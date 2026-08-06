@@ -42,7 +42,20 @@ declare
 begin
   for obj in select * from pg_event_trigger_ddl_commands()
   loop
-    if obj.object_type = 'table' and obj.schema_name = 'public' then
+    -- 어떤 명령이었는지는 여기서 거른다.
+    -- 트리거 정의(when tag in ...)에 적지 않는 이유는 아래 주석 참고.
+    --
+    -- 'CREATE TABLE ' || 'AS' 로 쪼개 둔 것도 같은 이유다.
+    -- 편집기가 문장을 쪼갤 때 이 토큰을 알아보지 못하게 해서,
+    -- 파일 어디에도 통째로 남지 않도록 했다. 실행 결과는 같다.
+    if obj.command_tag = any (array[
+         'CREATE TABLE',
+         'CREATE TABLE ' || 'AS',
+         'SELECT INTO'
+       ])
+       and obj.object_type = 'table'
+       and obj.schema_name = 'public'
+    then
       -- 확장(extension)이 자기 용도로 만든 표는 건드리지 않는다.
       -- 확장은 자기 표를 자기가 읽을 수 있다고 가정하고 동작하므로,
       -- 거기에 RLS를 걸면 확장이 조용히 망가진다.
@@ -66,12 +79,22 @@ revoke all on function app.auto_enable_rls() from public, anon, authenticated;
 
 drop event trigger if exists trg_auto_enable_rls;
 
--- CREATE TABLE AS 와 SELECT INTO 도 표를 만든다.
--- 'create table x as select * from work' 한 줄이면 정책 없는 사본이 생기므로
--- 세 가지를 모두 잡는다.
+-- 필터(when tag in ...)를 일부러 붙이지 않았다.
+--
+-- Supabase의 SQL Editor는 붙여 넣은 SQL을 문장 단위로 쪼개는데,
+-- 그 과정에서 문자열 안의 CREATE TABLE 계열 토큰이 조각나면
+-- 남은 조각이 그대로 실행된다. Postgres에서 `TABLE 이름` 은
+-- `SELECT * FROM 이름` 의 줄임말이라, 그 조각이
+--   ERROR: 42P01: relation "AS" does not exist
+-- 로 터진다. (실제로 그렇게 실패했다)
+--
+-- 그래서 트리거는 모든 DDL에 걸어 두고, 어떤 명령이었는지는
+-- 함수 안에서 판단한다. DDL은 자주 일어나는 일이 아니라 비용도 없다.
+--
+-- 재귀 걱정: 함수 안에서 실행하는 alter table 때문에 트리거가 한 번 더
+-- 돌지만, 그때의 command_tag 는 ALTER TABLE 이라 조건에 걸리지 않고 끝난다.
 create event trigger trg_auto_enable_rls
   on ddl_command_end
-  when tag in ('CREATE TABLE', 'CREATE TABLE AS', 'SELECT INTO')
   execute function app.auto_enable_rls();
 
 comment on function app.auto_enable_rls() is
