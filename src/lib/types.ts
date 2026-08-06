@@ -10,6 +10,30 @@ export type MemberRole = "owner" | "editor" | "viewer";
 export type WorkVisibility = "private" | "department" | "city";
 export type HandoverStatus = "draft" | "generated" | "confirmed" | "completed";
 
+export type ActivityKind =
+  | "work.created"
+  | "work.updated"
+  | "work.status_changed"
+  | "work.transferred"
+  | "member.added"
+  | "member.role_changed"
+  | "member.removed"
+  | "document.created"
+  | "document.updated"
+  | "document.deleted"
+  | "section.updated"
+  | "comment.created"
+  | "comment.deleted"
+  | "attachment.added"
+  | "attachment.removed"
+  | "handover.started"
+  | "handover.completed";
+
+export type AccessKind =
+  | "work.viewed"
+  | "document.viewed"
+  | "attachment.downloaded";
+
 /** 저장되지 않고 계산되는 파생 상태. 기한이 지났는데 완료되지 않은 업무. */
 export type DerivedStatus = WorkStatus | "overdue";
 
@@ -81,9 +105,29 @@ export interface Activity {
   id: number;
   work_id: string;
   actor_id: string | null;
-  kind: string;
+  kind: ActivityKind;
   summary: string;
   detail: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface Attachment {
+  id: string;
+  work_id: string;
+  storage_path: string;
+  file_name: string;
+  mime_type: string;
+  byte_size: number;
+  uploaded_by: string;
+  created_at: string;
+}
+
+export interface AccessLog {
+  id: number;
+  work_id: string | null;
+  target_id: string | null;
+  actor_id: string | null;
+  kind: AccessKind;
   created_at: string;
 }
 
@@ -109,6 +153,60 @@ export interface Handover {
   created_at: string;
 }
 
+export interface HandoverItem {
+  handover_id: string;
+  work_id: string;
+  transferred: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// 화면이 실제로 받는 모양 — 조인 결과
+//
+// 화면 컴포넌트는 이 타입에만 의존한다. 지금은 목업이 만들어 주고,
+// Supabase를 연결하면 select(...)의 결과가 같은 모양으로 들어온다.
+// 그래야 데이터 소스를 갈아끼우는 일이 화면 재작성이 되지 않는다.
+// ---------------------------------------------------------------------------
+
+export interface MemberWithProfile extends WorkMember {
+  profile: Profile;
+}
+
+export interface WorkListItem extends Work {
+  department: Department;
+  owner: Profile;
+  members: MemberWithProfile[];
+  /** 서버에서 계산한다. 브라우저 시계에 따라 값이 달라지면 안 되기 때문이다. */
+  derived: DerivedStatus;
+  comment_count: number;
+  attachment_count: number;
+  /** 같은 업무의 작년 판. 있으면 '작년 이맘때' 카드를 띄운다. */
+  previous_year: Pick<Work, "id" | "title" | "fiscal_year"> | null;
+  /** 참여 부서 수 — 부서 간 협업 여부를 카드에서 바로 읽게 한다. */
+  department_count: number;
+}
+
+export interface ActivityWithActor extends Activity {
+  actor: Profile | null;
+}
+
+export interface CommentWithAuthor extends Comment {
+  author: Profile;
+}
+
+export interface AttachmentWithUploader extends Attachment {
+  uploader: Profile;
+}
+
+export interface AccessLogWithActor extends AccessLog {
+  actor: Profile | null;
+  work: Pick<Work, "id" | "title"> | null;
+}
+
+export interface DocSectionWithEditor extends DocSection {
+  updated_by_profile: Profile | null;
+  locked_by_profile: Profile | null;
+}
+
 // ---------------------------------------------------------------------------
 // 표시용 레이블 — 화면 전체에서 같은 말을 쓰기 위한 단일 출처
 // ---------------------------------------------------------------------------
@@ -131,6 +229,52 @@ export const VISIBILITY_LABEL: Record<WorkVisibility, string> = {
   private: "참여자만",
   department: "부서 공개",
   city: "전체 공개",
+};
+
+export const VISIBILITY_HINT: Record<WorkVisibility, string> = {
+  private: "참여자로 추가된 사람만 열람할 수 있습니다.",
+  department: "소관 부서 직원이면 누구나 열람할 수 있습니다.",
+  city: "시 전체 직원이 열람할 수 있습니다.",
+};
+
+export const HANDOVER_STATUS_LABEL: Record<HandoverStatus, string> = {
+  draft: "대상 선정",
+  generated: "초안 생성",
+  confirmed: "인계자 확인",
+  completed: "인수 완료",
+};
+
+export const ACCESS_KIND_LABEL: Record<AccessKind, string> = {
+  "work.viewed": "업무 열람",
+  "document.viewed": "문서 열람",
+  "attachment.downloaded": "첨부파일 내려받기",
+};
+
+/**
+ * 이력 항목을 색으로 묶는 기준.
+ * 타임라인에서 "권한이 움직인 사건"과 "내용이 바뀐 사건"은 눈에 다르게 보여야 한다.
+ * 인수인계 감사에서 실제로 찾는 것은 전자이기 때문이다.
+ */
+export type ActivityTone = "권한" | "내용" | "대화" | "인계";
+
+export const ACTIVITY_TONE: Record<ActivityKind, ActivityTone> = {
+  "work.created": "권한",
+  "work.updated": "내용",
+  "work.status_changed": "내용",
+  "work.transferred": "권한",
+  "member.added": "권한",
+  "member.role_changed": "권한",
+  "member.removed": "권한",
+  "document.created": "내용",
+  "document.updated": "내용",
+  "document.deleted": "내용",
+  "section.updated": "내용",
+  "comment.created": "대화",
+  "comment.deleted": "대화",
+  "attachment.added": "내용",
+  "attachment.removed": "내용",
+  "handover.started": "인계",
+  "handover.completed": "인계",
 };
 
 /**

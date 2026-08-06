@@ -11,11 +11,11 @@ import { STATUS_LABEL, type DerivedStatus } from "@/lib/types";
  */
 
 const TONE: Record<DerivedStatus, string> = {
-  todo: "bg-status-todo-bg text-status-todo",
-  doing: "bg-status-doing-bg text-status-doing",
-  review: "bg-status-review-bg text-status-review",
-  done: "bg-status-done-bg text-status-done",
-  overdue: "bg-status-overdue-bg text-status-overdue",
+  todo: "bg-status-todo-bg text-status-todo-text",
+  doing: "bg-status-doing-bg text-status-doing-text",
+  review: "bg-status-review-bg text-status-review-text",
+  done: "bg-status-done-bg text-status-done-text",
+  overdue: "bg-status-overdue-bg text-status-overdue-text",
 };
 
 export function StatusBadge({

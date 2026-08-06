@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // KRDS 공식 배포본(참고용으로 내려받은 것). 우리 코드가 아니라 검사 대상이 아니다.
+    "design/**",
   ]),
 ]);
 

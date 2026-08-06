@@ -1,7 +1,7 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
-import { publicEnv } from "@/lib/env";
+import { requireSupabaseEnv } from "@/lib/env";
 
 /**
  * 브라우저용 Supabase 클라이언트.
@@ -13,8 +13,6 @@ import { publicEnv } from "@/lib/env";
  * 세션 토큰은 httpOnly 쿠키에 있으며 localStorage에 두지 않는다(XSS 시 탈취 방지).
  */
 export function createClient() {
-  return createBrowserClient(
-    publicEnv.NEXT_PUBLIC_SUPABASE_URL,
-    publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  );
+  const { url, anonKey } = requireSupabaseEnv();
+  return createBrowserClient(url, anonKey);
 }

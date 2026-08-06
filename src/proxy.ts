@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { publicEnv } from "@/lib/env";
+import { isSupabaseConfigured, publicEnv } from "@/lib/env";
+import { DEMO_COOKIE } from "@/lib/demo-cookie";
 
 /**
  * 일머리(Ilmeori) — Proxy
@@ -8,7 +9,7 @@ import { publicEnv } from "@/lib/env";
  * Next.js 16에서 middleware는 proxy로 이름이 바뀌었고 런타임은 nodejs로 고정된다.
  *
  * 여기서 세 가지를 한다.
- *   1) Supabase 세션 갱신 — 만료된 액세스 토큰을 조용히 재발급한다.
+ *   1) 세션 갱신 — 만료된 액세스 토큰을 조용히 재발급한다.
  *   2) 인증 게이트 — 비로그인 사용자를 /login으로 보낸다.
  *   3) nonce 기반 CSP 주입 — XSS 방어의 마지막 층.
  *
@@ -20,7 +21,10 @@ import { publicEnv } from "@/lib/env";
 const PUBLIC_PATHS = ["/login", "/auth", "/error"];
 
 function buildCsp(nonce: string, isDev: boolean): string {
-  const supabaseOrigin = new URL(publicEnv.NEXT_PUBLIC_SUPABASE_URL).origin;
+  // 데모 모드에서는 Supabase로 나가는 통로 자체를 열지 않는다.
+  const supabaseOrigin = publicEnv.NEXT_PUBLIC_SUPABASE_URL
+    ? new URL(publicEnv.NEXT_PUBLIC_SUPABASE_URL).origin
+    : "";
   const supabaseWs = supabaseOrigin.replace(/^https/, "wss");
 
   return [
@@ -43,7 +47,8 @@ function buildCsp(nonce: string, isDev: boolean): string {
   ]
     .filter(Boolean)
     .join("; ")
-    .replace(/\s{2,}/g, " ");
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 export async function proxy(request: NextRequest) {
@@ -57,53 +62,64 @@ export async function proxy(request: NextRequest) {
   requestHeaders.set("Content-Security-Policy", csp);
 
   let response = NextResponse.next({ request: { headers: requestHeaders } });
+  let signedIn: boolean;
 
-  const supabase = createServerClient(
-    publicEnv.NEXT_PUBLIC_SUPABASE_URL,
-    publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet, headers) {
-          for (const { name, value } of cookiesToSet) {
-            request.cookies.set(name, value);
-          }
-          response = NextResponse.next({ request: { headers: requestHeaders } });
-          for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options);
-          }
-          // 인증 쿠키가 실린 응답은 CDN·프록시가 캐시하면 안 된다.
-          // 캐시되면 한 사용자의 세션이 다른 사용자에게 전달될 수 있다.
-          for (const [key, val] of Object.entries(headers ?? {})) {
-            response.headers.set(key, val);
-          }
+  if (isSupabaseConfigured) {
+    const supabase = createServerClient(
+      publicEnv.NEXT_PUBLIC_SUPABASE_URL as string,
+      publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet, headers) {
+            for (const { name, value } of cookiesToSet) {
+              request.cookies.set(name, value);
+            }
+            response = NextResponse.next({
+              request: { headers: requestHeaders },
+            });
+            for (const { name, value, options } of cookiesToSet) {
+              response.cookies.set(name, value, options);
+            }
+            // 인증 쿠키가 실린 응답은 CDN·프록시가 캐시하면 안 된다.
+            // 캐시되면 한 사용자의 세션이 다른 사용자에게 전달될 수 있다.
+            for (const [key, val] of Object.entries(headers ?? {})) {
+              response.headers.set(key, val);
+            }
+          },
         },
       },
-    },
-  );
+    );
 
-  // getSession()이 아니라 getUser()를 쓴다. 쿠키를 그대로 믿지 않고 Auth 서버에 검증을 맡긴다.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    // getSession()이 아니라 getUser()를 쓴다. 쿠키를 그대로 믿지 않고 Auth 서버에 검증을 맡긴다.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    signedIn = Boolean(user);
+  } else {
+    // 데모 모드 — 쿠키가 있는지만 본다.
+    // 값이 실제 데모 계정인지는 서버 컴포넌트(getViewer)에서 목업과 대조해 다시 확인한다.
+    signedIn = Boolean(request.cookies.get(DEMO_COOKIE)?.value);
+  }
 
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
 
-  if (!user && !isPublic) {
+  if (!signedIn && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
     // 로그인 후 원래 가려던 곳으로 돌려보낸다. 오픈 리다이렉트를 막기 위해
     // 경로만 전달하고, 복원할 때 반드시 내부 경로인지 다시 검사한다.
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
 
-  if (user && pathname === "/login") {
+  if (signedIn && pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";
