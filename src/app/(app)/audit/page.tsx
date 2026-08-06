@@ -33,7 +33,7 @@ export default async function AuditPage() {
   const viewer = await requireViewer();
   const logs = await listAccessLogs(viewer);
   const department = viewer.department_id
-    ? getDepartment(viewer.department_id)
+    ? await getDepartment(viewer.department_id)
     : null;
 
   return (

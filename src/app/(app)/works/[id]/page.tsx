@@ -36,6 +36,7 @@ import {
   getComments,
   getWork,
   getWorkDocument,
+  logAccess,
   roleIn,
 } from "@/lib/data";
 import { requireViewer } from "@/lib/session";
@@ -85,11 +86,19 @@ export default async function WorkDetailPage({
   const role = roleIn(work, viewer);
   const canWrite = role === "owner" || role === "editor";
 
-  const { document: doc, sections } = getWorkDocument(work.id);
-  const comments = await getComments(work.id);
-  const activities = getActivities(work.id);
-  const attachments = getAttachments(work.id);
-  const accessLogs = getAccessLogsForWork(work.id);
+  // 한 화면에 필요한 것을 한꺼번에 가져온다. 순서대로 기다리면 왕복이 그만큼 쌓인다.
+  const [{ document: doc, sections }, comments, activities, attachments, accessLogs] =
+    await Promise.all([
+      getWorkDocument(work.id),
+      getComments(work.id),
+      getActivities(work.id),
+      getAttachments(work.id),
+      getAccessLogsForWork(work.id),
+    ]);
+
+  // 누가 열어 봤는지 남긴다. 사용자에게는 이 표에 쓰기 권한이 없고,
+  // 서버의 지정된 함수만 기록할 수 있다.
+  await logAccess(work.id, "work.viewed");
 
   const tabs: TabItem[] = [
     {

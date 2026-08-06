@@ -27,7 +27,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
   const mine = sp.mine === "1";
   const overdueOnly = sp.overdue === "1";
 
-  const tree = getDepartmentTree();
+  const tree = await getDepartmentTree();
   const knownDept = tree.some(
     (b) => b.id === deptParam || b.children.some((c) => c.id === deptParam),
   );

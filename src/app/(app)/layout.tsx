@@ -23,7 +23,7 @@ export default async function AppLayout({
   if (!viewer) redirect("/login");
 
   const department = viewer.department_id
-    ? getDepartment(viewer.department_id)
+    ? await getDepartment(viewer.department_id)
     : null;
 
   return (

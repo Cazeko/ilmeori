@@ -38,7 +38,7 @@ const SUMMARY: Array<{ key: DerivedStatus; tone: string }> = [
 export default async function HomePage() {
   const viewer = await requireViewer();
   const department = viewer.department_id
-    ? getDepartment(viewer.department_id)
+    ? await getDepartment(viewer.department_id)
     : null;
   const { mine, counts, recent, urgent } = await getDashboard(viewer);
   const handover = await getHandoverFor(viewer);

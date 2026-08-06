@@ -26,6 +26,7 @@ import {
 } from "@/lib/mock/works";
 import { departments, profiles } from "@/lib/mock/org";
 import { getDemoState, type DemoState } from "@/lib/demo-state";
+import type { HandoverView, WorkFilter } from "./types";
 import { daysUntil } from "@/lib/format";
 import {
   derivedStatus,
@@ -38,7 +39,6 @@ import {
   type DocSectionWithEditor,
   type Document,
   type Handover,
-  type MemberRole,
   type MemberWithProfile,
   type Profile,
   type Work,
@@ -54,6 +54,16 @@ function requireProfile(id: string): Profile {
   return p;
 }
 
+/** 참여자 프로필에 소속 이름을 붙인다. DB 구현에서는 조인으로 따라온다. */
+function withDept(p: Profile) {
+  return {
+    ...p,
+    department_name: p.department_id
+      ? (deptById.get(p.department_id)?.name ?? null)
+      : null,
+  };
+}
+
 function requireDept(id: string): Department {
   const d = deptById.get(id);
   if (!d) throw new Error(`목업에 없는 부서: ${id}`);
@@ -67,7 +77,7 @@ function requireDept(id: string): Department {
 function membersOf(workId: string): MemberWithProfile[] {
   return workMembers
     .filter((m) => m.work_id === workId)
-    .map((m) => ({ ...m, profile: requireProfile(m.profile_id) }))
+    .map((m) => ({ ...m, profile: withDept(requireProfile(m.profile_id)) }))
     // 소유 → 편집 → 열람 순. 권한이 센 사람이 위에 온다.
     .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]);
 }
@@ -118,7 +128,7 @@ function overlayMembers(
       profile_id: h.to_profile_id,
       role: "owner",
       created_at: new Date().toISOString(),
-      profile: requireProfile(h.to_profile_id),
+      profile: withDept(requireProfile(h.to_profile_id)),
     });
   }
   return next.sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]);
@@ -171,25 +181,9 @@ function toListItem(raw: Work, state: DemoState): WorkListItem {
   };
 }
 
-/** 이 사람이 이 업무에서 가진 역할. 참여자가 아니면 null. */
-export function roleIn(work: WorkListItem, viewer: Profile): MemberRole | null {
-  return work.members.find((m) => m.profile_id === viewer.id)?.role ?? null;
-}
-
 // ---------------------------------------------------------------------------
 // 조회
 // ---------------------------------------------------------------------------
-
-export type WorkFilter = {
-  /** 부서 id. 없으면 전체 */
-  departmentId?: string;
-  /** 내가 참여한 업무만 */
-  mine?: boolean;
-  /** 제목·설명 검색어 */
-  q?: string;
-  /** 기한이 지난 미완료 업무만 */
-  overdueOnly?: boolean;
-};
 
 export async function listWorks(viewer: Profile, filter: WorkFilter = {}) {
   const state = await getDemoState();
@@ -239,10 +233,10 @@ export async function getWork(
   return work;
 }
 
-export function getWorkDocument(workId: string): {
+export async function getWorkDocument(workId: string): Promise<{
   document: Document | null;
   sections: DocSectionWithEditor[];
-} {
+}> {
   const document = documents.find((d) => d.work_id === workId) ?? null;
   if (!document) return { document: null, sections: [] };
   const sections = docSections
@@ -256,7 +250,7 @@ export function getWorkDocument(workId: string): {
   return { document, sections };
 }
 
-export function getActivities(workId: string): ActivityWithActor[] {
+export async function getActivities(workId: string): Promise<ActivityWithActor[]> {
   return activities
     .filter((a) => a.work_id === workId)
     .map((a) => ({ ...a, actor: a.actor_id ? requireProfile(a.actor_id) : null }))
@@ -274,23 +268,23 @@ export async function getComments(workId: string): Promise<CommentWithAuthor[]> 
     .sort((a, b) => a.created_at.localeCompare(b.created_at));
 }
 
-export function getAttachments(workId: string): AttachmentWithUploader[] {
+export async function getAttachments(workId: string): Promise<AttachmentWithUploader[]> {
   return attachments
     .filter((a) => a.work_id === workId)
     .map((a) => ({ ...a, uploader: requireProfile(a.uploaded_by) }))
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
-export function getDepartments(): Department[] {
+export async function getDepartments(): Promise<Department[]> {
   return departments;
 }
 
-export function getDepartment(id: string): Department | null {
+export async function getDepartment(id: string): Promise<Department | null> {
   return deptById.get(id) ?? null;
 }
 
 /** 실·국 아래 과들. 부서 선택은 2단계까지만 편다. */
-export function getDepartmentTree() {
+export async function getDepartmentTree() {
   const roots = departments.filter((d) => !d.parent_id);
   return roots.map((root) => ({
     ...root,
@@ -316,7 +310,7 @@ export async function getPreviousYearBrief(
   const work = toListItem(raw, state);
   if (!canRead(work, viewer, work.members)) return null;
 
-  const { document, sections } = getWorkDocument(work.id);
+  const { document, sections } = await getWorkDocument(work.id);
   return {
     work,
     document,
@@ -383,13 +377,6 @@ function isDueSoon(due: string | null, derived: DerivedStatus) {
 // 인계·인수
 // ---------------------------------------------------------------------------
 
-export type HandoverView = {
-  handover: Handover;
-  from: Profile;
-  to: Profile;
-  items: Array<{ work: WorkListItem; transferred: boolean }>;
-};
-
 /** 내가 넘겨야 하거나 넘겨받는 인계 건 */
 export async function getHandoverFor(viewer: Profile): Promise<HandoverView | null> {
   const h = handovers.find(
@@ -398,7 +385,10 @@ export async function getHandoverFor(viewer: Profile): Promise<HandoverView | nu
   return h ? buildHandover(h) : null;
 }
 
-export async function getHandover(id: string): Promise<HandoverView | null> {
+export async function getHandover(
+  _viewer: Profile,
+  id: string,
+): Promise<HandoverView | null> {
   const h = handovers.find((x) => x.id === id);
   return h ? buildHandover(h) : null;
 }
@@ -468,7 +458,7 @@ export async function listAccessLogs(
 }
 
 /** 이 업무를 누가 열어 봤는지 — 업무 상세의 이력 탭에서 함께 보여준다 */
-export function getAccessLogsForWork(workId: string): AccessLogWithActor[] {
+export async function getAccessLogsForWork(workId: string): Promise<AccessLogWithActor[]> {
   return accessLogs
     .filter((l) => l.work_id === workId)
     .map((l) => ({

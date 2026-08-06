@@ -41,7 +41,9 @@ export type HandoverDraft = {
   evidence: { works: number; documents: number; activities: number; attachments: number };
 };
 
-export function buildHandoverDraft(view: HandoverView): HandoverDraft {
+export async function buildHandoverDraft(
+  view: HandoverView,
+): Promise<HandoverDraft> {
   const works = view.items.map((i) => i.work);
 
   let documentCount = 0;
@@ -70,8 +72,10 @@ export function buildHandoverDraft(view: HandoverView): HandoverDraft {
   // --- 나. 주요 업무계획 및 진행사항 ---------------------------------------
   const progress: string[] = [];
   for (const w of works) {
-    const { document, sections } = getWorkDocument(w.id);
-    const acts = getActivities(w.id);
+    const [{ document, sections }, acts] = await Promise.all([
+      getWorkDocument(w.id),
+      getActivities(w.id),
+    ]);
     activityCount += acts.length;
     if (document) documentCount += 1;
 
@@ -101,7 +105,7 @@ export function buildHandoverDraft(view: HandoverView): HandoverDraft {
   // --- 다. 현안사항 및 문제점 ----------------------------------------------
   const issues: string[] = [];
   for (const w of works) {
-    const { document, sections } = getWorkDocument(w.id);
+    const { document, sections } = await getWorkDocument(w.id);
     const issueSection = sections.find(
       (s) => s.heading?.includes("현안") || s.heading?.includes("유의"),
     );
@@ -137,8 +141,10 @@ export function buildHandoverDraft(view: HandoverView): HandoverDraft {
   // --- 2. 관련 문서 현황 ---------------------------------------------------
   const docs: string[] = [];
   for (const w of works) {
-    const { document, sections } = getWorkDocument(w.id);
-    const files = getAttachments(w.id);
+    const [{ document, sections }, files] = await Promise.all([
+      getWorkDocument(w.id),
+      getAttachments(w.id),
+    ]);
     attachmentCount += files.length;
     if (!document && files.length === 0) continue;
 

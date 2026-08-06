@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { isSupabaseConfigured } from "@/lib/env";
+import { createClient } from "@/lib/supabase/server";
 import { profiles } from "@/lib/mock/org";
 import { DEMO_COOKIE } from "@/lib/demo-cookie";
 import type { Profile } from "@/lib/types";
@@ -8,12 +9,7 @@ import type { Profile } from "@/lib/types";
 /**
  * 지금 화면을 보고 있는 사람.
  *
- * 데모 모드에서는 쿠키에 담긴 데모 계정 id로 사람을 정한다.
- * 쿠키 값은 절대 믿지 않고 **목업에 실재하는 데모 계정인지 대조**한 뒤에만 쓴다.
- * 임의의 UUID를 넣어 남의 계정을 흉내 내는 경로를 여기서 끊는다.
- *
- * Supabase가 연결되면 이 함수는 supabase.auth.getUser()로 대체된다.
- * 화면 코드는 이 함수만 부르므로, 바뀌는 곳은 여기 한 군데다.
+ * 화면 코드는 이 함수만 부른다. 인증 방식이 바뀌어도 고칠 곳은 여기 하나다.
  */
 
 export { DEMO_COOKIE };
@@ -22,13 +18,33 @@ const demoById = new Map(profiles.map((p) => [p.id, p]));
 
 export async function getViewer(): Promise<Profile | null> {
   if (isSupabaseConfigured) {
-    // 조용히 null을 돌려주면 앱 전체가 영문도 모른 채 로그인 화면만 반복한다.
-    // 아직 연결 코드를 쓰지 않았다는 사실이 즉시 드러나게 크게 실패시킨다.
-    throw new Error(
-      "Supabase 환경변수가 설정되어 있지만 실제 인증 연동이 아직 구현되지 않았습니다. " +
-        ".env.local의 NEXT_PUBLIC_SUPABASE_* 값을 비우면 데모 모드로 동작합니다.",
-    );
+    const supabase = await createClient();
+
+    // getSession()이 아니라 getUser()를 쓴다.
+    // getSession()은 쿠키에 담긴 값을 그대로 믿지만, getUser()는 Auth 서버에 검증을 맡긴다.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // 로그인했다는 것과 이 시스템의 직원이라는 것은 다르다.
+    // profile 행이 없으면 들어올 자격이 없는 계정이다.
+    const { data } = await supabase
+      .from("profile")
+      .select(
+        "id, name, department_id, position, email, avatar_url, is_active, is_demo",
+      )
+      .eq("id", user.id)
+      .maybeSingle();
+
+    // 퇴직·휴직 처리된 계정은 세션이 남아 있어도 들여보내지 않는다.
+    if (!data || !data.is_active) return null;
+    return data as Profile;
   }
+
+  // ── 데모 모드 ──────────────────────────────────────────────────────────
+  // 쿠키 값은 절대 믿지 않고 목업에 실재하는 계정인지 대조한 뒤에만 쓴다.
+  // 임의의 UUID를 넣어 남의 계정을 흉내 내는 경로를 여기서 끊는다.
   const store = await cookies();
   const id = store.get(DEMO_COOKIE)?.value;
   if (!id) return null;

@@ -167,8 +167,13 @@ export interface HandoverItem {
 // 그래야 데이터 소스를 갈아끼우는 일이 화면 재작성이 되지 않는다.
 // ---------------------------------------------------------------------------
 
+/** 참여자 목록에서 소속까지 함께 보여주므로 조회 단계에서 붙여 온다. */
+export interface ProfileWithDepartment extends Profile {
+  department_name: string | null;
+}
+
 export interface MemberWithProfile extends WorkMember {
-  profile: Profile;
+  profile: ProfileWithDepartment;
 }
 
 export interface WorkListItem extends Work {

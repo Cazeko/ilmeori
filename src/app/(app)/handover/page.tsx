@@ -24,6 +24,7 @@ import { formatFullDateTime } from "@/lib/format";
 import { getDepartment, getHandoverFor } from "@/lib/data";
 import { buildHandoverDraft } from "@/lib/handover-draft";
 import { requireViewer } from "@/lib/session";
+import { isSupabaseConfigured } from "@/lib/env";
 
 export const metadata: Metadata = { title: "인계·인수" };
 
@@ -58,12 +59,14 @@ export default async function HandoverPage() {
   }
 
   const { handover, from, to, items } = view;
-  const draft = buildHandoverDraft(view);
+  const draft = await buildHandoverDraft(view);
   const isSender = from.id === viewer.id;
   const done = handover.status === "completed";
 
-  const fromDept = from.department_id ? getDepartment(from.department_id) : null;
-  const toDept = to.department_id ? getDepartment(to.department_id) : null;
+  const [fromDept, toDept] = await Promise.all([
+    from.department_id ? getDepartment(from.department_id) : null,
+    to.department_id ? getDepartment(to.department_id) : null,
+  ]);
 
   return (
     <div className="px-5 py-6 sm:px-7 lg:px-8">
@@ -71,12 +74,16 @@ export default async function HandoverPage() {
         title="업무인계·인수"
         description="「행정업무의 운영 및 혁신에 관한 규정」 제61조 및 같은 규정 시행규칙 별지 제12호서식 「업무인계·인수서」의 항목 구성을 그대로 따릅니다."
         action={
-          <form action={resetDemo}>
-            <Button type="submit" variant="ghost" size="sm">
-              <RotateCcw aria-hidden className="size-4" />
-              시연 처음으로
-            </Button>
-          </form>
+          // 목업으로 돌 때만 보인다. 실제 DB에서는 인계가 진짜로 실행되고
+          // 그 사실이 이력에 남으므로 되돌리는 버튼이 있으면 안 된다.
+          isSupabaseConfigured ? null : (
+            <form action={resetDemo}>
+              <Button type="submit" variant="ghost" size="sm">
+                <RotateCcw aria-hidden className="size-4" />
+                시연 처음으로
+              </Button>
+            </form>
+          )
         }
       />
 

@@ -1,7 +1,6 @@
 import { Eye, Globe, Lock, PenLine, ShieldCheck, Users } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
-import { getDepartment } from "@/lib/data";
 import {
   ROLE_LABEL,
   VISIBILITY_HINT,
@@ -95,9 +94,6 @@ export function MemberList({
           {members.map((m) => {
             const style = ROLE_STYLE[m.role];
             const RoleIcon = style.icon;
-            const dept = m.profile.department_id
-              ? getDepartment(m.profile.department_id)
-              : null;
             const isMe = m.profile_id === viewer.id;
             return (
               <li key={m.profile_id} className="flex items-center gap-3 px-4 py-3">
@@ -115,7 +111,7 @@ export function MemberList({
                     ) : null}
                   </p>
                   <p className="mt-0.5 text-body-xs text-gray-60">
-                    {dept?.name ?? "소속 없음"}
+                    {m.profile.department_name ?? "소속 없음"}
                   </p>
                 </div>
                 <span
