@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { Archive, ArchiveRestore, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import { ActionFeedback } from "@/components/ui/feedback";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { WorkForm } from "@/components/work/work-form";
+import { WorkNotFound } from "@/components/work/work-not-found";
 import { archiveWork, restoreWork, updateWork } from "@/lib/actions/works";
 import { getWork, roleIn } from "@/lib/data";
 import { canMutate } from "@/lib/env";
@@ -27,9 +27,14 @@ export async function generateMetadata({
 /**
  * 업무 수정과 보관.
  *
- * 볼 수 없는 업무든 고칠 수 없는 업무든 똑같이 404로 답한다.
- * "권한이 없습니다"라고 답하면 그 업무가 존재한다는 사실이 새어 나가고,
- * 업무 제목 하나가 곧 사업 계획인 경우가 있다.
+ * 볼 수 없는 업무는 **없는 업무와 똑같이** 답한다. "권한이 없습니다"라고 답하면
+ * 그 업무가 존재한다는 사실이 새어 나가고, 업무 제목 하나가 곧 사업 계획인 경우가 있다.
+ * 반대로 볼 수는 있는데 고칠 수 없는 경우에는 그 사실을 정확히 말한다 —
+ * 존재를 이미 아는 상대에게 감출 것이 없고, 감추면 사용자만 헤맨다.
+ *
+ * 둘 다 notFound()를 쓰지 않고 페이지가 직접 그린다. 그래야 스크립트를 끈
+ * 브라우저에서 본문이 비지 않는다(이유는 components/work/work-not-found.tsx 주석).
+ * 대신 응답 코드가 200이 된다 — 의도한 맞바꿈이다.
  *
  * 이 화면에서 바꾸는 것은 업무의 '내용'뿐이다. 공개 범위와 참여자는
  * 함께 판단해야 하는 값이라 참여자·권한 화면에 있고, 소관 부서와 주담당은
@@ -44,10 +49,17 @@ export default async function EditWorkPage({
   const sp = await searchParams;
 
   const work = await getWork(viewer, id);
-  if (!work) notFound();
+  // 없는 업무와 못 보는 업무를 구분하지 않는다.
+  if (!work) return <WorkNotFound path={`/works/${id}/edit`} />;
 
   const role = roleIn(work, viewer);
-  if (role !== "owner" && role !== "editor") notFound();
+  // 여기부터는 볼 수 있는 사람이다. 존재를 이미 아는 상대에게 감출 것이 없으므로
+  // "없습니다"가 아니라 "고칠 권한이 없습니다"라고 정확히 말한다.
+  if (role !== "owner" && role !== "editor") {
+    // 막힌 주소를 그대로 넘긴다. 「이 주소 다시 열기」가 상세로 보내 버리면
+    // 편집 화면이 열리는지 확인하려던 사람은 끝내 확인하지 못한다.
+    return <WorkNotFound path={`/works/${id}/edit`} mode="not-editable" />;
+  }
 
   const archived = Boolean(work.archived_at);
 

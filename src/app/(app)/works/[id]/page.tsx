@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import {
   Archive,
   Building2,
@@ -28,6 +27,8 @@ import { DocSections } from "@/components/work/doc-sections";
 import { MemberList } from "@/components/work/member-list";
 import { PreviousYearCallout } from "@/components/work/previous-year-callout";
 import { StatusChanger } from "@/components/work/status-changer";
+import { VisibilityReason } from "@/components/work/visibility-reason";
+import { WorkNotFound } from "@/components/work/work-not-found";
 import { formatDate, formatDateTime, formatDueLabel } from "@/lib/format";
 import {
   getAccessLogsForWork,
@@ -57,7 +58,7 @@ export async function generateMetadata({
   const viewer = await requireViewer();
   const { id } = await params;
   const work = await getWork(viewer, id);
-  return { title: work?.title ?? "업무" };
+  return { title: work?.title ?? "찾을 수 없습니다" };
 }
 
 /**
@@ -81,8 +82,10 @@ export default async function WorkDetailPage({
   const sp = await searchParams;
 
   const work = await getWork(viewer, id);
-  // 볼 수 없는 업무도 404로 답한다. 403으로 답하면 "그 업무는 있다"는 정보가 샌다.
-  if (!work) notFound();
+  // 볼 수 없는 업무도 없는 업무와 똑같이 답한다.
+  // "권한이 없다"고 답하면 그 업무가 있다는 정보가 새기 때문이다.
+  // notFound()를 쓰지 않는 이유는 work-not-found.tsx 의 주석에 적었다.
+  if (!work) return <WorkNotFound path={`/works/${id}`} />;
 
   const tab = parseTab(sp.tab);
   const role = roleIn(work, viewer);
@@ -260,6 +263,10 @@ export default async function WorkDetailPage({
             </div>
           ) : null}
         </dl>
+
+        {/* 접근제어는 잘 돌수록 화면에 아무것도 보이지 않는다.
+            여기서 규칙을 말로 적고, 같은 자리에서 시험할 수단을 함께 둔다. */}
+        <VisibilityReason work={work} viewer={viewer} role={role} />
 
         {canChangeStatus ? (
           <div className="mt-5">

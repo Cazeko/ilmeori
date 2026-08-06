@@ -5,9 +5,15 @@ import { enterAsDemo } from "./actions";
 import { Avatar } from "@/components/ui/avatar";
 import { Notice } from "@/components/ui/notice";
 import { demoAccounts } from "@/lib/mock/org";
+import { safeNext } from "@/lib/safe-next";
 import { getViewer } from "@/lib/session";
 
 export const metadata: Metadata = { title: "들어가기" };
+
+/** 업무 하나를 가리키는 주소인가. 안내 문구를 고르는 데만 쓴다. */
+function isWorkPath(next: string): boolean {
+  return /^\/works\/[0-9a-fA-F-]{36}(\/|\?|$)/.test(next);
+}
 
 /**
  * 처음 열리는 화면.
@@ -24,7 +30,9 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   if (viewer) redirect("/");
 
   const params = await searchParams;
-  const next = typeof params.next === "string" ? params.next : "/";
+  // 여기서 한 번 거른다. 어차피 enterAsDemo가 다시 거르지만, 두 곳이 서로 다른
+  // 값을 보고 있으면 "돌아갑니다"라고 적어 놓고 홈으로 가는 화면이 된다.
+  const next = safeNext(params.next);
   const error = typeof params.error === "string" ? params.error : null;
 
   return (
@@ -94,6 +102,29 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
               가입 절차 없이 바로 보실 수 있습니다. 계정마다 소속과 역할이 달라
               <strong className="font-bold text-gray-80"> 보이는 업무가 서로 다릅니다.</strong>
             </p>
+
+            {/* 「이 주소를 다른 계정으로 열어 보기」로 온 경우.
+                주소를 화면에 그대로 되읊지 않는다. next 값은 사용자가 만든
+                문자열이고, 로그인 화면에 원하는 문장을 띄우는 통로가 된다.
+                (safeNext가 우리 앱 안의 경로만 통과시키지만, 경로 이름 자체로도
+                 "비밀번호를 다시 입력하세요" 같은 문장은 얼마든지 만들어진다) */}
+            {next !== "/" ? (
+              <Notice tone="info" className="mt-4">
+                계정을 고르면 <strong className="font-bold">방금 보던 주소</strong>로
+                돌아갑니다.
+                {/* next 는 두 곳에서 온다. 업무 상세의 「다른 계정으로 열어 보기」와,
+                    로그인하지 않은 사람을 proxy가 되돌려보낼 때(경로를 가리지 않는다).
+                    앞의 경우에만 「없습니다」 이야기가 성립한다 — /audit 같은 화면은
+                    어느 계정으로 들어가도 그냥 열린다. */}
+                {isWorkPath(next) ? (
+                  <>
+                    {" "}
+                    그 업무를 볼 수 없는 계정을 고르면 「없습니다」라고 답합니다 —
+                    권한이 없다고 말하지 않습니다.
+                  </>
+                ) : null}
+              </Notice>
+            ) : null}
 
             {error ? (
               <Notice tone="danger" className="mt-4">

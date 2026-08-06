@@ -79,7 +79,9 @@ export function AppShell({
   return (
     <div className="flex min-h-dvh flex-col">
       {/* ── 상단 바 ─────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-20 flex h-header shrink-0 items-center gap-3 border-b border-gray-10 bg-white px-3 sm:px-4">
+      {/* 상단 바와 왼쪽 메뉴는 종이에 나올 이유가 없다. 인쇄물은 결재에 올라가는
+          문서 한 벌이지 화면의 사진이 아니다. */}
+      <header className="sticky top-0 z-20 flex h-header shrink-0 items-center gap-3 border-b border-gray-10 bg-white px-3 sm:px-4 print:hidden">
         <button
           type="button"
           aria-label="메뉴 열기"
@@ -170,6 +172,7 @@ export function AppShell({
             // inert 속성 대신 visibility를 쓰는 이유: CSS만으로 결정되므로
             // 자바스크립트가 늦게 뜨거나 실패해도 넓은 화면에서 메뉴가 잠기지 않는다.
             drawerOpen ? "visible translate-x-0" : "invisible -translate-x-full",
+            "print:hidden",
           )}
         >
           <div className="flex h-header items-center justify-between px-4 lg:hidden">
@@ -232,7 +235,7 @@ export function AppShell({
         </aside>
 
         {/* ── 본문 ────────────────────────────────────────────────────────── */}
-        <main id="main" tabIndex={-1} className="min-w-0 flex-1 bg-gray-5">
+        <main id="main" tabIndex={-1} className="min-w-0 flex-1 bg-gray-5 print:bg-white">
           {children}
         </main>
       </div>

@@ -500,7 +500,7 @@ insert into handover (
   id, from_profile_id, to_profile_id, status, ai_model, generated_at, created_at
 ) values
   ('40000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000003', 'generated', 'rule-based/v1', '2026-08-06T08:40:00+09:00'::timestamptz, '2026-08-06T08:31:00+09:00'::timestamptz)
-on conflict (id) do nothing;
+on conflict (id) do update set ai_model = excluded.ai_model;
 
 insert into handover_item (handover_id, work_id, transferred) values
   ('40000000-0000-4000-8000-000000000001', 'f0000000-0000-4000-8000-000000000005', false),

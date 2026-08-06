@@ -6,23 +6,9 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { demoAccounts } from "@/lib/mock/org";
 import { DEMO_COOKIE } from "@/lib/demo-cookie";
+import { safeNext } from "@/lib/safe-next";
 
 const allowed = new Map(demoAccounts.map((a) => [a.profile.id, a.profile.email]));
-
-/**
- * 돌아갈 곳을 정한다.
- *
- * proxy가 붙여 준 next 값을 그대로 믿고 리다이렉트하면 오픈 리다이렉트가 된다.
- * "//evil.example.com"은 브라우저가 프로토콜 상대 URL로 읽어 외부로 나간다.
- * 그래서 슬래시 하나로 시작하고 두 개는 아닌, 우리 앱 안의 경로만 통과시킨다.
- */
-function safeNext(raw: FormDataEntryValue | null): string {
-  if (typeof raw !== "string") return "/";
-  if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) {
-    return "/";
-  }
-  return raw;
-}
 
 /**
  * 데모 계정으로 들어간다.
@@ -78,8 +64,16 @@ export async function enterAsDemo(formData: FormData) {
  * 데모 진행 상태(ilmeori.state)는 지우지 않는다.
  * 박준호로 인계를 실행하고 이하람으로 바꿔서 결과를 확인하는 것이
  * 이 제품의 핵심 시연 동선이라, 계정을 바꿀 때마다 초기화되면 그 동선이 끊긴다.
+ *
+ * next 를 함께 보내면 새 계정으로 들어간 뒤 **그 주소로 되돌아간다.**
+ * 업무 상세의 「이 주소를 다른 계정으로 열어 보기」가 이것을 쓴다.
+ * 같은 주소가 계정에 따라 열리기도 하고 404가 되기도 하는 것을 보여 주는 것이
+ * 접근제어를 설명하는 가장 짧은 방법이다. 값은 여기서도 safeNext로 거른다 —
+ * 로그인 화면이 다시 검사하지만, 열린 문을 두 곳에 두지 않는다.
  */
-export async function leaveDemo() {
+export async function leaveDemo(formData?: FormData) {
+  const next = safeNext(formData?.get("next") ?? null);
+
   if (isSupabaseConfigured) {
     const supabase = await createClient();
     await supabase.auth.signOut();
@@ -87,5 +81,5 @@ export async function leaveDemo() {
     const store = await cookies();
     store.delete(DEMO_COOKIE);
   }
-  redirect("/login");
+  redirect(next === "/" ? "/login" : `/login?next=${encodeURIComponent(next)}`);
 }

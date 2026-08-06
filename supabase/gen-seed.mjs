@@ -526,7 +526,14 @@ function build(org, works) {
           `${q(h.id)}, ${q(h.from_profile_id)}, ${q(h.to_profile_id)}, ${q(h.status)}, ` +
           `${q(h.ai_model)}, ${ts(h.generated_at)}, ${ts(h.created_at)}`,
       ),
-    ) + "\non conflict (id) do nothing;",
+    ) +
+      // ai_model 만은 덮어쓴다. 「무엇으로 만들었는지」를 적는 감사용 칸이라
+      // 실제와 어긋난 값이 남아 있으면 화면이 거짓말을 한다. 실제로 그랬다 —
+      // 시드에는 한때 모델 이름이 들어 있었고, do nothing 때문에 시드를 고친
+      // 뒤에도 실제 프로젝트의 행은 그대로 'claude-opus-5' 였다.
+      // 다른 칸(status·generated_at)은 건드리지 않는다. 시연 도중 시드를
+      // 다시 돌렸을 때 진행 중인 인계가 처음으로 되돌아가면 안 된다.
+      "\non conflict (id) do update set ai_model = excluded.ai_model;",
     "",
     "insert into handover_item (handover_id, work_id, transferred) values",
     rows(

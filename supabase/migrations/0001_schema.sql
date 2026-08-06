@@ -233,9 +233,11 @@ create table handover (
   from_profile_id uuid not null references profile(id),  -- 인계자
   to_profile_id   uuid not null references profile(id),  -- 인수자
   status         handover_status not null default 'draft',
-  -- AI가 생성한 「업무인계·인수서」 초안. 최종본은 사람이 확인·수정한 뒤 확정한다.
+  -- 쌓인 기록에서 뽑아낸 「업무인계·인수서」 초안. 최종본은 사람이 확인·수정한 뒤 확정한다.
   document_draft text,
-  ai_model       text,                                   -- 생성 모델 기록(재현성·감사 목적)
+  -- 무엇으로 만들었는지 적는 칸(재현성·감사 목적). 지금 들어가는 값은 'rule-based/v1' 이다.
+  -- 모델을 부르지 않으면서 모델 이름을 적어 두면 그 자체가 기록의 위조다.
+  ai_model       text,
   generated_at   timestamptz,
   confirmed_at   timestamptz,
   completed_at   timestamptz,
@@ -244,7 +246,7 @@ create table handover (
 );
 
 comment on column handover.document_draft is
-  'AI 생성 초안. 원칙: AI는 축적된 협업 이력을 문서로 조립할 뿐, 없는 내용을 만들지 않는다.';
+  '자동 생성 초안. 원칙: 축적된 협업 이력을 서식대로 조립할 뿐, 없는 내용을 만들지 않는다.';
 
 create table handover_item (
   handover_id uuid not null references handover(id) on delete cascade,

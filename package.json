@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "db:verify": "node supabase/verify.mjs",
     "db:test": "node supabase/rls.test.mjs",
-    "check": "npm run typecheck && npm run db:verify && npm run db:test && npm run db:seed:test",
+    "test:safe-next": "node tests/safe-next.test.mjs",
+    "test:browser": "node tests/browser.test.mjs",
+    "check": "npm run typecheck && npm run test:safe-next && npm run db:verify && npm run db:test && npm run db:seed:test",
     "db:seed": "node supabase/gen-seed.mjs",
     "db:seed:test": "node supabase/seed.test.mjs"
   },

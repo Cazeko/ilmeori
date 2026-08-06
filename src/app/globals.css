@@ -214,3 +214,86 @@
     top: 8px;
   }
 }
+
+/* =============================================================================
+   인쇄 — 「업무인계·인수서」를 A4 한 벌로 뽑는다
+   =============================================================================
+
+   심사에서 나오는 질문은 "파일 형식이 무엇이냐"가 아니라
+   **"이걸 그대로 결재에 올릴 수 있느냐"** 다. 종이 한 장이면 답이 된다.
+
+   HWPX 내보내기는 2차예선으로 미뤘다. 이틀이 들고, 실제 한글에서 열리는지
+   검증이 끝나지 않으면 그 이틀이 통째로 날아간다. 브라우저 인쇄는 규칙 몇 줄로
+   되고, 어느 컴퓨터에서도 같은 결과가 나온다.
+
+   화면용 본문에는 print:hidden 을, 인쇄용 문서에는 hidden print:block 을 붙였다.
+   두 벌을 따로 그리는 이유는 print-sheet.tsx 의 주석에 적었다.
+
+   ※ 이 블록은 @layer 밖에 둔다. Tailwind 유틸리티(layered)보다 뒤에 적용되어야
+     화면용 색·크기가 종이에서 그대로 새어 나오지 않는다. */
+@media print {
+  @page {
+    size: A4;
+    margin: 18mm 20mm 20mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000;
+  }
+
+  .print-sheet {
+    font-size: 10.5pt;
+    line-height: 1.6;
+    color: #000;
+  }
+
+  .print-sheet h1 {
+    font-size: 18pt;
+  }
+  .print-sheet h2 {
+    font-size: 11.5pt;
+    /* 제목만 페이지 아래에 남고 본문이 다음 장으로 넘어가면 읽는 사람이 헤맨다. */
+    break-after: avoid;
+  }
+
+  .print-sheet table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .print-sheet th,
+  .print-sheet td {
+    border: 1px solid #000;
+    padding: 4pt 7pt;
+    font-size: 10pt;
+    vertical-align: top;
+  }
+  /* 칸 이름은 굵게. 이 블록이 @layer 밖이라 여기서 정하지 않으면
+     print-sheet.tsx 의 font-bold 유틸리티가 이 규칙에 눌려 아무 일도 안 한다.
+     (unlayered CSS가 layered utility를 이긴다 — 여기서 건드리는 속성은
+      Tailwind 클래스로 못 바꾼다는 뜻이므로, 필요한 것은 여기에 적는다) */
+  .print-sheet th {
+    font-weight: 700;
+  }
+  .print-sheet td {
+    font-weight: 400;
+  }
+
+  /* 표·서명란처럼 짧고 통째로 읽혀야 하는 것만 쪼개지지 않게 한다.
+     본문 항목에까지 걸면 한 쪽을 넘는 항목에서 앞 페이지가 통째로 비어 버린다. */
+  .print-sheet .avoid-break {
+    break-inside: avoid;
+  }
+
+  .print-sheet p {
+    orphans: 2;
+    widows: 2;
+  }
+
+  /* 종이에서 파란 밑줄은 누를 수 없는 장식일 뿐이다. */
+  .print-sheet a {
+    color: #000;
+    text-decoration: none;
+  }
+}
