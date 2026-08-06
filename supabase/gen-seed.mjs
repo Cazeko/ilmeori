@@ -427,6 +427,11 @@ function build(org, works) {
     "-- 평소에는 트리거가 남기는 표다. 시드에서만 예외적으로 직접 넣는다.",
     "-- id는 identity 열이라 값을 주지 않고 시각 순서대로 넣는다.",
     "-- -----------------------------------------------------------------------------",
+    "-- 이력과 열람기록에는 자연키가 없어 on conflict 를 걸 수 없다.",
+    "-- 그대로 두면 시드를 두 번 실행했을 때 전부 두 벌이 된다(실제로 그렇게 됐다).",
+    "-- 그래서 표가 비어 있을 때만 넣는다.",
+    "do $$ begin",
+    "if not exists (select 1 from activity) then",
     "insert into activity (work_id, actor_id, kind, summary, created_at) values",
     rows(
       [...activities]
@@ -436,6 +441,8 @@ function build(org, works) {
             `${q(a.work_id)}, ${a.actor_id ? q(a.actor_id) : "NULL"}, ${q(a.kind)}, ${q(a.summary)}, ${ts(a.created_at)}`,
         ),
     ) + ";",
+    "end if;",
+    "end $$;",
     "",
   );
 
@@ -469,6 +476,8 @@ function build(org, works) {
     "-- -----------------------------------------------------------------------------",
     "-- 10. 열람기록",
     "-- -----------------------------------------------------------------------------",
+    "do $$ begin",
+    "if not exists (select 1 from access_log) then",
     "insert into access_log (work_id, actor_id, kind, created_at) values",
     rows(
       [...accessLogs]
@@ -478,6 +487,8 @@ function build(org, works) {
             `${q(l.work_id)}, ${q(l.actor_id)}, ${q(l.kind)}, ${ts(l.created_at)}`,
         ),
     ) + ";",
+    "end if;",
+    "end $$;",
     "",
   );
 

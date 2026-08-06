@@ -155,14 +155,21 @@ for (const [label, sql] of checks) {
   console.log(`  · force 미적용 표: ${rows[0].unforced || "없음"}`);
 }
 
-// 같은 시드를 두 번 돌려도 안전해야 한다(대시보드에서 실수로 두 번 누를 수 있다)
-await db.exec(dataOnly.replace(/insert into (activity|access_log)[\s\S]*?;\n/g, ""));
-const { rows: again } = await db.query("select count(*)::int as n from work");
-if (again[0].n !== EXPECTED.work) {
-  failed = true;
-  console.log(`  ✗ 두 번 실행하면 업무가 ${again[0].n}건으로 늘어난다`);
-} else {
-  console.log("  ✓ 두 번 실행해도 늘어나지 않는다");
+// 같은 시드를 두 번 돌려도 안전해야 한다. 대시보드에서 실수로 두 번 누를 수 있고,
+// 실제로 그런 일이 일어나 이력이 전부 두 벌이 됐다.
+//
+// 예전에는 여기서 activity·access_log 삽입문을 빼고 돌렸다. 그 두 개가 바로
+// 겹치는 표였으므로, 검사는 통과하는데 실물은 겹치는 상태였다.
+// 빼지 않고 **파일 그대로** 다시 돌린 뒤 모든 표의 행 수를 다시 확인한다.
+await db.exec(dataOnly);
+console.log("\n두 번째 실행 후 행 수");
+for (const [table, expected] of Object.entries(EXPECTED)) {
+  const { rows } = await db.query(`select count(*)::int as n from ${table}`);
+  const ok = rows[0].n === expected;
+  if (!ok) failed = true;
+  console.log(
+    `  ${ok ? "✓" : "✗"} ${table.padEnd(14)} ${rows[0].n}${ok ? "" : ` — ${rows[0].n - expected}건 늘어났다`}`,
+  );
 }
 
 console.log(failed ? "\n실패\n" : "\n전체 통과\n");
