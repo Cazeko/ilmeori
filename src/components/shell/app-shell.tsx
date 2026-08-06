@@ -14,6 +14,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { leaveDemo } from "@/app/login/actions";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
 import type { Profile } from "@/lib/types";
@@ -130,17 +131,21 @@ export function AppShell({
             <span className="block text-body-xs text-gray-60">{departmentName}</span>
           </span>
           <Avatar profile={viewer} />
-          <Link
-            href="/login"
-            data-variant="plain"
-            title="다른 데모 계정으로 바꿔 봅니다"
-            className="flex min-h-9 min-w-9 cursor-pointer items-center justify-center gap-1.5 rounded-sm border border-gray-20 px-2 text-body-xs font-bold text-gray-60 hover:bg-gray-5 sm:px-2.5"
-          >
-            <Repeat aria-hidden className="size-4 sm:size-3.5" />
-            {/* 좁은 화면에서는 아이콘만. 글자까지 두면 검색칸이 눌려 버린다. */}
-            <span className="hidden sm:inline">계정 전환</span>
-            <span className="sr-only sm:hidden">계정 전환</span>
-          </Link>
+          {/* /login으로 가는 링크로 두면 안 된다. proxy가 로그인한 사람을
+              /login에서 곧바로 홈으로 되돌려보내 눌러도 제자리가 된다.
+              계정을 바꾸려면 세션을 실제로 끊어야 하므로 서버 액션을 태운다. */}
+          <form action={leaveDemo}>
+            <button
+              type="submit"
+              title="세션을 끊고 다른 데모 계정으로 들어갑니다"
+              className="flex min-h-9 min-w-9 cursor-pointer items-center justify-center gap-1.5 rounded-sm border border-gray-20 px-2 text-body-xs font-bold text-gray-60 hover:bg-gray-5 sm:px-2.5"
+            >
+              <Repeat aria-hidden className="size-4 sm:size-3.5" />
+              {/* 좁은 화면에서는 아이콘만. 글자까지 두면 검색칸이 눌려 버린다. */}
+              <span className="hidden sm:inline">계정 전환</span>
+              <span className="sr-only sm:hidden">계정 전환</span>
+            </button>
+          </form>
         </div>
       </header>
 

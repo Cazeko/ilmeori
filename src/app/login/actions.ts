@@ -40,6 +40,18 @@ export async function enterAsDemo(formData: FormData) {
   redirect(safeNext(formData.get("next")));
 }
 
+/**
+ * 계정에서 나온다. 데모에서는 "다른 계정으로 바꿔 보기"가 이 동작이다.
+ *
+ * /login으로 가는 링크로는 안 된다. proxy가 로그인한 사람을 /login에서
+ * 곧바로 홈으로 되돌려보내기 때문에, 눌러도 제자리로 돌아온다.
+ * 계정을 바꾸려면 먼저 세션을 실제로 끊어야 한다.
+ *
+ * 데모 진행 상태(ilmeori.state)는 지우지 않는다.
+ * 박준호로 인계를 실행하고 이하람으로 바꿔서 결과를 확인하는 것이
+ * 이 제품의 핵심 시연 동선이라, 계정을 바꿀 때마다 초기화되면 그 동선이 끊긴다.
+ * 처음부터 다시 보려면 인계 화면의 「시연 처음으로」를 쓴다.
+ */
 export async function leaveDemo() {
   const store = await cookies();
   store.delete(DEMO_COOKIE);
