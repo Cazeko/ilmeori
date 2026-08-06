@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 /**
- * 이음(Ieum) — Next.js 설정
+ * 일머리(Ilmeori) — Next.js 설정
  *
  * 보안 헤더는 기획서 7.4의 대응표를 그대로 구현한 것이다.
  * CSP는 nonce 기반으로 src/proxy.ts에서 요청마다 생성해 주입한다(여기서는 정적 헤더만).

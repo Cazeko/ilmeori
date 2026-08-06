@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { publicEnv } from "@/lib/env";
 
 /**
- * 이음(Ieum) — Proxy
+ * 일머리(Ilmeori) — Proxy
  *
  * Next.js 16에서 middleware는 proxy로 이름이 바뀌었고 런타임은 nodejs로 고정된다.
  *

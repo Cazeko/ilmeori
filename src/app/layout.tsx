@@ -3,8 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "이음 — 부서 간 협업 업무공유 플랫폼",
-    template: "%s · 이음",
+    default: "일머리 — 부서 간 협업 업무공유 플랫폼",
+    template: "%s · 일머리",
   },
   description:
     "화성시 공무원이 팀 단위로 업무를 쌓고, 인사이동이 와도 그 기록을 끊김 없이 넘기는 내부 협업 플랫폼",

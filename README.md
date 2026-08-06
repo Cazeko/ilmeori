@@ -1,9 +1,9 @@
-# 이음 (Ieum)
+# 일머리 (Ilmeori)
 
 **부서 간 협업 업무공유 플랫폼**
 2026 화성시 AI·DATA 공모전 지정과제 **N7** · 내부 행정혁신형
 
-> 담당자는 바뀌어도, 업무는 이어집니다.
+> **파일은 넘겨받는데, 일머리는 못 넘겨받습니다.**
 
 ---
 
@@ -153,9 +153,9 @@ npm run check   # typecheck + db:verify + db:test
 ## 프로젝트 구조
 
 ```
-ieum/
+ilmeori/
 ├── docs/
-│   └── 기획서-초안.md
+│   └── 기획서.md
 ├── supabase/
 │   ├── migrations/
 │   │   ├── 0001_schema.sql
