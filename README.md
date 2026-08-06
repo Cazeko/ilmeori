@@ -1,36 +1,196 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 이음 (Ieum)
 
-## Getting Started
+**부서 간 협업 업무공유 플랫폼**
+2026 화성시 AI·DATA 공모전 지정과제 **N7** · 내부 행정혁신형
 
-First, run the development server:
+> 담당자는 바뀌어도, 업무는 이어집니다.
+
+---
+
+## 무엇을 푸는가
+
+화성시 공무원의 업무자료는 **개인 PC와 개인 폴더**에 있다. 협조하려면 파일을 메신저·전화·공문으로 주고받고, 누가 최신본을 갖고 있는지 아무도 확신하지 못한다. 진행상황은 담당자에게 물어봐야만 알 수 있다.
+
+그런데 노션·구글 독스·슬랙 같은 민간 협업도구는 **쓸 수가 없다.** 망분리와 공공자료 외부반출 제한 때문이다.
+
+> 문제의 본질은 *"민간에 이미 있는 것을 또 만드는 것"*이 아니라,
+> **"민간 도구를 쓸 수 없는 조직에는 아직 아무것도 없다"**는 것이다.
+
+그리고 이 취약함은 **인사이동** 때 터진다. 평소에도 업무가 개인에게 묶여 있으니, 담당자가 바뀌면 맥락이 통째로 사라진다. 남는 건 정리 안 된 파일 더미와 떠나기 직전 기억으로 급조한 인계서 한 장이다.
+
+담당자가 바뀌면 민원 처리가 지연되고, 작년의 시행착오를 올해 또 반복한다.
+**이건 공무원의 편의 문제가 아니라 행정 연속성의 문제이며, 곧 시민이 받는 서비스의 품질 문제다.**
+
+## 설계 원리
+
+> **평소 협업의 부산물이 곧 인수인계서가 된다.**
+
+인수인계를 위해 따로 무언가를 쓰게 하지 않는다. 평소의 협업 기록(진행상태·메모·변경이력·문서)이 그대로 인계 자료가 되도록 구조를 짰다.
+
+## 과제 요구사항 대응
+
+| 과제 요구 | 구현 |
+|---|---|
+| 문서·업무 공동편집 | 업무 카드 문서를 **섹션 단위로 분할 편집** + 편집 중 잠금 |
+| 진행상태 관리 | 업무 상태(대기/진행중/검토/완료) + 칸반 보드 |
+| 변경이력 기록 | 모든 사건을 **DB 트리거가 자동 기록** (append-only) |
+| 접근권한 관리 | 업무별 역할(소유/편집/열람)을 **RLS로 DB가 강제** |
+| 실시간 공유 체계 | 변경 즉시 반영 + 접속자 표시 (Supabase Realtime) |
+| 팀 단위 협업 | 업무 보드 · 댓글 · 첨부파일 |
+| 업무 인수인계 | 담당 업무 일괄 이관 + AI 인수인계서 생성 |
+
+---
+
+## 보안
+
+**시제품에는 실제 공문서를 단 한 건도 넣지 않는다.** 배포본의 모든 데이터는 가상이다.
+
+권한은 애플리케이션이 아니라 **데이터베이스가 강제**한다.
+
+- 모든 테이블 RLS `default deny` + `force row level security`
+- 테이블 권한(GRANT)과 행 권한(RLS) **이중 방어**
+- 이력·열람로그는 **INSERT 권한 자체를 부여하지 않는다.** `SECURITY DEFINER` 트리거·RPC만 기록할 수 있다
+- `service_role` 키를 **애플리케이션에서 사용하지 않는다.** 쓰는 순간 RLS 전제가 무너진다
+- 첨부파일은 private 버킷 + 단기 만료 signed URL. 공개 URL이 존재하지 않는다
+- nonce 기반 CSP + HSTS + `X-Frame-Options: DENY` 등 보안 헤더
+- 소속·직급은 본인이 바꿀 수 없다 (부서 변경을 통한 권한 상승 차단)
+
+### 검증
+
+정책이 *존재하는 것*과 *실제로 막는 것*은 다르다. 그래서 실제 Postgres에 사용자를 흉내 내어 접속하는 **행동 테스트 39개**를 짰다.
+
+```bash
+npm run db:test
+```
+
+```
+[2] IDOR — UUID를 알아도 뚫리지 않는다
+[4] 이력 위조 — 감사 기록은 손댈 수 없다
+[5] 권한 상승 — 소속을 바꿔 남의 부서를 엿볼 수 없다
+[6] 섹션 편집 잠금 — DB가 강제한다
+[8] 인수인계 — 제품의 클라이맥스
+...
+39개 통과 · 0개 실패
+```
+
+> 이 테스트가 통과한다는 것은 **애플리케이션 코드에 버그가 있어도 권한 없는 사용자에게 데이터가 나가지 않는다**는 뜻이다.
+
+---
+
+## 기술 스택
+
+| 층 | 선택 |
+|---|---|
+| 프론트/서버 | Next.js 16 (App Router) · React 19 · TypeScript |
+| 데이터 | Supabase — Auth / Postgres + RLS / Realtime / Storage |
+| 스타일 | Tailwind CSS v4 + **KRDS 디자인 토큰** |
+| AI | 인수인계서 생성 (서버 전용, 모델 교체 가능하도록 추상화) |
+| 배포 | Vercel |
+
+### 디자인 시스템
+
+KRDS(대한민국 정부 디자인시스템)의 **토큰을 채택**하되, 전면 준수하지는 않는다.
+
+「디지털 정부서비스 UI/UX 가이드라인」은 법령이 아닌 권고이며 1차 적용 대상은 대국민 서비스다. 이 프로젝트는 로그인 기반 내부 업무 시스템이므로, 대국민 사이트 구조(공식 배너·운영기관 식별자·신청 패턴)를 그대로 적용하면 업무 도구로서 오히려 나빠진다.
+
+체크리스트 자체가 `E(예외)` `N/A(해당없음)` 판정 칸을 두고 있다. 그래서 **취사선택하고 그 판단 근거를 문서화**했다.
+
+- 채택: Pretendard GOV / 본문 17px / 행간 1.5 / 굵기 2단 / KRDS 색상 체계 / 컨테이너 비례 둥글기 / 접근성
+- 미적용: 공식 배너 · 운영기관 식별자 · 대국민형 헤더·푸터 · 다크모드
+
+---
+
+## 개발 환경 설정
+
+### 1. 의존성
+
+```bash
+npm install
+```
+
+### 2. Supabase 프로젝트 연결
+
+1. [supabase.com](https://supabase.com)에서 프로젝트 생성
+2. `.env.example`을 `.env.local`로 복사하고 값 입력
+
+```bash
+cp .env.example .env.local
+```
+
+> ⚠️ `.env.local`은 절대 커밋하지 않는다. 제출물에 깃헙 주소가 포함되므로 키 유출이 가장 현실적인 사고 경로다.
+
+### 3. 마이그레이션 적용
+
+Supabase 대시보드의 SQL Editor에서 순서대로 실행한다.
+
+```
+supabase/migrations/0001_schema.sql     스키마 · 인덱스
+supabase/migrations/0002_rls.sql        권한 · RLS 정책
+supabase/migrations/0003_triggers.sql   이력 자동기록 · 인계 실행 · Storage
+```
+
+적용 전에 로컬에서 먼저 검증할 수 있다. PGlite(Postgres WASM)로 실제 실행해본다.
+
+```bash
+npm run db:verify   # 마이그레이션이 실제로 도는지
+npm run db:test     # RLS가 실제로 막는지 (39개)
+```
+
+### 4. 실행
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 전체 점검
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run check   # typecheck + db:verify + db:test
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 프로젝트 구조
 
-To learn more about Next.js, take a look at the following resources:
+```
+ieum/
+├── docs/
+│   └── 기획서-초안.md
+├── supabase/
+│   ├── migrations/
+│   │   ├── 0001_schema.sql
+│   │   ├── 0002_rls.sql
+│   │   └── 0003_triggers.sql
+│   ├── verify.mjs             마이그레이션 검증 (PGlite)
+│   └── rls.test.mjs           RLS 행동 테스트 39개
+├── src/
+│   ├── app/
+│   │   ├── globals.css        KRDS 기반 디자인 토큰
+│   │   └── layout.tsx
+│   ├── lib/
+│   │   ├── env.ts             환경변수 검증
+│   │   └── supabase/          server / client
+│   ├── styles/
+│   │   └── krds-tokens.css    KRDS 원본 토큰
+│   └── proxy.ts               세션 갱신 · 인증 게이트 · CSP
+├── design/krds/               KRDS 공식 컴포넌트 킷 (참조용, 미커밋)
+└── next.config.ts             보안 헤더
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 일정
 
-## Deploy on Vercel
+| 단계 | 마감 | 범위 |
+|---|---|---|
+| 1차예선 | 8/19 | 업무보드 · 문서 섹션편집 · 이력 · 권한 · AI 인계서 · 배포 |
+| 2차예선 | 8/26 | 동시편집(Yjs) · MFA · 열람로그 · 개인정보 마스킹 |
+| 본선 | 9/2 | 실제 공무원 피드백 반영 · 망분리 온프레미스 전환 설계 |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 참고 자료
+
+- 「2026 화성시 AI·DATA 공모전 신규 24개 과제 설명자료」
+- 「디지털 정부서비스 UI/UX 가이드라인」(2025.08) · 「자체 검증 체크리스트」(2024.11)
+- [KRDS 공식](https://www.krds.go.kr) · [KRDS HTML Component Kit](https://github.com/KRDS-uiux/krds-uiux)

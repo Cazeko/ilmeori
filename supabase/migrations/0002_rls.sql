@@ -144,6 +144,29 @@ alter table handover     force row level security;
 alter table handover_item force row level security;
 
 -- -----------------------------------------------------------------------------
+-- 테이블 권한 (RLS 앞단의 방어층)
+--   RLS는 "어떤 행"을 볼지 정하고, GRANT는 "어떤 동작"을 할 수 있는지 정한다.
+--   둘 다 걸어야 한다. 예컨대 activity에 INSERT 권한 자체를 주지 않으면
+--   설령 정책 실수가 있어도 사용자가 이력을 위조할 수 없다.
+-- -----------------------------------------------------------------------------
+
+grant usage on schema public to authenticated;
+
+grant select on department to authenticated;
+grant select, update on profile to authenticated;
+grant select, insert, update, delete on work, work_member, document, doc_section, attachment to authenticated;
+grant select, insert on doc_version to authenticated;
+grant select, insert, update on comment to authenticated;
+grant select, insert, update on handover to authenticated;
+grant select, insert, delete on handover_item to authenticated;
+
+-- 이력 테이블은 읽기만. 쓰기는 SECURITY DEFINER 트리거·RPC의 몫이다.
+grant select on activity, access_log to authenticated;
+
+-- 익명 사용자에게는 아무것도 주지 않는다.
+revoke all on all tables in schema public from anon;
+
+-- -----------------------------------------------------------------------------
 -- department — 조직도는 전 직원 열람. 수정은 애플리케이션에서 하지 않는다(마이그레이션 전용).
 -- -----------------------------------------------------------------------------
 

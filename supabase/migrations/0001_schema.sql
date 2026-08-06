@@ -8,7 +8,8 @@
 --   3) 이력은 append-only이며 애플리케이션 코드로 우회할 수 없다. → 0003_triggers.sql
 -- =============================================================================
 
-create extension if not exists "pgcrypto";
+-- gen_random_uuid()는 PostgreSQL 13부터 코어에 포함되어 pgcrypto가 필요 없다.
+-- (Supabase는 PG15+ 이므로 안전하다)
 
 -- RLS 보조 함수 전용 스키마. PostgREST에 노출하지 않는다(= 클라이언트가 직접 호출 불가).
 create schema if not exists app;
