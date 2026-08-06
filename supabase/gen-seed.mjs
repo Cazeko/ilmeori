@@ -177,6 +177,20 @@ function q(v) {
 function ts(v) {
   return v === null || v === undefined ? "NULL" : `${q(v)}::timestamptz`;
 }
+
+/**
+ * 편집 잠금 시각만은 고정된 값을 적을 수 없다.
+ *
+ * 잠금은 5분이 지나면 풀린 것으로 본다(app.section_lock_active). 그래서 생성 시각을
+ * 박아 두면 시연 당일에는 반드시 만료되어 있고, 「○○님 편집 중」 배지가 영영 안 보인다.
+ * 목업(src/lib/mock/works.ts)이 화면을 그릴 때마다 1분 전으로 잡는 것과 같은 이유다.
+ *
+ * 시드가 **실행되는 순간**을 기준으로 잡도록 SQL 식을 그대로 내보낸다.
+ * 심사 직전에 초기화를 돌리면 그때부터 5분간 잠긴 화면을 보여 줄 수 있다.
+ */
+function lockTs(v) {
+  return v === null || v === undefined ? "NULL" : "now() - interval '1 minute'";
+}
 function bool(v) {
   return v ? "true" : "false";
 }
@@ -436,7 +450,7 @@ function build(org, works) {
       docSections.map(
         (s) =>
           `${q(s.id)}, ${q(s.document_id)}, ${s.sort_order}, ${q(s.heading)}, ${q(s.body)}, ` +
-          `${s.locked_by ? q(s.locked_by) : "NULL"}, ${ts(s.locked_at)}, ${q(s.updated_by)}, ${ts(s.updated_at)}`,
+          `${s.locked_by ? q(s.locked_by) : "NULL"}, ${lockTs(s.locked_at)}, ${q(s.updated_by)}, ${ts(s.updated_at)}`,
       ),
     ) + "\non conflict (id) do nothing;",
     "",

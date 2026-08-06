@@ -317,9 +317,54 @@ await admin(`update doc_section set locked_at = now() - interval '10 minutes' wh
     r.ok ? `${r.rows[0].n}개 버전` : r.error,
   );
 }
+{
+  // 잠금만 잡았다 푸는 것은 수정이 아니다. 여기서 시각이 밀리면 읽기 화면에
+  // 「이전 사람 이름 · 방금」이라는 있지도 않은 사실이 찍힌다.
+  const before = await admin(
+    `select updated_at, updated_by from doc_section where id = $1`,
+    [sec.id],
+  );
+  await as(kim, `update doc_section set locked_by = $1, locked_at = now() where id = $2`, [kim, sec.id]);
+  await as(kim, `update doc_section set locked_by = null, locked_at = null where id = $1`, [sec.id]);
+  const after = await admin(
+    `select updated_at, updated_by from doc_section where id = $1`,
+    [sec.id],
+  );
+  check(
+    "잠금만 잡았다 풀면 마지막 수정 시각이 밀리지 않는다",
+    before[0].updated_at.getTime() === after[0].updated_at.getTime() &&
+      before[0].updated_by === after[0].updated_by,
+  );
+  const v = await admin(`select count(*)::int as n from doc_version where section_id = $1`, [sec.id]);
+  check("잠금만으로는 새 판도 생기지 않는다", v[0].n === 2, `${v[0].n}개 판`);
+}
+{
+  // 항목을 지운 사실은 남아야 한다. 인수인계 감사에서 「누가 없앴는가」는
+  // 「누가 고쳤는가」만큼 자주 묻는 질문이다.
+  const [tmpSec] = await admin(
+    `insert into doc_section (document_id, heading, body) values ($1, '없어질 항목', '내용') returning id`,
+    [doc.id],
+  );
+  const r = await as(kim, `delete from doc_section where id = $1 returning id`, [tmpSec.id]);
+  check("편집자는 항목을 지울 수 있다", r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+  const log = await admin(
+    `select summary from activity where work_id = $1 and detail->>'deleted' = 'true'`,
+    [workId],
+  );
+  check("항목을 지운 사실이 이력에 남는다", log.length === 1, log[0]?.summary ?? "기록 없음");
+}
+{
+  const r = await as(kim, `update document set title = '이름 바꾼 문서' where id = $1 returning id`, [doc.id]);
+  check("문서 이름을 바꾼다", r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+  const log = await admin(
+    `select summary from activity where work_id = $1 and kind = 'document.updated'`,
+    [workId],
+  );
+  check("문서 이름을 바꾼 사실이 이력에 남는다", log.length === 1, log[0]?.summary ?? "기록 없음");
+}
 
 // ---------------------------------------------------------------------------
-console.log("\n[7] 주인 없는 업무 방지");
+console.log("\n[7] 주인 없는 업무 방지 — 그리고 업무 자체는 지워진다");
 // ---------------------------------------------------------------------------
 check(
   "마지막 소유자는 해제할 수 없다",
@@ -328,9 +373,120 @@ check(
     kim,
   ]),
 );
+{
+  // 0008 이전에는 여기서 막혔다. 업무를 지우면 참여자가 연쇄로 지워지고
+  // 그때 위의 가드가 걸려, 소유자를 아무리 늘려도 **어떤 방법으로도** 지울 수 없었다.
+  // 정책은 허용한다고 적혀 있는데 실행하면 언제나 실패하는 상태였다.
+  const [tmp] = await admin(
+    `insert into work (title, department_id, owner_id, created_by, visibility)
+     values ('지워질 업무', $1, $2, $2, 'private') returning id`,
+    [deptA.id, kim],
+  );
+  await admin(
+    `insert into document (work_id, title, created_by) values ($1, '딸린 문서', $2)`,
+    [tmp.id, kim],
+  );
+  const r = await as(kim, `delete from work where id = $1 returning id`, [tmp.id]);
+  check("소유자는 업무를 지울 수 있다 (연쇄 삭제가 가드에 막히지 않는다)", r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+  const left = await admin(`select count(*)::int as n from work_member where work_id = $1`, [tmp.id]);
+  check("딸린 참여자·문서도 함께 사라진다", left[0].n === 0);
+}
+check(
+  "남은 업무의 마지막 소유자는 여전히 보호된다",
+  await denied(kim, `delete from work_member where work_id = $1 and profile_id = $2 returning work_id`, [
+    workId,
+    kim,
+  ]),
+);
 
 // ---------------------------------------------------------------------------
-console.log("\n[8] 인수인계 — 제품의 클라이맥스");
+console.log("\n[8] 공개 범위 — 편집 권한과 권한 배분 권한은 다르다");
+// ---------------------------------------------------------------------------
+// 이 시점에 workId의 참여자는 김담당=소유, 박협업=열람, 최후임=편집이다.
+check(
+  "편집자는 공개 범위를 바꿀 수 없다",
+  await denied(choi, `update work set visibility = 'city' where id = $1 returning id`, [workId]),
+);
+{
+  // 칸 하나만 막은 것이지 편집 자체를 막은 것이 아니다.
+  // 정책을 소유자로 좁혔다면 이것까지 막혔을 것이고, 그러면 협업 도구가 아니다.
+  const r = await as(choi, `update work set title = '제목 수정' where id = $1 returning id`, [workId]);
+  check("편집자는 다른 칸은 여전히 고칠 수 있다", r.ok && r.rows.length === 1);
+}
+{
+  const r = await as(kim, `update work set visibility = 'city' where id = $1 returning id`, [workId]);
+  check("소유자는 공개 범위를 바꿀 수 있다", r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+}
+{
+  const rows = await admin(`select visibility from work where id = $1`, [workId]);
+  check("바뀐 값이 실제로 저장된다", rows[0]?.visibility === "city");
+}
+// 뒤 시험이 private 전제로 돌아가므로 되돌린다
+await admin(`update work set visibility = 'private' where id = $1`, [workId]);
+
+// ── 같은 표의 다른 칸들 — 정책은 행만 보고 칸은 보지 못한다 ──────────────
+// 아래 넷은 전부 실제로 뚫려 있던 자리다. 부서를 옮기면 남의 과 전원이 문서·대화를
+// 읽게 되는데 이력에는 한 줄도 남지 않았다.
+check(
+  "편집자는 소관 부서를 옮길 수 없다 (다른 과 전체에 열람 권한이 넘어간다)",
+  await denied(choi, `update work set department_id = $1 where id = $2 returning id`, [
+    deptB.id,
+    workId,
+  ]),
+);
+check(
+  "소유자도 소관 부서는 옮길 수 없다 (바꾸는 정상 경로가 없는 값이다)",
+  await denied(kim, `update work set department_id = $1 where id = $2 returning id`, [
+    deptB.id,
+    workId,
+  ]),
+);
+check(
+  "편집자는 주담당을 스스로 가져갈 수 없다 (이력 위조가 된다)",
+  await denied(choi, `update work set owner_id = $1 where id = $2 returning id`, [choi, workId]),
+);
+check(
+  "편집자는 업무를 보관할 수 없다",
+  await denied(choi, `update work set archived_at = now() where id = $1 returning id`, [workId]),
+);
+check(
+  "소유 권한이 없는 사람을 주담당으로 앉힐 수 없다",
+  await denied(kim, `update work set owner_id = $1 where id = $2 returning id`, [park, workId]),
+);
+{
+  // 한 폼으로 여러 칸을 함께 고친다. elsif 사슬이던 시절에는 첫 하나만 남았다.
+  const before = await admin(
+    `select count(*)::int as n from activity where work_id = $1 and kind = 'work.updated'`,
+    [workId],
+  );
+  const r = await as(
+    kim,
+    `update work set title = '제목과 마감을 함께', due_date = '2026-12-31', description = '설명도'
+     where id = $1 returning id`,
+    [workId],
+  );
+  const after = await admin(
+    `select count(*)::int as n from activity where work_id = $1 and kind = 'work.updated'`,
+    [workId],
+  );
+  check(
+    "여러 칸을 함께 고치면 칸마다 이력이 남는다",
+    r.ok && after[0].n - before[0].n === 3,
+    `${after[0].n - before[0].n}줄`,
+  );
+}
+{
+  const r = await as(kim, `update work set archived_at = now() where id = $1 returning id`, [workId]);
+  const log = await admin(
+    `select summary from activity where work_id = $1 order by id desc limit 1`,
+    [workId],
+  );
+  check("보관도 이력에 남는다", r.ok && log[0]?.summary === "업무를 보관했습니다", log[0]?.summary ?? "");
+  await as(kim, `update work set archived_at = null where id = $1`, [workId]);
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n[9] 인수인계 — 제품의 클라이맥스");
 // ---------------------------------------------------------------------------
 const [ho] = await admin(
   `insert into handover (from_profile_id, to_profile_id, status)
@@ -390,9 +546,31 @@ check(
   const r = await as(kim, `select public.execute_handover($1)`, [ho.id]);
   check("완료된 인계는 재실행되지 않는다", !r.ok);
 }
+{
+  // 인수자를 잘못 골라 초안을 만들었을 때 되돌릴 길 — 아무 일도 일어나지 않은 초안은 지운다.
+  const [draft] = await admin(
+    `insert into handover (from_profile_id, to_profile_id, status)
+     values ($1, $2, 'generated') returning id`,
+    [choi, lee],
+  );
+  check(
+    "제3자는 남의 인계를 취소할 수 없다",
+    await denied(kim, `delete from handover where id = $1 returning id`, [draft.id]),
+  );
+  const r = await as(choi, `delete from handover where id = $1 returning id`, [draft.id]);
+  check("실행 전 인계는 인계자가 취소할 수 있다", r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+}
+check(
+  "완료된 인계는 지울 수 없다 (권한이 실제로 옮겨 간 기록이다)",
+  await denied(kim, `delete from handover where id = $1 returning id`, [ho.id]),
+);
+check(
+  "완료된 인계를 되돌려 놓고 지우는 우회도 막힌다",
+  await denied(kim, `update handover set status = 'confirmed' where id = $1 returning id`, [ho.id]),
+);
 
 // ---------------------------------------------------------------------------
-console.log("\n[9] 열람 로그 — 누가 봤는지 남는다");
+console.log("\n[10] 열람 로그 — 누가 봤는지 남는다");
 // ---------------------------------------------------------------------------
 {
   const r = await as(choi, `select public.log_access($1, 'work.viewed')`, [workId]);
@@ -408,7 +586,31 @@ check(
 );
 
 // ---------------------------------------------------------------------------
-console.log("\n[10] 익명 접근");
+console.log("\n[11] GRANT 층 — RLS가 아니라 권한에서 막히는가");
+// ---------------------------------------------------------------------------
+// 아래는 전부 RLS 정책도 없어서 어차피 0행으로 끝난다. 그런데 0행과 42501은 다르다.
+// 0행은 "정책이 지금 막고 있다"이고, 42501은 "이 동작 자체가 이 역할에 없다"이다.
+// 정책은 실수로 열릴 수 있고 권한은 그렇지 않다. 그래서 두 겹을 다 확인한다.
+for (const [name, sql, params] of [
+  ["부서를 지울 수", `delete from department where id = $1`, [deptB.id]],
+  ["프로필을 지울 수", `delete from profile where id = $1`, [lee]],
+  ["대화를 진짜로 지울 수", `delete from comment where work_id = $1`, [workId]],
+  [
+    "인계 대상의 이관 표시를 직접 켤 수",
+    `update handover_item set transferred = true where handover_id = $1`,
+    [ho.id],
+  ],
+]) {
+  const r = await as(kim, sql, params);
+  check(
+    `${name} 없다 (권한층에서 차단)`,
+    !r.ok && /permission denied|42501/i.test(r.error ?? ""),
+    r.ok ? "정책만 막고 있다 — GRANT가 열려 있다" : "",
+  );
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n[12] 익명 접근");
 // ---------------------------------------------------------------------------
 {
   await db.exec("set role anon;");
