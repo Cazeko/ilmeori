@@ -54,3 +54,6 @@ secrets/
 # 빌드·캐시
 .next/
 .turbo/
+
+# 비밀번호를 채워 넣은 시드 사본. 붙여넣기용이며 절대 커밋하지 않는다.
+supabase/seed/*.local.sql
