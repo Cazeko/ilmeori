@@ -1,4 +1,4 @@
-import { changeStatus } from "@/app/(app)/works/[id]/actions";
+import { changeStatus } from "@/lib/actions/works";
 import { cn } from "@/lib/cn";
 import { STATUS_LABEL, type WorkStatus } from "@/lib/types";
 

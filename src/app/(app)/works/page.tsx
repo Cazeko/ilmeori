@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, Filter } from "lucide-react";
+import { AlertTriangle, Filter, Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { KanbanBoard } from "@/components/work/kanban-board";
 import { PageHeader } from "@/components/ui/page-header";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { ActionFeedback } from "@/components/ui/feedback";
 import { Field, Input, Select } from "@/components/ui/field";
+import { Notice } from "@/components/ui/notice";
 import { getDepartmentTree, listWorks } from "@/lib/data";
+import { canMutate } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
 
 export const metadata: Metadata = { title: "업무 보드" };
@@ -26,6 +29,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
   const deptParam = typeof sp.dept === "string" ? sp.dept : "";
   const mine = sp.mine === "1";
   const overdueOnly = sp.overdue === "1";
+  const archived = sp.archived === "1";
 
   const tree = await getDepartmentTree();
   const knownDept = tree.some(
@@ -33,7 +37,13 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
   );
   const departmentId = knownDept ? deptParam : undefined;
 
-  const works = await listWorks(viewer, { q, departmentId, mine, overdueOnly });
+  const works = await listWorks(viewer, {
+    q,
+    departmentId,
+    mine,
+    overdueOnly,
+    archived,
+  });
   const allVisible = await listWorks(viewer, { q, departmentId });
   const overdueCount = allVisible.filter((w) => w.derived === "overdue").length;
 
@@ -44,6 +54,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
     if (departmentId) params.set("dept", departmentId);
     if (mine) params.set("mine", "1");
     if (overdueOnly) params.set("overdue", "1");
+    if (archived) params.set("archived", "1");
     for (const [k, v] of Object.entries(patch)) {
       if (v === null) params.delete(k);
       else params.set(k, v);
@@ -52,10 +63,29 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
     return s ? `/works?${s}` : "/works";
   };
 
+  // 보관함은 다른 조건과 섞이면 "지연된 보관 업무"처럼 뜻이 흐려진다.
+  // 고를 때 나머지를 비우고, 나머지를 고르면 보관함에서 나온다.
   const chips = [
-    { label: "전체", href: linkWith({ mine: null, overdue: null }), on: !mine && !overdueOnly },
-    { label: "내 업무", href: linkWith({ mine: "1", overdue: null }), on: mine && !overdueOnly },
-    { label: "지연만", href: linkWith({ overdue: "1", mine: null }), on: overdueOnly },
+    {
+      label: "전체",
+      href: linkWith({ mine: null, overdue: null, archived: null }),
+      on: !mine && !overdueOnly && !archived,
+    },
+    {
+      label: "내 업무",
+      href: linkWith({ mine: "1", overdue: null, archived: null }),
+      on: mine && !overdueOnly && !archived,
+    },
+    {
+      label: "지연만",
+      href: linkWith({ overdue: "1", mine: null, archived: null }),
+      on: overdueOnly && !archived,
+    },
+    {
+      label: "보관함",
+      href: linkWith({ archived: "1", mine: null, overdue: null }),
+      on: archived,
+    },
   ];
 
   return (
@@ -63,7 +93,23 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
       <PageHeader
         title="업무 보드"
         description="내가 볼 수 있는 업무만 나타납니다. 참여자로 등록되었거나, 공개 범위가 내 소속을 포함하는 업무입니다."
+        action={
+          canMutate ? (
+            <ButtonLink href="/works/new">
+              <Plus aria-hidden className="size-4" />새 업무
+            </ButtonLink>
+          ) : null
+        }
       />
+
+      <ActionFeedback msg={sp.msg} className="mb-4" />
+
+      {archived ? (
+        <Notice tone="info" title="보관함을 보고 있습니다" className="mb-4">
+          보관은 삭제가 아닙니다. 문서·대화·이력·첨부는 그대로 있고, 소유자가 보관을
+          해제하면 원래 목록으로 돌아옵니다.
+        </Notice>
+      ) : null}
 
       {/* ── 조건 ─────────────────────────────────────────────────────────── */}
       <form
@@ -71,6 +117,11 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
         action="/works"
         className="mb-4 rounded-md border border-gray-10 bg-white p-4"
       >
+        {/* 칸으로 그리지 않은 조건은 제출할 때 사라진다.
+            보관함에서 검색하면 보관함 밖으로 튕겨 나가고, 그건 고장으로 보인다. */}
+        {overdueOnly ? <input type="hidden" name="overdue" value="1" /> : null}
+        {archived ? <input type="hidden" name="archived" value="1" /> : null}
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <Field
             id="works-q"

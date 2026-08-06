@@ -50,6 +50,24 @@ const nextConfig: NextConfig = {
   // 심사 당일 런타임에서 터지는 것보다 낫다.
   typescript: { ignoreBuildErrors: false },
 
+  experimental: {
+    serverActions: {
+      /**
+       * 첨부파일은 서버 액션의 요청 본문으로 올라온다. 기본 상한은 1MB라
+       * hwp 한 개도 못 올린다.
+       *
+       * 4.5MB로 잡은 것은 우리가 고른 값이 아니라 **배포 환경의 천장**이다.
+       * Vercel의 서버리스 함수는 요청 본문을 4.5MB까지만 받는다. 여기서 더 올려
+       * 봐야 배포하면 막히므로, 막히는 자리를 그대로 적어 두는 편이 낫다.
+       * 애플리케이션은 multipart 부대비용을 감안해 4MB에서 먼저 거절한다.
+       *
+       * 더 큰 파일이 필요해지면 브라우저가 Storage로 직접 올리는 경로(signed upload
+       * URL)로 바꿔야 한다. 그때는 자바스크립트가 필요해진다.
+       */
+      bodySizeLimit: "4.5mb",
+    },
+  },
+
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

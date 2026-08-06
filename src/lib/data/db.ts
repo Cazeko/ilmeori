@@ -15,6 +15,7 @@ import {
   type Handover,
   type MemberWithProfile,
   type Profile,
+  type ProfileWithDepartment,
   type Work,
   type WorkListItem,
 } from "@/lib/types";
@@ -34,7 +35,7 @@ import type { HandoverView, WorkFilter } from "./types";
  *
  * 그래서 이 파일은 "가져와서 화면이 쓰는 모양으로 조립"만 한다.
  * 안 보여야 할 것이 보이면 그건 이 파일이 아니라 정책의 문제이고,
- * 그 정책은 supabase/rls.test.mjs 39개가 지키고 있다.
+ * 그 정책은 supabase/rls.test.mjs 59개가 지키고 있다.
  *
  * ── 필터를 자바스크립트로 거는 이유 ────────────────────────────────────────
  *
@@ -62,8 +63,37 @@ const WORK_SELECT = `
   attachment_count:attachment ( count )
 `;
 
+/**
+ * 지운 대화는 세지 않는다.
+ *
+ * 대화 삭제는 행을 지우는 것이 아니라 deleted_at 에 시각을 적는 것이라(soft delete),
+ * 그냥 세면 지운 글까지 들어간다. 그러면 카드에는 「대화 5」인데 탭을 열면 4개인
+ * 상태가 되고, 목업 구현은 애초에 지운 것을 빼고 세므로 두 구현이 서로 다른 말을 한다.
+ *
+ * 임베드한 관계에는 별칭 접두사로 필터를 건다. !inner 가 아니므로 대화가 하나도 없는
+ * 업무가 목록에서 빠지지는 않는다(실제 프로젝트에서 확인했다).
+ */
+function withoutDeletedComments<T extends { is: (c: string, v: null) => T }>(
+  query: T,
+): T {
+  return query.is("comment_count.deleted_at", null);
+}
+
 const PROFILE_SELECT =
   "id, name, department_id, position, email, avatar_url, is_active, is_demo";
+
+/**
+ * 주소에서 온 id가 uuid 모양인가.
+ *
+ * 이 검사가 없으면 /works/새업무 같은 주소가 404가 아니라 **500**이 된다.
+ * Postgres는 uuid 칸에 아무 문자열이나 오면 22P02로 질의를 거절하고,
+ * 그 오류가 조회층을 뚫고 올라가 오류 화면이 뜬다.
+ *
+ * 없는 업무와 모양이 틀린 id는 사용자에게 같은 것이다 — 둘 다 "그런 건 없다"이다.
+ * 목업 구현은 find로 찾으므로 애초에 이 문제가 없고, 그래서 두 구현의 동작이
+ * 여기서 갈렸다. 이쪽을 목업에 맞춘다.
+ */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** PostgREST의 count 집계는 [{count: n}] 모양으로 온다. */
 function countOf(v: unknown): number {
@@ -148,7 +178,10 @@ function byUrgency(a: WorkListItem, b: WorkListItem) {
 
 export async function listWorks(viewer: Profile, filter: WorkFilter = {}) {
   const supabase = await createClient();
-  let query = supabase.from("work").select(WORK_SELECT).is("archived_at", null);
+  let query = withoutDeletedComments(supabase.from("work").select(WORK_SELECT));
+  query = filter.archived
+    ? query.not("archived_at", "is", null)
+    : query.is("archived_at", null);
   if (filter.departmentId) query = query.eq("department_id", filter.departmentId);
 
   const { data, error } = await query;
@@ -172,14 +205,14 @@ export async function getWork(
   _viewer: Profile,
   id: string,
 ): Promise<WorkListItem | null> {
+  if (!UUID.test(id)) return null;
+
   const supabase = await createClient();
   // 볼 수 없는 업무는 RLS가 0행으로 돌려준다.
   // 없는 것과 못 보는 것이 화면에서 구분되지 않아야 하므로 그대로 null을 준다.
-  const { data, error } = await supabase
-    .from("work")
-    .select(WORK_SELECT)
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } = await withoutDeletedComments(
+    supabase.from("work").select(WORK_SELECT).eq("id", id),
+  ).maybeSingle();
   if (error) throw error;
   return data ? toListItem(data as unknown as RawWork) : null;
 }
@@ -192,6 +225,8 @@ export async function getWorkDocument(workId: string): Promise<{
   document: Document | null;
   sections: DocSectionWithEditor[];
 }> {
+  if (!UUID.test(workId)) return { document: null, sections: [] };
+
   const supabase = await createClient();
   const { data: document, error } = await supabase
     .from("document")
@@ -221,6 +256,8 @@ export async function getWorkDocument(workId: string): Promise<{
 }
 
 export async function getActivities(workId: string): Promise<ActivityWithActor[]> {
+  if (!UUID.test(workId)) return [];
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("activity")
@@ -232,6 +269,8 @@ export async function getActivities(workId: string): Promise<ActivityWithActor[]
 }
 
 export async function getComments(workId: string): Promise<CommentWithAuthor[]> {
+  if (!UUID.test(workId)) return [];
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("comment")
@@ -246,6 +285,8 @@ export async function getComments(workId: string): Promise<CommentWithAuthor[]> 
 export async function getAttachments(
   workId: string,
 ): Promise<AttachmentWithUploader[]> {
+  if (!UUID.test(workId)) return [];
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("attachment")
@@ -254,6 +295,22 @@ export async function getAttachments(
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as unknown as AttachmentWithUploader[];
+}
+
+/** 내려받기 한 건. 볼 수 없는 업무의 첨부는 RLS가 애초에 돌려주지 않는다. */
+export async function getAttachment(
+  id: string,
+): Promise<AttachmentWithUploader | null> {
+  if (!UUID.test(id)) return null;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("attachment")
+    .select(`*, uploader:uploaded_by ( ${PROFILE_SELECT} )`)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as AttachmentWithUploader) ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -268,6 +325,28 @@ export async function getDepartments(): Promise<Department[]> {
     .order("sort_order");
   if (error) throw error;
   return (data ?? []) as Department[];
+}
+
+/**
+ * 참여자로 부를 수 있는 사람들.
+ *
+ * 재직자는 전 직원이 볼 수 있다(profile_select 정책). 부서 경계를 넘는 협업이
+ * 이 제품의 목적이므로, 다른 과 사람을 찾을 수 없으면 제품이 성립하지 않는다.
+ * 퇴직·휴직자는 정책이 애초에 돌려주지 않는다.
+ */
+export async function listProfiles(): Promise<ProfileWithDepartment[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profile")
+    .select(`${PROFILE_SELECT}, department:department_id ( name )`)
+    .order("name");
+  if (error) throw error;
+  return ((data ?? []) as unknown as Array<
+    Profile & { department: { name: string } | null }
+  >).map(({ department, ...p }) => ({
+    ...p,
+    department_name: department?.name ?? null,
+  }));
 }
 
 export async function getDepartment(id: string): Promise<Department | null> {
@@ -442,6 +521,8 @@ export async function getHandover(
   viewer: Profile,
   id: string,
 ): Promise<HandoverView | null> {
+  if (!UUID.test(id)) return null;
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("handover")
@@ -478,6 +559,8 @@ export async function listAccessLogs(
 export async function getAccessLogsForWork(
   workId: string,
 ): Promise<AccessLogWithActor[]> {
+  if (!UUID.test(workId)) return [];
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("access_log")

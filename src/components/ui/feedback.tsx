@@ -1,0 +1,32 @@
+import { Notice } from "@/components/ui/notice";
+import { readFeedback } from "@/lib/actions/feedback";
+
+/**
+ * 방금 한 일이 어떻게 됐는지 알려 주는 줄.
+ *
+ * 서버 액션은 끝나면 ?msg=<코드>를 붙여 원래 화면으로 돌려보낸다.
+ * 여기서 그 코드를 문구로 바꿔 그린다. 스크립트가 없어도 읽히고,
+ * 새로고침해도 남고, 그대로 링크로 보낼 수도 있다.
+ *
+ * 성공 알림에 role="status"를 두는 이유는, 화면을 보지 않는 사용자에게는
+ * "저장됐다"가 아무 데도 나타나지 않기 때문이다. 실패는 Notice가 role="alert"로
+ * 먼저 읽어 준다.
+ */
+export function ActionFeedback({
+  msg,
+  className,
+}: {
+  msg: unknown;
+  className?: string;
+}) {
+  const feedback = readFeedback(msg);
+  if (!feedback) return null;
+
+  const quiet = feedback.tone === "success" || feedback.tone === "info";
+
+  return (
+    <div role={quiet ? "status" : undefined} className={className}>
+      <Notice tone={feedback.tone}>{feedback.text}</Notice>
+    </div>
+  );
+}

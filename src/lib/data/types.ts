@@ -16,6 +16,11 @@ export type WorkFilter = {
   q?: string;
   /** 기한이 지난 미완료 업무만 */
   overdueOnly?: boolean;
+  /**
+   * 보관한 업무만 볼 것인가. 기본은 보관하지 않은 것만이다.
+   * 보관은 삭제가 아니므로 반드시 다시 찾아갈 길이 있어야 한다.
+   */
+  archived?: boolean;
 };
 
 export type HandoverView = {

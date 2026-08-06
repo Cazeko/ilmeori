@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getActivities, getAttachments, getWorkDocument, type HandoverView } from "@/lib/data";
-import { formatDate, formatDueLabel } from "@/lib/format";
+import { formatDate, formatDueLabel, josa } from "@/lib/format";
 import { STATUS_LABEL, VISIBILITY_LABEL } from "@/lib/types";
 
 /**
@@ -183,7 +183,11 @@ export async function buildHandoverDraft(
     );
   }
   notes.push(
-    `인계자 ${view.from.name} ${view.from.position}는 인계 후에도 열람 권한을 유지합니다. 확인이 필요한 사항은 문의할 수 있습니다.`,
+    `인계자 ${view.from.name} ${view.from.position}${josa(
+      view.from.position ?? view.from.name,
+      "은",
+      "는",
+    )} 인계 후에도 열람 권한을 유지합니다. 확인이 필요한 사항은 문의할 수 있습니다.`,
   );
 
   const blocks: DraftBlock[] = [

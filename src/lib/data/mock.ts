@@ -41,6 +41,7 @@ import {
   type Handover,
   type MemberWithProfile,
   type Profile,
+  type ProfileWithDepartment,
   type Work,
   type WorkListItem,
 } from "@/lib/types";
@@ -190,7 +191,7 @@ export async function listWorks(viewer: Profile, filter: WorkFilter = {}) {
   const q = filter.q?.trim().toLowerCase();
 
   return works
-    .filter((w) => !w.archived_at)
+    .filter((w) => (filter.archived ? Boolean(w.archived_at) : !w.archived_at))
     .map((w) => toListItem(w, state))
     .filter((w) => canRead(w, viewer, w.members))
     .filter((w) => !filter.departmentId || w.department_id === filter.departmentId)
@@ -275,8 +276,24 @@ export async function getAttachments(workId: string): Promise<AttachmentWithUplo
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
+/** 내려받기 한 건. 목업에는 실제 파일이 없으므로 메타데이터만 있다. */
+export async function getAttachment(
+  id: string,
+): Promise<AttachmentWithUploader | null> {
+  const a = attachments.find((x) => x.id === id);
+  return a ? { ...a, uploader: requireProfile(a.uploaded_by) } : null;
+}
+
 export async function getDepartments(): Promise<Department[]> {
   return departments;
+}
+
+/** 참여자로 부를 수 있는 사람들. DB 구현과 같은 순서(이름순)로 돌려준다. */
+export async function listProfiles(): Promise<ProfileWithDepartment[]> {
+  return profiles
+    .filter((p) => p.is_active)
+    .map(withDept)
+    .sort((a, b) => a.name.localeCompare(b.name, "ko"));
 }
 
 export async function getDepartment(id: string): Promise<Department | null> {

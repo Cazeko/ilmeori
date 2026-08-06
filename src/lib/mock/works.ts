@@ -420,8 +420,13 @@ export const docSections: DocSection[] = [
     heading: "2. 부서별 역할 분담",
     body: "· 전국체전추진단 — 종합 기획, 대한체육회 협의, 개·폐회식\n· 체육진흥과 — 경기장 8개소 개보수, 시설 실사 대응\n· 교통정책과 — 선수단 수송, 대회 기간 교통 통제\n· 대중교통과 — 셔틀 노선 편성, 트램 연계\n· 안전정책과 — 다중운집 안전관리, 재난 대응\n· 공보실 — 홍보 로드맵, 미디어센터\n· 예산재정과 — 사업별 재원 배분 검토",
     // 지금 누군가 편집 중인 섹션. 잠금은 DB 정책이 강제한다.
+    //
+    // 고정된 시각을 적을 수 없다. 잠금은 5분이 지나면 풀린 것으로 보므로
+    // (app.section_lock_active / sectionLockActive) 박아 둔 시각은 시연 당일에
+    // 반드시 만료되어 있고, 「편집 중」 배지가 영영 안 보인다.
+    // 화면을 열 때마다 1분 전으로 잡아 잠금이 살아 있는 상태를 보여 준다.
     locked_by: person("정유진").id,
-    locked_at: "2026-08-06T09:12:00+09:00",
+    locked_at: new Date(Date.now() - 60_000).toISOString(),
     updated_by: person("정유진").id,
     updated_at: "2026-08-05T17:41:00+09:00",
   },
@@ -747,7 +752,9 @@ export const handovers: Handover[] = [
     // 초안까지 만들어 둔 상태. 데모에서 '확인 → 실행'을 눌러 볼 수 있게 한다.
     status: "generated",
     document_draft: null, // 화면에서 서식 구조로 조립한다
-    ai_model: "claude-opus-5",
+    // 무엇으로 만들었는지를 적는 감사용 칸이다. handover-draft.ts 는 쌓인 기록을
+    // 서식 순서대로 조립하는 규칙 기반 코드이고 어떤 모델도 부르지 않는다.
+    ai_model: "rule-based/v1",
     generated_at: "2026-08-06T08:40:00+09:00",
     confirmed_at: null,
     completed_at: null,

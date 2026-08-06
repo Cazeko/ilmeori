@@ -212,6 +212,28 @@ export interface DocSectionWithEditor extends DocSection {
   locked_by_profile: Profile | null;
 }
 
+/**
+ * 편집 잠금이 아직 살아 있는가.
+ *
+ * supabase/migrations/0002_rls.sql 의 app.section_lock_active()와 **같은 규칙**이다.
+ * 두 곳에 같은 규칙이 있는 것은 위험하지만, 여기서는 필요하다.
+ * 화면이 잠금을 판단하지 않으면 브라우저를 닫고 간 사람의 잠금이 영원히 남아
+ * "○○님 편집 중"이 몇 달째 붙어 있게 된다. 실제로 잠기는 것은 DB이고,
+ * 여기는 그 결과를 미리 그려 보여 줄 뿐이다.
+ *
+ * 시각 계산을 서버에서 하는 이유는 derivedStatus와 같다.
+ * 브라우저 시계가 틀어져 있으면 잠긴 것이 안 잠긴 것으로 보인다.
+ */
+export const SECTION_LOCK_MINUTES = 5;
+
+export function sectionLockActive(
+  s: Pick<DocSection, "locked_by" | "locked_at">,
+): boolean {
+  if (!s.locked_by || !s.locked_at) return false;
+  const age = Date.now() - new Date(s.locked_at).getTime();
+  return age < SECTION_LOCK_MINUTES * 60_000;
+}
+
 // ---------------------------------------------------------------------------
 // 표시용 레이블 — 화면 전체에서 같은 말을 쓰기 위한 단일 출처
 // ---------------------------------------------------------------------------

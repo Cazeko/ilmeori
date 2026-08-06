@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  Archive,
   Building2,
   CalendarClock,
   ChevronRight,
@@ -9,26 +10,25 @@ import {
   FileText,
   History,
   MessageSquare,
-  Paperclip,
+  PencilLine,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { StatusBadge } from "@/components/status-badge";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { PersonChip } from "@/components/ui/avatar";
+import { ButtonLink } from "@/components/ui/button";
+import { ActionFeedback } from "@/components/ui/feedback";
+import { Notice } from "@/components/ui/notice";
 import { TabNav, type TabItem } from "@/components/ui/tab-nav";
 import { ActivityTimeline } from "@/components/work/activity-timeline";
+import { AttachmentPanel } from "@/components/work/attachment-panel";
 import { CommentThread } from "@/components/work/comment-thread";
 import { DocSections } from "@/components/work/doc-sections";
 import { MemberList } from "@/components/work/member-list";
 import { PreviousYearCallout } from "@/components/work/previous-year-callout";
 import { StatusChanger } from "@/components/work/status-changer";
-import {
-  formatBytes,
-  formatDate,
-  formatDateTime,
-  formatDueLabel,
-} from "@/lib/format";
+import { formatDate, formatDateTime, formatDueLabel } from "@/lib/format";
 import {
   getAccessLogsForWork,
   getActivities,
@@ -36,9 +36,11 @@ import {
   getComments,
   getWork,
   getWorkDocument,
+  listProfiles,
   logAccess,
   roleIn,
 } from "@/lib/data";
+import { canMutate } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
 import { ACCESS_KIND_LABEL, VISIBILITY_LABEL } from "@/lib/types";
 
@@ -84,7 +86,24 @@ export default async function WorkDetailPage({
 
   const tab = parseTab(sp.tab);
   const role = roleIn(work, viewer);
-  const canWrite = role === "owner" || role === "editor";
+  // 화면에서 감추는 것은 안내이지 통제가 아니다. 실제로 막는 것은 서버 액션과 DB다.
+  const canEdit = role === "owner" || role === "editor";
+
+  /**
+   * 진행 상태만 데모 모드에서도 살아 있다.
+   *
+   * 데모의 변경분은 쿠키에 담기는데(src/lib/demo-state.ts) 업무 하나, 문서 한 판,
+   * 참여자 목록을 담기 시작하면 4KB를 넘고 브라우저가 조용히 통째로 버린다.
+   * 상태 한 칸은 그 안에 들어가고, 심사 시연 동선이 여기에 걸려 있다.
+   * (env.ts의 canMutate 주석과 works.ts의 changeStatus 데모 분기가 같은 말을 한다)
+   */
+  const canChangeStatus = canEdit;
+  const canWrite = canMutate && canEdit;
+  const canOwn = canMutate && role === "owner";
+
+  // 문서 항목을 편집 중인지는 주소에 있다. 그래야 새로고침해도 편집칸이 남고,
+  // 잠금을 쥔 채로 화면을 떠났다가 뒤로 가기로 돌아와도 이어서 쓸 수 있다.
+  const editingId = typeof sp.edit === "string" ? sp.edit : null;
 
   // 한 화면에 필요한 것을 한꺼번에 가져온다. 순서대로 기다리면 왕복이 그만큼 쌓인다.
   const [{ document: doc, sections }, comments, activities, attachments, accessLogs] =
@@ -95,6 +114,11 @@ export default async function WorkDetailPage({
       getAttachments(work.id),
       getAccessLogsForWork(work.id),
     ]);
+
+  // 부를 수 있는 사람 목록은 참여자 탭에서 소유자에게만 필요하다.
+  // 다른 탭을 볼 때마다 전 직원을 읽어 올 이유가 없다.
+  const candidates =
+    tab === "people" && canOwn ? await listProfiles() : [];
 
   // 누가 열어 봤는지 남긴다. 사용자에게는 이 표에 쓰기 권한이 없고,
   // 서버의 지정된 함수만 기록할 수 있다.
@@ -150,6 +174,15 @@ export default async function WorkDetailPage({
         </ol>
       </nav>
 
+      <ActionFeedback msg={sp.msg} className="mb-4" />
+
+      {work.archived_at ? (
+        <Notice tone="info" title="보관된 업무입니다" className="mb-4">
+          업무 보드의 기본 목록에는 나타나지 않습니다. 문서·대화·이력·첨부는 그대로
+          있고, 소유자가 보관을 해제하면 다시 목록에 돌아옵니다.
+        </Notice>
+      ) : null}
+
       {/* ── 머리 ─────────────────────────────────────────────────────────── */}
       <header className="mb-5">
         <div className="flex flex-wrap items-center gap-2">
@@ -157,11 +190,29 @@ export default async function WorkDetailPage({
           <span className="text-body-xs text-gray-60">
             {work.fiscal_year}년도 · {VISIBILITY_LABEL[work.visibility]}
           </span>
+          {work.archived_at ? (
+            <span className="inline-flex items-center gap-1 rounded-xs bg-gray-5 px-1.5 py-0.5 text-body-xs font-bold text-gray-60">
+              <Archive aria-hidden className="size-3" />
+              보관됨
+            </span>
+          ) : null}
         </div>
 
-        <h1 className="mt-2.5 text-h2 leading-snug font-bold break-keep text-gray-90">
-          {work.title}
-        </h1>
+        <div className="mt-2.5 flex flex-wrap items-start justify-between gap-3">
+          <h1 className="text-h2 leading-snug font-bold break-keep text-gray-90">
+            {work.title}
+          </h1>
+          {canWrite ? (
+            <ButtonLink
+              href={`/works/${work.id}/edit`}
+              variant="secondary"
+              size="sm"
+            >
+              <PencilLine aria-hidden className="size-4" />
+              업무 고치기
+            </ButtonLink>
+          ) : null}
+        </div>
 
         {work.description ? (
           <p className="mt-3 max-w-3xl text-body leading-relaxed break-keep text-gray-70">
@@ -210,7 +261,7 @@ export default async function WorkDetailPage({
           ) : null}
         </dl>
 
-        {canWrite ? (
+        {canChangeStatus ? (
           <div className="mt-5">
             <StatusChanger workId={work.id} current={work.status} />
           </div>
@@ -224,7 +275,15 @@ export default async function WorkDetailPage({
 
           <div className="pt-5">
             {tab === "doc" ? (
-              <DocSections document={doc} sections={sections} />
+              <DocSections
+                workId={work.id}
+                document={doc}
+                sections={sections}
+                viewer={viewer}
+                canWrite={canWrite}
+                canDelete={canOwn}
+                editingId={editingId}
+              />
             ) : null}
 
             {tab === "talk" ? (
@@ -295,10 +354,14 @@ export default async function WorkDetailPage({
 
             {tab === "people" ? (
               <MemberList
+                workId={work.id}
                 members={work.members}
                 visibility={work.visibility}
                 departmentName={work.department.name}
                 viewer={viewer}
+                leadId={work.owner_id}
+                canManage={canOwn}
+                candidates={candidates}
               />
             ) : null}
           </div>
@@ -315,40 +378,11 @@ export default async function WorkDetailPage({
             />
           ) : null}
 
-          <Card>
-            <CardHeader title="첨부" as="h2" />
-            {attachments.length > 0 ? (
-              <ul className="divide-y divide-gray-5">
-                {attachments.map((a) => (
-                  <li key={a.id} className="px-4 py-3">
-                    <p className="flex items-start gap-2">
-                      <Paperclip
-                        aria-hidden
-                        className="mt-0.5 size-3.5 shrink-0 text-gray-40"
-                      />
-                      <span className="min-w-0 text-body-sm font-bold break-all text-gray-80">
-                        {a.file_name}
-                      </span>
-                    </p>
-                    <p className="mt-1 pl-5.5 text-body-xs text-gray-60">
-                      {a.uploader.name} · {formatBytes(a.byte_size)} ·{" "}
-                      {formatDateTime(a.created_at)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <CardBody>
-                <p className="text-body-sm text-gray-60">첨부된 파일이 없습니다.</p>
-              </CardBody>
-            )}
-            <div className="border-t border-gray-10 bg-gray-5 px-4 py-2.5">
-              <p className="text-body-xs leading-relaxed text-gray-60">
-                파일은 공개 URL이 없는 비공개 저장소에 있습니다. 내려받을 때마다
-                권한을 확인하고 짧은 유효기간의 링크를 발급합니다.
-              </p>
-            </div>
-          </Card>
+          <AttachmentPanel
+            workId={work.id}
+            attachments={attachments}
+            canWrite={canWrite}
+          />
 
           <Card>
             <CardHeader title="참여자" as="h2" />
@@ -358,7 +392,13 @@ export default async function WorkDetailPage({
                   <PersonChip
                     profile={m.profile}
                     size="sm"
-                    sub={m.role === "owner" ? "주담당" : undefined}
+                    sub={
+                      m.profile_id === work.owner_id
+                        ? "주담당"
+                        : m.role === "owner"
+                          ? "소유"
+                          : undefined
+                    }
                   />
                 </li>
               ))}

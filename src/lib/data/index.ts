@@ -34,6 +34,9 @@ export const getWorkDocument = (workId: string) => impl.getWorkDocument(workId);
 export const getActivities = (workId: string) => impl.getActivities(workId);
 export const getComments = (workId: string) => impl.getComments(workId);
 export const getAttachments = (workId: string) => impl.getAttachments(workId);
+export const getAttachment = (id: string) => impl.getAttachment(id);
+
+export const listProfiles = () => impl.listProfiles();
 
 export const getDepartments = () => impl.getDepartments();
 export const getDepartment = (id: string) => impl.getDepartment(id);

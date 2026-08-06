@@ -80,6 +80,27 @@ export function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
+/**
+ * 조사를 받침 보고 고른다.
+ *
+ * DB 쪽에는 app.josa()가 이미 있다(0006_activity_wording.sql). 화면에서 이력이 아닌
+ * 문장을 조립할 때는 그것을 부를 수 없어 같은 규칙을 여기에 둔다.
+ *
+ * "최민재 팀장로 바뀌었습니다"는 읽는 사람이 한 번 멈추게 만든다.
+ * 「을(를)」식 회피 표기는 그보다 낫지만, 공문서를 다루는 화면에서 괄호가 늘어나는 것도
+ * 좋지 않다. 받침만 보면 되는 일이라 규칙으로 처리한다.
+ *
+ * 판정은 마지막 **한글 음절**로 한다. 숫자나 영문으로 끝나면 판정이 갈리므로
+ * (예: 3은/3는) 받침 없는 쪽으로 둔다 — 틀려도 덜 어색한 쪽이다.
+ */
+export function josa(word: string, withJong: string, withoutJong: string): string {
+  const last = word.trim().at(-1) ?? "";
+  const code = last.charCodeAt(0);
+  const isHangulSyllable = code >= 0xac00 && code <= 0xd7a3;
+  if (!isHangulSyllable) return withoutJong;
+  return (code - 0xac00) % 28 === 0 ? withoutJong : withJong;
+}
+
 const numberFmt = new Intl.NumberFormat("ko-KR");
 
 /** 1,234 — 자릿수 구분 없는 큰 숫자는 읽는 데 시간이 걸린다 */

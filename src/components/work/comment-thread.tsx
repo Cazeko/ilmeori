@@ -1,9 +1,10 @@
-import { MessageSquare, Send } from "lucide-react";
-import { postComment } from "@/app/(app)/works/[id]/actions";
+import { MessageSquare, Send, Trash2 } from "lucide-react";
+import { deleteComment, postComment } from "@/lib/actions/comments";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/empty-state";
+import { canMutate } from "@/lib/env";
 import { formatDateTime, formatFullDateTime } from "@/lib/format";
 import type { CommentWithAuthor, Profile } from "@/lib/types";
 
@@ -26,6 +27,16 @@ import type { CommentWithAuthor, Profile } from "@/lib/types";
  * 다른 부서 담당자가 "이 부분 우리 일정과 겹칩니다"라고 적을 수 있어야 한다.
  * 문서와 상태를 고치는 것은 여전히 편집자 이상만 가능하다.
  */
+/**
+ * 지우기는 내 글에만 붙는다. 남의 글을 지우는 길은 화면에도 서버에도 없다.
+ * 지워도 글자만 사라지고 지웠다는 사실은 이력에 남는다는 점을,
+ * 누르기 전에 알 수 있도록 입력칸 밑에 미리 적어 둔다.
+ *
+ * 데모 모드에서는 삭제 버튼을 아예 그리지 않는다. 데모의 글은 쿠키에 담긴
+ * 최근 세 개뿐이고 새 글을 남기면 오래된 것부터 저절로 밀려난다.
+ * 지우는 길을 따로 내는 것보다 감추는 편이 단순하고, 감추면 서버 쪽도
+ * openWork 하나로 끝나 데모 전용 분기를 만들지 않아도 된다.
+ */
 export function CommentThread({
   workId,
   comments,
@@ -45,7 +56,9 @@ export function CommentThread({
               <li key={c.id} className="flex gap-3">
                 <Avatar profile={c.author} className="mt-0.5" />
                 <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-baseline gap-x-2">
+                  {/* 삭제는 <form>이라 문단(<p>) 안에 넣을 수 없다.
+                      글자끼리의 기준선 정렬은 안쪽 span이 그대로 맡는다. */}
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="text-body-sm font-bold text-gray-90">
                       {c.author.name}
                       {c.author.position ? (
@@ -66,7 +79,26 @@ export function CommentThread({
                     >
                       {formatDateTime(c.created_at)}
                     </time>
-                  </p>
+
+                    {mine && canMutate ? (
+                      <form action={deleteComment} className="-my-2 ml-auto">
+                        <input type="hidden" name="workId" value={workId} />
+                        <input type="hidden" name="commentId" value={c.id} />
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          className="min-h-11 px-2"
+                          // 화면에는 '삭제'가 여러 개 놓인다. 어느 글을 지우는
+                          // 버튼인지 소리로만 듣고도 구분할 수 있어야 한다.
+                          aria-label={`${formatFullDateTime(c.created_at)}에 남긴 내 대화 삭제`}
+                        >
+                          <Trash2 aria-hidden className="size-4" />
+                          삭제
+                        </Button>
+                      </form>
+                    ) : null}
+                  </div>
                   <p className="mt-1 rounded-md rounded-tl-none border border-gray-10 bg-white px-3.5 py-2.5 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
                     {c.body}
                   </p>
@@ -88,7 +120,11 @@ export function CommentThread({
           <Field
             id="comment-body"
             label="대화 남기기"
-            hint="시연용입니다. 남긴 글은 이 브라우저에만 저장되며 최근 3개까지 유지됩니다."
+            hint={
+              canMutate
+                ? "남긴 글은 업무와 함께 보관되며, 담당자가 바뀌어도 그대로 넘어갑니다. 내가 남긴 글은 지울 수 있지만 지웠다는 사실은 이력에 남습니다."
+                : "시연용입니다. 남긴 글은 이 브라우저에만 저장되며 최근 3개까지 유지됩니다."
+            }
           >
             {(p) => (
               <Textarea

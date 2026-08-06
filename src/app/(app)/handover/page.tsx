@@ -9,22 +9,28 @@ import {
   RotateCcw,
   Sparkles,
 } from "lucide-react";
-import { confirmHandover, executeHandover, resetDemo } from "./actions";
+import {
+  cancelHandover,
+  confirmHandover,
+  executeHandover,
+  resetDemo,
+} from "@/lib/actions/handover";
 import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ActionFeedback } from "@/components/ui/feedback";
 import { Notice } from "@/components/ui/notice";
 import { Avatar } from "@/components/ui/avatar";
 import { ProgressSteps } from "@/components/handover/progress-steps";
 import { StatusBadge } from "@/components/status-badge";
-import { formatFullDateTime } from "@/lib/format";
+import { formatFullDateTime, josa } from "@/lib/format";
 import { getDepartment, getHandoverFor } from "@/lib/data";
 import { buildHandoverDraft } from "@/lib/handover-draft";
 import { requireViewer } from "@/lib/session";
-import { isSupabaseConfigured } from "@/lib/env";
+import { canMutate, isSupabaseConfigured } from "@/lib/env";
 
 export const metadata: Metadata = { title: "인계·인수" };
 
@@ -39,19 +45,31 @@ export const metadata: Metadata = { title: "인계·인수" };
  *
  * 마지막 단계에서 실제로 권한이 옮겨 간다. 되돌릴 수 없으므로 확인을 한 번 더 받는다.
  */
-export default async function HandoverPage() {
+export default async function HandoverPage({
+  searchParams,
+}: PageProps<"/handover">) {
   const viewer = await requireViewer();
+  const sp = await searchParams;
   const view = await getHandoverFor(viewer);
 
   if (!view) {
     return (
       <div className="px-5 py-6 sm:px-7 lg:px-8">
         <PageHeader title="인계·인수" />
+        <ActionFeedback msg={sp.msg} className="mb-4" />
         <Card>
           <EmptyState
             icon={Inbox}
             title="진행 중인 인계·인수가 없습니다"
-            description="인사이동으로 업무를 넘기게 되면 여기에서 「업무인계·인수서」 초안을 만들 수 있습니다. 시연에서는 자원순환과 박준호 주무관 또는 이하람 주무관 계정으로 보실 수 있습니다."
+            description="인사이동으로 업무를 넘기게 되면 여기에서 「업무인계·인수서」 초안을 만들 수 있습니다. 넘길 업무와 인수자만 고르면, 나머지는 쌓인 기록에서 뽑아 채웁니다."
+            action={
+              canMutate ? (
+                <ButtonLink href="/handover/new">
+                  인계 시작하기
+                  <ArrowRight aria-hidden className="size-4" />
+                </ButtonLink>
+              ) : undefined
+            }
           />
         </Card>
       </div>
@@ -62,6 +80,10 @@ export default async function HandoverPage() {
   const draft = await buildHandoverDraft(view);
   const isSender = from.id === viewer.id;
   const done = handover.status === "completed";
+
+  // 대상 수와 실제로 옮겨 간 수는 다를 수 있다. execute_handover는 인계서를 만든 뒤
+  // 소유 권한이 바뀐 업무를 건너뛰기 때문이다. 결론을 말할 때는 옮겨 간 쪽을 쓴다.
+  const transferredCount = items.filter((i) => i.transferred).length;
 
   const [fromDept, toDept] = await Promise.all([
     from.department_id ? getDepartment(from.department_id) : null,
@@ -87,20 +109,23 @@ export default async function HandoverPage() {
         }
       />
 
+      <ActionFeedback msg={sp.msg} className="mb-4" />
+
       {/* ── 단계 ─────────────────────────────────────────────────────────── */}
       <div className="mb-6">
         <ProgressSteps current={handover.status} />
       </div>
 
       {done ? (
-        <Notice
-          tone="success"
-          title="인계가 끝났습니다"
-          className="mb-6"
-        >
-          업무 {items.length}건의 주담당이 {to.name} {to.position}로 바뀌었습니다.{" "}
-          {from.name} {from.position}는 열람 권한을 유지합니다. 업무 보드에서 실제로
-          바뀐 것을 확인해 보세요.{" "}
+        <Notice tone="success" title="인계가 끝났습니다" className="mb-6">
+          {/* 대상 수가 아니라 **실제로 옮겨 간 수**를 말한다. 인계서를 만든 뒤
+              소유 권한이 바뀐 업무는 execute_handover가 건너뛰므로 둘이 다를 수 있고,
+              그때 대상 수를 말하면 옆칸의 「인계 완료」 배지와 앞뒤가 안 맞는다. */}
+          업무 {transferredCount}건의 주담당이 {to.name} {to.position}
+          {josa(to.position ?? to.name, "으로", "로")} 바뀌었습니다. {from.name}{" "}
+          {from.position}
+          {josa(from.position ?? from.name, "은", "는")} 열람 권한을 유지합니다. 업무
+          보드에서 실제로 바뀐 것을 확인해 보세요.{" "}
           <Link href="/works">업무 보드로 가기</Link>
         </Notice>
       ) : null}
@@ -108,15 +133,22 @@ export default async function HandoverPage() {
       <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
         {/* ── 초안 ────────────────────────────────────────────────────────── */}
         <div className="min-w-0">
+          {/* 이 문구는 실제로 도는 방식과 정확히 같아야 한다.
+              buildHandoverDraft()는 쌓인 기록을 서식 순서대로 조립하는 규칙 기반
+              코드이고 어떤 모델도 부르지 않는다. "AI가 썼습니다"라고 적어 두면
+              심사에서 모델 이름을 묻는 한 마디에 무너진다. 자동으로 뽑았다는 것은
+              그 자체로 충분히 설득력 있는 사실이고, 근거를 붙일 수 있다는 점에서
+              오히려 더 강한 주장이다. */}
           <Notice
             tone="ai"
-            title="이 초안은 AI가 만들었습니다"
+            title="이 초안은 사람이 쓰지 않았습니다"
             className="mb-4"
           >
-            사람이 쓴 글이 아닙니다. 아래 항목은 이 시스템에 쌓인 기록(업무{" "}
-            {draft.evidence.works}건 · 문서 {draft.evidence.documents}건 · 이력{" "}
-            {draft.evidence.activities}건 · 첨부 {draft.evidence.attachments}건)에서
-            뽑아 정리한 것이며, 그대로 제출하는 문서가 아니라{" "}
+            아래 항목은 이 시스템에 쌓인 기록(업무 {draft.evidence.works}건 · 문서{" "}
+            {draft.evidence.documents}건 · 이력 {draft.evidence.activities}건 ·
+            첨부 {draft.evidence.attachments}건)에서 서식 순서대로 뽑아 정리한
+            것입니다. 없는 내용을 지어내지 않으며, 근거를 붙일 수 없는 항목은 채우지
+            않고 비워 둔 채로 표시합니다. 그대로 제출하는 문서가 아니라{" "}
             <strong className="font-bold text-gray-90">
               인계자가 확인하고 고쳐야 하는 초안
             </strong>
@@ -124,8 +156,8 @@ export default async function HandoverPage() {
             {handover.generated_at ? (
               <>
                 <br />
-                생성 {formatFullDateTime(handover.generated_at)} · 모델{" "}
-                {handover.ai_model}
+                생성 {formatFullDateTime(handover.generated_at)} · 생성 방식{" "}
+                {handover.ai_model ?? "rule-based/v1"}
               </>
             ) : null}
           </Notice>
@@ -267,7 +299,8 @@ export default async function HandoverPage() {
             <CardBody>
               {!isSender ? (
                 <p className="text-body-sm break-keep text-gray-60">
-                  이 인계는 {from.name} {from.position}가 확인하고 실행합니다.
+                  이 인계는 {from.name} {from.position}
+                  {josa(from.position ?? from.name, "이", "가")} 확인하고 실행합니다.
                   넘겨받는 사람은 진행 상황과 초안을 볼 수 있습니다.
                 </p>
               ) : handover.status === "generated" ? (
@@ -290,7 +323,8 @@ export default async function HandoverPage() {
                 <>
                   <p className="mb-4 text-body-sm break-keep text-gray-60">
                     실행하면 업무 {items.length}건의 주담당이 {to.name}{" "}
-                    {to.position}로 바뀝니다.{" "}
+                    {to.position}
+                    {josa(to.position ?? to.name, "으로", "로")} 바뀝니다.{" "}
                     <strong className="font-bold text-danger">
                       되돌릴 수 없습니다.
                     </strong>
@@ -302,8 +336,10 @@ export default async function HandoverPage() {
                     confirmLabel="실행합니다"
                     description={
                       <>
-                        아래 업무의 주담당이 {to.name} {to.position}로 바뀌고,{" "}
-                        {from.name} {from.position}는 열람 권한만 남습니다. 실행한
+                        아래 업무의 주담당이 {to.name} {to.position}
+                        {josa(to.position ?? to.name, "으로", "로")} 바뀌고,{" "}
+                        {from.name} {from.position}
+                        {josa(from.position ?? from.name, "은", "는")} 열람 권한만 남습니다. 실행한
                         기록은 각 업무의 이력에 남으며 지울 수 없습니다.
                       </>
                     }
@@ -337,6 +373,45 @@ export default async function HandoverPage() {
               )}
             </CardBody>
           </Card>
+
+          {/* ── 취소 ──────────────────────────────────────────────────────
+              실행 전에만 열어 둔다. 인수자를 잘못 골랐을 때 되돌릴 길이 없으면
+              한 번에 한 건이라는 규칙 때문에 새 인계를 영영 시작할 수 없다.
+              펼치는 손짓 한 번이 확인 절차를 대신한다 — ConfirmDialog는
+              "use client"라 스크립트가 없으면 버튼이 아무 일도 하지 않는다. */}
+          {isSender && !done && canMutate ? (
+            <details className="rounded-md border border-gray-10 bg-white">
+              <summary className="min-h-11 cursor-pointer list-none px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+                인계를 잘못 시작했다면
+              </summary>
+              <div className="border-t border-gray-10 px-4 py-3.5">
+                <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
+                  아직 실행되지 않은 인계이므로 넘어간 업무는 없습니다. 취소하면
+                  초안과 대상 목록이 사라지고 새로 시작할 수 있습니다. 실행한 뒤에는
+                  취소할 수 없습니다.
+                </p>
+                <form action={cancelHandover}>
+                  <Button type="submit" variant="secondary" size="sm">
+                    <RotateCcw aria-hidden className="size-4" />이 인계 취소
+                  </Button>
+                </form>
+              </div>
+            </details>
+          ) : null}
+
+          {done && canMutate ? (
+            <Card>
+              <CardBody>
+                <p className="mb-3 text-body-sm break-keep text-gray-60">
+                  다른 업무를 더 넘겨야 한다면 새 인계를 시작할 수 있습니다.
+                </p>
+                <ButtonLink href="/handover/new" variant="secondary" block>
+                  새 인계 시작
+                  <ArrowRight aria-hidden className="size-4" />
+                </ButtonLink>
+              </CardBody>
+            </Card>
+          ) : null}
         </div>
       </div>
     </div>
