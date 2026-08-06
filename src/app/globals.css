@@ -46,19 +46,31 @@
   --text-h4: 17px;
   --text-h4--line-height: 1.5;
 
-  /* --- Primary -------------------------------------------------------------
-     TODO(확인 필요): 화성시 CI 색상값 확보 후 교체.
-     교체 시 조건(체크리스트 스타일-색상-자체상징 1):
-       hover/active/disabled 등 상호작용 상태는 기본 색상 기준 증·감 규칙으로 파생할 것.
-     확보 전까지는 KRDS primary를 그대로 쓴다. */
-  --color-primary-5: #ecf2fe;
-  --color-primary-10: #d8e5fd;
-  --color-primary-20: #b1cefb;
-  --color-primary-30: #86aff9;
-  --color-primary-40: #4c87f6;
-  --color-primary: #256ef4;
-  --color-primary-hover: #0b50d0;
-  --color-primary-active: #083891;
+  /* --- Primary: 화성특례시 BI 전용색상 --------------------------------------
+     출처: 「화성특례시 상징물(BI) 기본 디자인 가이드라인」 BS 1-03 (2024-10-25 선포)
+       HS Blue   PANTONE 7686 C · C100 M75 Y0 K0 · R0  G70  B150
+       HS Orange PANTONE 1505 C · C0 M70 Y100 K0 · R220 G110 B45
+
+     ※ 화성시는 HEX를 공식 규정한 적이 없다. 아래 값은 규정 RGB의 환산값이며,
+       시청 BI 페이지가 실제로 로드하는 전용 CSS(add_2025-04-02.css)에서
+       #004696 / #dc6e2d 로 렌더링되는 것을 확인했다.
+       (배포 PNG 아트워크의 픽셀 실측값 #0054A6/#F36F21은 CMYK→sRGB 변환 산출물이다)
+
+     상호작용 상태는 체크리스트(스타일-색상-자체상징 1)에 따라
+     기본 색상 기준 증·감 규칙으로 파생했다. 명도 대비 #004696 : 흰색 = 9.06:1 (AAA) */
+  --color-primary-5: #e6edf5;
+  --color-primary-10: #ccdaea;
+  --color-primary-20: #99b5d5;
+  --color-primary-30: #6690c0;
+  --color-primary-40: #336bab;
+  --color-primary: #004696; /* HS Blue */
+  --color-primary-hover: #003c80; /* -15% */
+  --color-primary-active: #003169; /* -30% */
+
+  /* HS Orange — 강조·포인트 전용.
+     흰 배경 대비 3.33:1 이므로 본문 텍스트 색으로 쓰지 않는다(KWCAG 4.5:1 미달). */
+  --color-accent: #dc6e2d;
+  --color-accent-bg: #fdf1e9;
 
   /* --- Gray (KRDS 13단계) --- */
   --color-gray-0: #ffffff;

@@ -219,12 +219,21 @@ create table access_log (
 -- 인수인계
 -- -----------------------------------------------------------------------------
 
+-- 법정 명칭은 '사무인계인수'가 아니라 「업무의 인계·인수」다.
+--   근거: 「행정업무의 운영 및 혁신에 관한 규정」 제61조, 같은 규정 시행규칙 제45조
+--   서식: 시행규칙 별지 제12호서식 「업무인계·인수서」
+--   서식 구조: 1. 업무현황(가.담당 업무 / 나.주요 업무계획 및 진행사항 /
+--                        다.현안사항 및 문제점 / 라.주요 미결사항)
+--             2. 관련 문서 현황
+--             3. 주요 물품 및 예산 등 인계·인수가 필요한 사항
+--             4. 그 밖의 참고사항  + 인계자·인수자·입회자 서명
+--   ('유의사항'이라는 항목은 실제 서식에 존재하지 않는다)
 create table handover (
   id             uuid primary key default gen_random_uuid(),
-  from_profile_id uuid not null references profile(id),  -- 전임자
-  to_profile_id   uuid not null references profile(id),  -- 후임자
+  from_profile_id uuid not null references profile(id),  -- 인계자
+  to_profile_id   uuid not null references profile(id),  -- 인수자
   status         handover_status not null default 'draft',
-  -- AI가 생성한 사무인계인수서 초안. 최종본은 사람이 확인·수정한 뒤 확정한다.
+  -- AI가 생성한 「업무인계·인수서」 초안. 최종본은 사람이 확인·수정한 뒤 확정한다.
   document_draft text,
   ai_model       text,                                   -- 생성 모델 기록(재현성·감사 목적)
   generated_at   timestamptz,
