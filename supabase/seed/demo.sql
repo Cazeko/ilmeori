@@ -35,6 +35,33 @@ alter table comment      disable trigger user;
 alter table attachment   disable trigger user;
 
 -- -----------------------------------------------------------------------------
+-- 0-2. RLS도 잠시 끈다
+--
+-- 우리 표에는 force row level security 가 걸려 있다. FORCE는 **테이블 소유자에게도**
+-- 정책을 적용하므로, 소유자 역할에 BYPASSRLS 속성이 없으면 시드를 실행하는
+-- postgres 조차 자기 표에 INSERT를 못 한다. (PGlite로 실측했다)
+--
+-- 특히 activity·access_log 는 INSERT 정책 자체가 없어서 확실히 막힌다.
+-- 그게 평소에는 정확히 우리가 원하는 동작이다 — 감사 기록은 아무도 못 쓴다.
+--
+-- 이 트랜잭션 안에서만 끄고 아래에서 반드시 다시 켠다.
+-- 실패하면 통째로 롤백되므로 꺼진 채로 남을 일은 없다.
+-- (force 표시는 disable 해도 유지되므로 다시 켜면 원래 상태로 돌아온다)
+-- -----------------------------------------------------------------------------
+alter table department    disable row level security;
+alter table profile       disable row level security;
+alter table work          disable row level security;
+alter table work_member   disable row level security;
+alter table document      disable row level security;
+alter table doc_section   disable row level security;
+alter table comment       disable row level security;
+alter table attachment    disable row level security;
+alter table activity      disable row level security;
+alter table handover      disable row level security;
+alter table handover_item disable row level security;
+alter table access_log    disable row level security;
+
+-- -----------------------------------------------------------------------------
 -- 1. 로그인 계정
 --
 -- profile.id 가 auth.users(id) 를 참조하므로 계정이 먼저 있어야 한다.
@@ -495,6 +522,19 @@ alter table document     enable trigger user;
 alter table doc_section  enable trigger user;
 alter table comment      enable trigger user;
 alter table attachment   enable trigger user;
+
+alter table department    enable row level security;
+alter table profile       enable row level security;
+alter table work          enable row level security;
+alter table work_member   enable row level security;
+alter table document      enable row level security;
+alter table doc_section   enable row level security;
+alter table comment       enable row level security;
+alter table attachment    enable row level security;
+alter table activity      enable row level security;
+alter table handover      enable row level security;
+alter table handover_item enable row level security;
+alter table access_log    enable row level security;
 
 commit;
 

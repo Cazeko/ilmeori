@@ -137,6 +137,44 @@ if (!failed) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// 0005 이벤트 트리거가 실제로 동작하는지 — 정의만 있고 안 도는 경우를 잡는다
+// ---------------------------------------------------------------------------
+console.log("\n새 테이블 자동 보호");
+{
+  const check = async (label, sql, table, expect) => {
+    try {
+      await db.exec(sql);
+      const { rows } = await db.query(
+        `select coalesce((select relrowsecurity from pg_class c
+           join pg_namespace n on n.oid=c.relnamespace
+           where n.nspname='public' and c.relname=$1), false) as on`,
+        [table],
+      );
+      const ok = rows[0].on === expect;
+      if (!ok) failed = true;
+      console.log(`  ${ok ? "✓" : "✗"} ${label}`);
+    } catch (err) {
+      failed = true;
+      console.log(`  ✗ ${label} — ${err.message.split("\n")[0]}`);
+    }
+  };
+
+  await check(
+    "create table 하면 RLS가 켜진다",
+    "create table _probe_plain (id int);",
+    "_probe_plain",
+    true,
+  );
+  await check(
+    "create table as select 도 켜진다 (표를 통째로 복사하는 경로)",
+    "create table _probe_copy as select 1 as id;",
+    "_probe_copy",
+    true,
+  );
+  await db.exec("drop table _probe_plain, _probe_copy;");
+}
+
 await db.close();
 console.log(failed ? "\n실패 — 위 오류를 수정할 것\n" : "\n전체 통과\n");
 process.exit(failed ? 1 : 0);

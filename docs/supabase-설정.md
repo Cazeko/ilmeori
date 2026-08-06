@@ -27,6 +27,7 @@ supabase/migrations/0001_schema.sql      스키마 · 인덱스
 supabase/migrations/0002_rls.sql         권한 · RLS 정책 35개
 supabase/migrations/0003_triggers.sql    이력 자동기록 · 인계 실행 · Storage
 supabase/migrations/0004_hardening.sql   기본 권한 잠금 · 점검용 뷰
+supabase/migrations/0005_auto_rls.sql    새 표에 RLS 자동 적용
 ```
 
 적용 전에 로컬에서 먼저 돌려 볼 수 있다. PGlite(Postgres WASM)로 실제 실행한다.
@@ -49,6 +50,46 @@ Supabase 기본값은 개발 편의 쪽으로 열려 있어서, 그대로 두면
 > 정책을 평가할 때 *정책을 평가하는 사용자*의 실행 권한을 검사하기 때문에,
 > `app.can_read_work` 를 `authenticated` 에서 회수하면 정책이 통째로 죽는다.
 > 0004에 그 이유를 주석으로 남겨 뒀다.
+
+### 0005 — 새 표에 RLS 자동 적용
+
+대시보드의 **Enable automatic RLS** 와 같은 일을 하는 이벤트 트리거다.
+`public` 스키마에 표가 새로 만들어지면 곧바로 RLS를 켠다.
+
+이게 막는 것은 공격이 아니라 **우리 실수**다. 외부에서 표를 만들어 데이터를 빼내는
+경로는 0004에서 이미 닫혔고(`public` 스키마 CREATE 회수), 여기서 막는 것은
+앞으로 기능을 붙이며 표를 추가할 때 RLS를 깜빡하는 경우다.
+실패 방향도 안전한 쪽이다 — 정책이 없으면 아무도 못 읽는다.
+
+`CREATE TABLE AS` 와 `SELECT INTO` 도 잡는다.
+`create table x as select * from work` 한 줄이면 정책 없는 사본이 생기기 때문이다.
+
+**FORCE ROW LEVEL SECURITY 는 자동으로 걸지 않는다.** 아래 항을 참고할 것.
+
+> `CREATE EVENT TRIGGER` 는 슈퍼유저 권한이 필요하다.
+> `permission denied to create event trigger` 가 나오면 대시보드의
+> **Enable automatic RLS** 버튼을 대신 쓰면 된다. 하는 일은 같다.
+> 다만 대시보드 설정은 프로젝트를 다시 만들면 사라지고, 마이그레이션은 남는다.
+
+### FORCE RLS와 소유자 — 시드가 막힐 수 있는 지점
+
+`force row level security` 는 **테이블 소유자에게도** 정책을 적용한다.
+소유자 역할에 `BYPASSRLS` 속성이 없으면, 시드를 실행하는 `postgres` 조차
+자기 표에 INSERT를 못 한다. (PGlite로 실측했다 — 소유자여도 차단되고,
+`BYPASSRLS` 를 주면 통과한다)
+
+특히 `activity`·`access_log` 는 INSERT 정책 자체가 없어서 확실히 막힌다.
+평소에는 그게 정확히 우리가 원하는 동작이다. 감사 기록은 아무도 못 쓴다.
+
+그래서 시드는 트랜잭션 안에서 RLS를 잠시 끄고 넣은 뒤 다시 켠다.
+실패하면 통째로 롤백되므로 꺼진 채로 남을 일은 없고, 검증 스크립트가
+**시드 후 RLS가 다시 켜져 있는지** 확인한다.
+
+Supabase의 `postgres` 역할에 `BYPASSRLS` 가 있는지 궁금하면 이걸로 확인한다.
+
+```sql
+select rolname, rolbypassrls from pg_roles where rolname = 'postgres';
+```
 
 ### 적용 후 점검
 

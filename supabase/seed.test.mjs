@@ -135,6 +135,26 @@ for (const [label, sql] of checks) {
   console.log(`  ${ok ? "✓" : "✗"} ${label}${ok ? "" : ` — 어긋난 행 ${rows[0].n}개`}`);
 }
 
+// 시드가 RLS를 끄고 들어가므로, 끝난 뒤 반드시 원래대로 켜져 있어야 한다.
+// 여기서 못 잡으면 "데이터는 들어갔는데 표가 전부 열린 상태"로 배포된다.
+{
+  const { rows } = await db.query(`
+    select coalesce(string_agg(c.relname, ', '), '') as off
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity`);
+  const ok = rows[0].off === "";
+  if (!ok) failed = true;
+  console.log(`  ${ok ? "✓" : "✗"} 시드 후 RLS가 다시 켜져 있다${ok ? "" : ` — 꺼진 표: ${rows[0].off}`}`);
+}
+{
+  const { rows } = await db.query(`
+    select coalesce(string_agg(c.relname, ', '), '') as unforced
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind = 'r'
+      and c.relrowsecurity and not c.relforcerowsecurity`);
+  console.log(`  · force 미적용 표: ${rows[0].unforced || "없음"}`);
+}
+
 // 같은 시드를 두 번 돌려도 안전해야 한다(대시보드에서 실수로 두 번 누를 수 있다)
 await db.exec(dataOnly.replace(/insert into (activity|access_log)[\s\S]*?;\n/g, ""));
 const { rows: again } = await db.query("select count(*)::int as n from work");
