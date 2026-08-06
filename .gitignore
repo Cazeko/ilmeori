@@ -1,0 +1,56 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# --- 이음(Ieum) 추가 규칙 ---
+# ⚠️ 제출물에 깃헙 주소가 포함된다. 키가 커밋되면 그 순간 유출이다.
+!.env.example
+*.key
+*.pem
+secrets/
+.claude/
+
+# KRDS 공식 컴포넌트 킷 (제3자 참조 자료. src/styles/krds-tokens.css로 필요한 부분만 복사해 사용)
+/design/krds/
+
+# 빌드·캐시
+.next/
+.turbo/
