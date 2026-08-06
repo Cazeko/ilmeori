@@ -172,5 +172,47 @@ for (const [table, expected] of Object.entries(EXPECTED)) {
   );
 }
 
+// 되돌리기 → 다시 채우기가 원상복구되는지.
+// 시연 사이에 실제로 돌릴 질의라, 여기서 깨지면 심사 직전에 발견하게 된다.
+console.log("\n되돌리기 왕복");
+{
+  await db.exec(await readFile(join(HERE, "seed", "reset-demo.sql"), "utf8"));
+  const after = {};
+  for (const t of Object.keys(EXPECTED)) {
+    after[t] = (await db.query(`select count(*)::int as n from ${t}`)).rows[0].n;
+  }
+  // 사람·부서는 남고 나머지는 비어야 한다.
+  const kept = after.department === EXPECTED.department && after.profile === EXPECTED.profile;
+  const cleared = Object.entries(after)
+    .filter(([t]) => t !== "department" && t !== "profile")
+    .every(([, n]) => n === 0);
+  if (!kept || !cleared) failed = true;
+  console.log(`  ${kept ? "✓" : "✗"} 사람·부서는 남는다`);
+  console.log(`  ${cleared ? "✓" : "✗"} 업무 관련 자료는 비워진다`);
+
+  await db.exec(dataOnly);
+  let restored = true;
+  for (const [t, expected] of Object.entries(EXPECTED)) {
+    const n = (await db.query(`select count(*)::int as n from ${t}`)).rows[0].n;
+    if (n !== expected) {
+      restored = false;
+      console.log(`  ✗ ${t} ${n} (기대 ${expected})`);
+    }
+  }
+  if (!restored) failed = true;
+  console.log(`  ${restored ? "✓" : "✗"} 다시 채우면 원래대로 돌아온다`);
+
+  // 끄고 켠 것들이 제대로 복구되었는지. 여기서 새면 표가 열린 채로 배포된다.
+  const off = (await db.query(`select coalesce(string_agg(c.relname, ', '), '') as t
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname='public' and c.relkind='r' and not c.relrowsecurity`)).rows[0].t;
+  const dis = (await db.query(`select coalesce(string_agg(distinct c.relname, ', '), '') as t
+    from pg_trigger g join pg_class c on c.oid = g.tgrelid
+    where not g.tgisinternal and g.tgenabled = 'D'`)).rows[0].t;
+  if (off || dis) failed = true;
+  console.log(`  ${off ? "✗ RLS 꺼진 표: " + off : "✓ RLS가 모두 켜져 있다"}`);
+  console.log(`  ${dis ? "✗ 트리거 꺼진 표: " + dis : "✓ 트리거가 모두 켜져 있다"}`);
+}
+
 console.log(failed ? "\n실패\n" : "\n전체 통과\n");
 process.exit(failed ? 1 : 0);

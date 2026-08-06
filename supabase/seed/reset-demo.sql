@@ -11,6 +11,22 @@
 
 begin;
 
+-- 트리거도 함께 끈다.
+-- work_member 에는 마지막 소유자를 지키는 트리거가 걸려 있어서,
+-- 그냥 지우면 '마지막 소유자는 해제할 수 없습니다' 로 막힌다.
+-- 평소에는 정확히 그래야 하는 동작이다 — 주인 없는 업무가 생기면 안 되니까.
+-- 비우는 동안만 끄고 아래에서 반드시 다시 켠다.
+alter table access_log    disable trigger user;
+alter table activity      disable trigger user;
+alter table handover_item disable trigger user;
+alter table handover      disable trigger user;
+alter table attachment    disable trigger user;
+alter table comment       disable trigger user;
+alter table doc_section   disable trigger user;
+alter table document      disable trigger user;
+alter table work_member   disable trigger user;
+alter table work          disable trigger user;
+
 alter table access_log    disable row level security;
 alter table activity      disable row level security;
 alter table handover_item disable row level security;
@@ -43,6 +59,16 @@ alter table doc_section   enable row level security;
 alter table document      enable row level security;
 alter table work_member   enable row level security;
 alter table work          enable row level security;
+alter table access_log    enable trigger user;
+alter table activity      enable trigger user;
+alter table handover_item enable trigger user;
+alter table handover      enable trigger user;
+alter table attachment    enable trigger user;
+alter table comment       enable trigger user;
+alter table doc_section   enable trigger user;
+alter table document      enable trigger user;
+alter table work_member   enable trigger user;
+alter table work          enable trigger user;
 
 commit;
 
