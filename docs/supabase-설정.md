@@ -23,19 +23,87 @@ SQL로 되는 것은 전부 마이그레이션에 넣어 뒀다. 이 문서는 *
 대시보드 → **SQL Editor** 에서 순서대로 붙여 넣고 실행한다.
 
 ```
-supabase/migrations/0001_schema.sql      스키마 · 인덱스
-supabase/migrations/0002_rls.sql         권한 · RLS 정책 35개
-supabase/migrations/0003_triggers.sql    이력 자동기록 · 인계 실행 · Storage
-supabase/migrations/0004_hardening.sql   기본 권한 잠금 · 점검용 뷰
-supabase/migrations/0005_auto_rls.sql    새 표에 RLS 자동 적용
+supabase/migrations/0001_schema.sql               스키마 · 인덱스
+supabase/migrations/0002_rls.sql                  권한 · RLS 정책 35개
+supabase/migrations/0003_triggers.sql             이력 자동기록 · 인계 실행 · Storage
+supabase/migrations/0004_hardening.sql            기본 권한 잠금 · 점검용 뷰
+supabase/migrations/0005_auto_rls.sql             새 표에 RLS 자동 적용
+supabase/migrations/0006_activity_wording.sql     이력 문구를 능동형으로
+supabase/migrations/0007_visibility_owner_only.sql 공개 범위는 소유자만
+supabase/migrations/0008_delete_paths.sql         지울 수 없던 두 곳
+supabase/migrations/0009_document_history.sql     문서 이력의 빈자리
+supabase/migrations/0010_grant_layer.sql          GRANT 층을 실제로 세운다
+supabase/migrations/0011_work_field_guard.sql     업무의 칸마다 주인을 정한다
 ```
 
 적용 전에 로컬에서 먼저 돌려 볼 수 있다. PGlite(Postgres WASM)로 실제 실행한다.
 
 ```bash
 npm run db:verify   # 마이그레이션이 실제로 도는지
-npm run db:test     # RLS가 실제로 막는지 (39개)
+npm run db:test     # RLS가 실제로 막는지 (67개)
 ```
+
+## 1-1. 0007~0011 — 이미 연결된 프로젝트에 따로 실행해야 하는 것
+
+> 0001~0006 을 적용한 **뒤에** 추가된 파일들이다. 대시보드 SQL Editor 에서
+> **0007 → 0008 → 0009 → 0010 → 0011 순서대로** 실행한다.
+>
+> 적용하지 않아도 화면은 정상 동작한다. 애플리케이션이 같은 규칙을 이미 지키기 때문이다.
+> 적용하면 PostgREST 를 직접 호출하는 경로까지 같은 규칙이 걸린다 —
+> 서버 액션은 화면을 거치지 않고 POST 로 부를 수 있고, PostgREST 는 더 직접적이다.
+> **애플리케이션에만 있는 규칙은 규칙이 아니라 관행이다.**
+
+### 0007 · 0011 — 업무의 칸마다 주인을 정한다
+
+`work_update` 정책은 편집자에게도 UPDATE 를 허용한다. 제목·마감일·진행상태는 그게 맞다.
+그런데 같은 표에는 성격이 다른 칸이 섞여 있고, 정책은 **행만 보고 칸은 보지 못한다.**
+
+실제로 뚫려 있던 것(PGlite 로 재현해 확인했다):
+
+| 칸 | 뚫려 있던 일 |
+|---|---|
+| `department_id` | 편집자가 소관 부서를 남의 과로 옮기면 그 과 전원이 문서·대화·첨부를 읽는다. **이력에는 한 줄도 안 남았다** |
+| `owner_id` | 편집자가 주담당을 스스로 가져가고, 지울 수 없는 이력에 없던 인계 기록이 박힌다 |
+| `archived_at` | 편집자가 업무를 모두의 보드에서 내린다 |
+
+정책을 소유자로 좁혀서는 풀 수 없다. 그러면 편집자가 진행상태조차 못 바꾸게 되어
+협업 도구가 아니게 된다. 칸 단위 규칙은 트리거의 일이다(0003 의 `trg_profile_immutable_fields`
+가 같은 이유로 같은 모양을 하고 있다).
+
+### 0008 — 지울 수 없던 두 곳
+
+`work_delete` 정책은 있는데 **실제로는 어떤 방법으로도 업무를 지울 수 없었다.**
+연쇄로 지워지는 참여자 행이 「마지막 소유자 보호」 트리거에 걸리고, 그 앞을 비켜서게 해도
+이번엔 이력 트리거가 이미 사라진 업무를 참조해 FK 위반이 났다.
+정책이 허용한다고 적혀 있는데 실행하면 언제나 실패하는 것은 그 자체로 결함이다.
+
+인계도 마찬가지였다. 시작한 인계를 되돌릴 길이 없어, 인수자를 잘못 고르면
+그 사람은 영영 새 인계를 시작할 수 없었다(한 번에 한 건만 진행하기 때문이다).
+
+### 0009 — 문서 이력의 빈자리
+
+화면에서 문서를 실제로 고칠 수 있게 되자 드러난 것들이다.
+항목을 지우면 아무 기록도 남지 않았고, 문서 이름 변경도 마찬가지였다.
+편집 잠금을 잡았다 풀기만 해도 「마지막 수정」이 밀려, 읽기 화면에
+「이전 사람 이름 · 방금」이라는 있지도 않은 사실이 찍혔다.
+
+### 0010 — GRANT 층을 실제로 세운다
+
+0002 는 「RLS 는 어떤 행을 볼지 정하고 GRANT 는 어떤 동작을 할 수 있는지 정한다」고 적었다.
+실제 프로젝트에 붙여 찔러 보니 그 문장이 절반만 참이었다.
+
+```
+department INSERT      42501  권한층에서 차단   ✓
+department DELETE      통과(0행)                ← RLS만 막고 있다
+profile    DELETE      통과(0행)                ← RLS만 막고 있다
+comment    DELETE      통과(0행)                ← RLS만 막고 있다
+```
+
+0004 의 `alter default privileges ... revoke` 는 **앞으로 만들 표**에만 걸리고,
+`revoke all on all tables ... from anon` 은 anon 에게만 걸린다.
+0001 에서 이미 만들어진 표에 대한 `authenticated` 의 권한은 아무도 걷어내지 않았다.
+유출이 일어나고 있던 것은 아니지만(RLS 가 전부 0행으로 막는다), 방어가 한 겹이면서
+두 겹인 것처럼 적혀 있었다.
 
 ### 0004가 하는 일
 

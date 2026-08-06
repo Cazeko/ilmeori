@@ -57,3 +57,10 @@ secrets/
 
 # 비밀번호를 채워 넣은 시드 사본. 붙여넣기용이며 절대 커밋하지 않는다.
 supabase/seed/*.local.sql
+
+# Jupyter 자동 저장본.
+#
+# 이 폴더가 빠져 있어서 supabase/seed/.ipynb_checkpoints/demo.local-checkpoint.sql 이
+# 커밋됐고, 거기에는 위에서 막아 둔 **데모 계정 비밀번호가 그대로 들어 있었다.**
+# 파일 이름 규칙(*.local.sql)으로만 막으면 사본의 사본이 다른 이름으로 새어 나간다.
+.ipynb_checkpoints/
