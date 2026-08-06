@@ -67,6 +67,7 @@ try {
   const works = require(find(out, "works.js", tscOutput));
 
   writeFileSync(join(HERE, "seed", "demo.sql"), build(org, works), "utf8");
+  writeFileSync(join(HERE, "seed", "reset-demo.sql"), buildReset(), "utf8");
 
   // 몇 행이 들어가야 하는지도 같이 적어 둔다.
   // 검증 스크립트가 이 값을 읽으므로 기대치가 두 벌로 갈라지지 않는다.
@@ -98,6 +99,62 @@ try {
 }
 
 // ---------------------------------------------------------------------------
+
+/**
+ * 시연을 처음 상태로 되돌리는 질의.
+ *
+ * 실제 DB에서는 인계가 되돌릴 수 없다. 그게 맞는 동작이다 —
+ * 지울 수 있는 감사 기록은 감사 기록이 아니다.
+ * 그런데 시연은 여러 사람이 돌아가며 본다. 심사위원 한 명이 인계를 실행하면
+ * 다음 사람은 완료된 화면만 보게 된다.
+ *
+ * 그래서 "제품 기능"이 아니라 **운영자가 SQL로 하는 일**로 분리했다.
+ * 화면에는 이 버튼이 없고, 시연 사이사이에 이 파일을 돌린다.
+ *
+ * 사람·부서·계정은 건드리지 않고, 업무 이후의 것만 비운다.
+ * 비운 뒤 demo.sql 을 다시 돌리면 원래 상태가 된다.
+ */
+function buildReset() {
+  // 지우는 순서는 외래키의 역순이다.
+  const tables = [
+    "access_log",
+    "activity",
+    "handover_item",
+    "handover",
+    "attachment",
+    "comment",
+    "doc_section",
+    "document",
+    "work_member",
+    "work",
+  ];
+  const pad = Math.max(...tables.map((t) => t.length));
+  return [
+    "-- =============================================================================",
+    "-- 시연 되돌리기",
+    "--",
+    "-- 이 파일을 먼저 돌리고, 이어서 seed/demo.sql 을 다시 돌린다.",
+    "-- 사람·부서·로그인 계정은 그대로 두고 업무 관련 자료만 비운다.",
+    "--",
+    "-- 감사 표(activity·access_log)는 평소 아무도 지울 수 없다. 그게 정확히",
+    "-- 우리가 원하는 동작이라, 이 정리 작업에서만 잠시 연다.",
+    "-- 실패하면 통째로 롤백되므로 열린 채로 남을 일은 없다.",
+    "-- =============================================================================",
+    "",
+    "begin;",
+    "",
+    ...tables.map((t) => `alter table ${t.padEnd(pad)} disable row level security;`),
+    "",
+    ...tables.map((t) => `delete from ${t};`),
+    "",
+    ...tables.map((t) => `alter table ${t.padEnd(pad)} enable row level security;`),
+    "",
+    "commit;",
+    "",
+    "-- 이제 seed/demo.sql 을 다시 돌린다.",
+    "",
+  ].join("\n");
+}
 
 /**
  * 컴파일 결과 위치는 tsc가 프로그램 전체의 공통 상위 폴더를 보고 정하므로
