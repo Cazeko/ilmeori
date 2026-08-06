@@ -91,6 +91,32 @@ Supabase의 `postgres` 역할에 `BYPASSRLS` 가 있는지 궁금하면 이걸�
 select rolname, rolbypassrls from pg_roles where rolname = 'postgres';
 ```
 
+### ⚠️ SQL Editor의 경고창은 대부분 오탐이다 — 제안을 수락하지 말 것
+
+붙여 넣고 실행하면 이런 경고가 뜬다.
+
+> This query creates a table without enabling Row Level Security.
+> Clients using anon or authenticated keys may be able to access **AS**.
+
+`AS` 라는 표는 존재하지 않는다. Supabase의 정적 분석기가 함수 정의의
+`... as $fn$` 를 `CREATE ... AS <이름>` 으로 잘못 읽은 것이다.
+plpgsql 함수는 `AS` 없이 정의할 방법이 없어 피할 수 없다.
+
+**여기서 "Enable Row Level Security" 제안을 수락하면 안 된다.**
+수락하면 Supabase가 `alter table AS enable row level security` 를 덧붙여 실행하고,
+없는 표이므로 아래 오류로 끝난다.
+
+```
+ERROR: 42P01: relation "AS" does not exist
+```
+
+경고를 무시하고 **그대로 실행**한다(Run this query anyway).
+
+`0001` 에서 뜨는 경고는 **진짜**다. 표 13개를 만드는데 RLS는 `0002` 에서 켜기 때문이다.
+그때도 제안은 수락하지 말고 그냥 실행한 뒤, 곧바로 `0002` 를 실행한다.
+
+Supabase의 경고보다 아래 점검이 정확하다.
+
 ### 적용 후 점검
 
 ```sql
