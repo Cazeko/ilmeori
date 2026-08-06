@@ -158,27 +158,40 @@ npm run dev   # http://localhost:3000
 >
 > ⚠️ `.env.local`은 절대 커밋하지 않는다. 제출물에 깃헙 주소가 포함되므로 키 유출이 가장 현실적인 사고 경로다.
 
-### 4. 마이그레이션 적용
+### 4. 마이그레이션과 시드
 
 Supabase 대시보드의 SQL Editor에서 순서대로 실행한다.
 
 ```
-supabase/migrations/0001_schema.sql     스키마 · 인덱스
-supabase/migrations/0002_rls.sql        권한 · RLS 정책
-supabase/migrations/0003_triggers.sql   이력 자동기록 · 인계 실행 · Storage
+supabase/migrations/0001_schema.sql      스키마 · 인덱스
+supabase/migrations/0002_rls.sql         권한 · RLS 정책 35개
+supabase/migrations/0003_triggers.sql    이력 자동기록 · 인계 실행 · Storage
+supabase/migrations/0004_hardening.sql   기본 권한 잠금 · 점검용 뷰
+supabase/seed/demo.sql                   시연 데이터 (생성물)
 ```
 
-적용 전에 로컬에서 먼저 검증할 수 있다. PGlite(Postgres WASM)로 실제 실행해본다.
+적용 전에 로컬에서 먼저 검증할 수 있다. PGlite(Postgres WASM)로 실제 실행해 본다.
 
 ```bash
-npm run db:verify   # 마이그레이션이 실제로 도는지
-npm run db:test     # RLS가 실제로 막는지 (39개)
+npm run db:verify      # 마이그레이션이 실제로 도는지
+npm run db:test        # RLS가 실제로 막는지 (39개)
+npm run db:seed        # src/lib/mock → supabase/seed/demo.sql 생성
+npm run db:seed:test   # 시드가 실제로 들어가는지
 ```
+
+적용 후에는 이걸 돌린다. **0행이어야 정상이다.**
+
+```sql
+select * from app.security_audit;
+```
+
+대시보드에서 손으로 눌러야 하는 보안 설정(가입 차단·세션·리다이렉트 화이트리스트 등)은
+**[docs/supabase-설정.md](docs/supabase-설정.md)** 에 정리해 두었다.
 
 ### 전체 점검
 
 ```bash
-npm run check   # typecheck + db:verify + db:test
+npm run check   # typecheck + db:verify + db:test + db:seed:test
 ```
 
 ---
@@ -188,14 +201,20 @@ npm run check   # typecheck + db:verify + db:test
 ```
 ilmeori/
 ├── docs/
-│   └── 기획서.md
+│   ├── 기획서.md
+│   ├── supabase-설정.md       대시보드에서 눌러야 하는 것
+│   └── screenshots/           발표자료용 화면 21장
 ├── supabase/
 │   ├── migrations/
 │   │   ├── 0001_schema.sql
 │   │   ├── 0002_rls.sql
-│   │   └── 0003_triggers.sql
+│   │   ├── 0003_triggers.sql
+│   │   └── 0004_hardening.sql
+│   ├── seed/demo.sql          시연 데이터 (자동 생성)
+│   ├── gen-seed.mjs           src/lib/mock → SQL 변환
 │   ├── verify.mjs             마이그레이션 검증 (PGlite)
-│   └── rls.test.mjs           RLS 행동 테스트 39개
+│   ├── rls.test.mjs           RLS 행동 테스트 39개
+│   └── seed.test.mjs          시드 검증
 ├── src/
 │   ├── app/
 │   │   ├── (app)/             로그인 후 화면 (홈·보드·상세·인계·열람기록)

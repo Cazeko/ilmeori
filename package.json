@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "db:verify": "node supabase/verify.mjs",
     "db:test": "node supabase/rls.test.mjs",
-    "check": "npm run typecheck && npm run db:verify && npm run db:test"
+    "check": "npm run typecheck && npm run db:verify && npm run db:test && npm run db:seed:test",
+    "db:seed": "node supabase/gen-seed.mjs",
+    "db:seed:test": "node supabase/seed.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
