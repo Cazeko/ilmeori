@@ -6,6 +6,7 @@ import {
   derivedStatus,
   type AccessLogWithActor,
   type ActivityWithActor,
+  type ApprovalWithSteps,
   type AttachmentWithUploader,
   type CommentWithAuthor,
   type Department,
@@ -313,6 +314,127 @@ export async function getAttachment(
     .maybeSingle();
   if (error) throw error;
   return (data as unknown as AttachmentWithUploader) ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// 결재
+// ---------------------------------------------------------------------------
+
+/**
+ * 결재 문서 한 벌.
+ *
+ * work 를 !inner 로 걸지 않는다. 결재선에 이름이 있으면 그 업무를 볼 수 없어도
+ * 문서는 보여야 하는데(0017 의 approval_select), inner join 을 걸면 업무가
+ * 안 보이는 순간 문서까지 목록에서 사라진다. 그 사람에게 「협조하라고 이름을
+ * 올려놓고 문서는 안 보이는」 화면이 되는 것이다.
+ */
+const APPROVAL_SELECT = `
+  *,
+  drafter:drafter_id ( ${PROFILE_SELECT} ),
+  work:work_id ( id, title ),
+  steps:approval_step (
+    id, approval_id, seq, kind, approver_id, position,
+    signed_at, rejected_at, opinion,
+    approver:approver_id ( ${PROFILE_SELECT} )
+  )
+`;
+
+type RawApproval = ApprovalWithSteps;
+
+function toApproval(raw: RawApproval): ApprovalWithSteps {
+  return {
+    ...raw,
+    // 결재란은 순번대로 읽는다. PostgREST 의 임베드 순서는 보장되지 않는다.
+    steps: [...(raw.steps ?? [])].sort((a, b) => a.seq - b.seq),
+  };
+}
+
+/**
+ * 내가 볼 수 있는 결재 문서 전부.
+ *
+ * 어느 칸(대기·예정·처리…)에 들어가는지는 화면이 정한다. 그 판정에 결재란 전체가
+ * 필요하고, 어차피 함께 가져오므로 칸별로 질의를 나누지 않는다.
+ * 결재함이 다루는 건수는 한 사람 기준 수십 건이다.
+ */
+export async function listApprovals(
+  _viewer: Profile,
+  limit = 100,
+): Promise<ApprovalWithSteps[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("approval")
+    .select(APPROVAL_SELECT)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return ((data ?? []) as unknown as RawApproval[]).map(toApproval);
+}
+
+export async function getApprovalsForWork(
+  _viewer: Profile,
+  workId: string,
+): Promise<ApprovalWithSteps[]> {
+  if (!UUID.test(workId)) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("approval")
+    .select(APPROVAL_SELECT)
+    .eq("work_id", workId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return ((data ?? []) as unknown as RawApproval[]).map(toApproval);
+}
+
+/**
+ * 내 칸이 아직 남아 있는 결재 문서.
+ *
+ * 홈의 「결재 대기」가 쓴다. 결재함처럼 전부 가져와 거르지 않는 이유는, 홈은
+ * 하루에 몇 번씩 열리는 화면이고 결재 문서는 부서 전체 것이 다 보이기 때문이다.
+ *
+ * 두 번 묻는다. 한 번에 묻는 길(`approval_step!inner(...)`)이 있지만, 그렇게
+ * 하면 **딸려 오는 결재란도 함께 걸러진다.** 그러면 「앞 순서가 끝났는가」를
+ * 판정할 형제 칸이 사라져 지금 내 차례인지 알 수 없게 된다.
+ */
+export async function listApprovalsAwaitingMe(
+  viewer: Profile,
+): Promise<ApprovalWithSteps[]> {
+  const supabase = await createClient();
+  const { data: steps, error } = await supabase
+    .from("approval_step")
+    .select("approval_id")
+    .eq("approver_id", viewer.id)
+    .is("signed_at", null)
+    .is("rejected_at", null);
+  if (error) throw error;
+
+  const ids = [...new Set((steps ?? []).map((s) => s.approval_id as string))];
+  if (ids.length === 0) return [];
+
+  const { data, error: docError } = await supabase
+    .from("approval")
+    .select(APPROVAL_SELECT)
+    .in("id", ids)
+    .order("created_at", { ascending: false });
+  if (docError) throw docError;
+  return ((data ?? []) as unknown as RawApproval[]).map(toApproval);
+}
+
+export async function getApproval(
+  _viewer: Profile,
+  id: string,
+): Promise<ApprovalWithSteps | null> {
+  if (!UUID.test(id)) return null;
+
+  const supabase = await createClient();
+  // 볼 수 없는 문서는 RLS 가 0행으로 돌려준다. 없는 것과 구분하지 않는다.
+  const { data, error } = await supabase
+    .from("approval")
+    .select(APPROVAL_SELECT)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? toApproval(data as unknown as RawApproval) : null;
 }
 
 // ---------------------------------------------------------------------------

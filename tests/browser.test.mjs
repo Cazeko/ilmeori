@@ -607,6 +607,122 @@ console.log("\n[7] 인계서 보충 — 스크립트 없이 적고, 종이에 �
   }
 }
 
+// ── 8. 결재 화면 ────────────────────────────────────────────────────────────
+//
+// 읽는 쪽만 본다. 서명·상신은 DB가 있어야 도는데(절차로만 찍히므로 목업에는
+// 아예 길이 없다), 그 판정은 db:test 의 [15] 41개가 이미 지키고 있다.
+// 여기서 확인할 것은 **화면이 그 판정과 같은 말을 하는가**다 —
+// 결재함의 「대기」와 문서의 「지금 내 차례」가 어긋나면 두 화면 다 못 믿게 된다.
+console.log("\n[8] 결재 — 결재함 · 결재란 · 업무 상세 탭");
+{
+  const ctx = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    // ── 협조자 쪽: 내 차례인 문서가 대기함에 있다 ─────────────────────────
+    const choi = await login(ctx, "최민재");
+    await choi.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
+    const home = await allText(choi);
+    ok("홈이 내 차례인 결재를 알린다", /내 차례인 결재가\s*1\s*건 있습니다/.test(home));
+
+    await choi.goto(`${BASE}/approvals`, { waitUntil: "domcontentloaded" });
+    const inbox = await allText(choi);
+    ok("결재함이 열린다", inbox.includes("결재함"));
+    // 목록 줄 안에서 본다. 화면 전체 글자에서 찾으면 왼쪽 분류 링크의 「대기」로
+    // 통과해 버린다 — 문서가 한 건도 없어도 초록불이 되는 시험이 된다.
+    const rows = choi.locator("main ul > li:has(h3)");
+    const first = (await rows.first().textContent()) ?? "";
+    ok("대기함에 문서가 있다", (await rows.count()) >= 1, `${await rows.count()}건`);
+    ok("그 줄에 「지금 내 차례」가 붙는다", first.includes("지금 내 차례"), first.slice(0, 80));
+    ok("진행률이 분자·분모로 보인다", /진행 중 \d+\/\d+/.test(first), first.slice(0, 80));
+    ok(
+      "문서번호가 하이웍스 체계다",
+      /HS-(보고|계획|검토|협조)-\d{8}-\d{4}/.test(first),
+      first.slice(0, 80),
+    );
+
+    // ── 결재란 ────────────────────────────────────────────────────────────
+    await rows.first().locator("h3 a").click();
+    await choi.waitForLoadState("domcontentloaded");
+    const doc = await allText(choi);
+    ok("결재 문서가 열린다", doc.includes("결재란"));
+    ok("서명 당시 직위가 결재란에 있다", doc.includes("단장") && doc.includes("팀장"));
+    ok("서명한 칸에는 날짜가 찍힌다", /8월 5일/.test(doc));
+    ok("아직 안 온 칸은 「대기」다", doc.includes("대기"));
+    ok("협조 줄이 따로 있다", doc.includes("대기(병렬)"));
+    ok(
+      "본문이 그대로 실린다",
+      doc.includes("동탄 트램 1호선 개통 일정이 확정되지 않아"),
+    );
+    ok("직위가 서명 당시의 것임을 화면이 밝힌다", doc.includes("서명 당시의 것"));
+
+    // ── 같은 문서, 다른 계정 ──────────────────────────────────────────────
+    // 기안자에게는 「내 차례」가 없다. 상신하면서 기안란에 이미 서명했기 때문이다.
+    const url = choi.url();
+    const other = await browser.newContext({ javaScriptEnabled: false });
+    try {
+      const kim = await login(other, "김서연");
+      await kim.goto(url, { waitUntil: "domcontentloaded" });
+      const seen = await allText(kim);
+      ok("기안자도 같은 문서를 본다", seen.includes("결재란"));
+      ok("기안자에게는 「지금 내 차례」가 없다", !seen.includes("지금 내 차례입니다"));
+    } finally {
+      await other.close();
+    }
+
+    // ── 기안 중인 문서는 기안자만 본다 ────────────────────────────────────
+    const draftId = "ab000000-0000-4000-8000-000000000005";
+    await choi.goto(`${BASE}/approvals/${draftId}`, { waitUntil: "domcontentloaded" });
+    const denied = await allText(choi);
+    ok(
+      "남의 기안 중 문서는 열리지 않는다",
+      denied.includes("결재 문서를 찾을 수 없습니다"),
+    );
+    ok(
+      "권한이 없다고 말하지 않는다",
+      denied.includes("없거나") && denied.includes("보이지 않습니다"),
+    );
+
+    // ── 업무 상세의 결재 탭 ───────────────────────────────────────────────
+    const park = await login(ctx, "박준호");
+    await park.goto(
+      `${BASE}/works/f0000000-0000-4000-8000-000000000005?tab=approval`,
+      { waitUntil: "domcontentloaded" },
+    );
+    const tab = await allText(park);
+    ok("업무 상세에 결재 탭이 있다", tab.includes("이 업무에서 올린 내부결재문서"));
+    ok(
+      "그 업무의 결재가 탭에 실린다",
+      tab.includes("2026년 음식물류폐기물 대행 원가산정 용역 결과 협조 요청"),
+    );
+    // 결재는 별도 이력 표를 만들지 않는다. 업무 이력에 함께 쌓이는 것이 그 증거다.
+    await park.goto(
+      `${BASE}/works/f0000000-0000-4000-8000-000000000005?tab=history`,
+      { waitUntil: "domcontentloaded" },
+    );
+    const history = await allText(park);
+    ok("결재 사건이 업무 이력에 함께 쌓인다", history.includes("상신했습니다"));
+    ok("서명도 업무 이력에 남는다", history.includes("결재란에 서명했습니다"));
+
+    // ── 기안자의 기안 중 문서 ─────────────────────────────────────────────
+    await park.goto(`${BASE}/approvals?box=drafting`, { waitUntil: "domcontentloaded" });
+    const drafts = await allText(park);
+    ok("기안자에게는 기안 중 문서가 보인다", drafts.includes("청소차량 운행기록 전산화 도입 검토"));
+    ok("기안 중인 문서에는 번호가 없다", !drafts.includes("HS-검토-"));
+
+    // ── 전결 ──────────────────────────────────────────────────────────────
+    await park.goto(`${BASE}/approvals/ab000000-0000-4000-8000-000000000002`, {
+      waitUntil: "domcontentloaded",
+    });
+    const delegated = await allText(park);
+    ok("전결란에 「전결」이 찍힌다", delegated.includes("전결"));
+    ok(
+      "전결 뒤 칸은 사선이고, 그 사실을 글자로도 적는다",
+      delegated.includes("전결로 끝나 결재하지 않았습니다"),
+    );
+  } finally {
+    await ctx.close();
+  }
+}
+
 await browser.close();
 
 console.log(`\n통과 ${pass}건 / 실패 ${fails.length}건`);

@@ -43,6 +43,26 @@ export const getAttachment = (id: string) => impl.getAttachment(id);
 
 export const listProfiles = () => impl.listProfiles();
 
+/**
+ * 결재.
+ *
+ * 두 구현 모두 **뷰어를 첫 인자로 받는다.** 대화·첨부와 달리 「누가 보는가」에
+ * 따라 돌려줄 것이 달라지기 때문이다 — 기안 중인 문서는 기안자만 보고,
+ * 결재선에 이름이 있는 사람은 그 업무를 못 봐도 문서 한 장은 본다.
+ * db 구현에서는 RLS 가 그 판정을 하므로 인자를 쓰지 않지만, 서명을 맞춰 둔다.
+ */
+export const listApprovals = (viewer: Profile, limit?: number) =>
+  impl.listApprovals(viewer, limit);
+
+export const getApprovalsForWork = (viewer: Profile, workId: string) =>
+  impl.getApprovalsForWork(viewer, workId);
+
+export const getApproval = (viewer: Profile, id: string) =>
+  impl.getApproval(viewer, id);
+
+export const listApprovalsAwaitingMe = (viewer: Profile) =>
+  impl.listApprovalsAwaitingMe(viewer);
+
 export const getDepartments = () => impl.getDepartments();
 export const getDepartment = (id: string) => impl.getDepartment(id);
 export const getDepartmentTree = () => impl.getDepartmentTree();

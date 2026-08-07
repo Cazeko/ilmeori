@@ -6,6 +6,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Inbox,
+  Stamp,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/ui/page-header";
@@ -15,7 +16,13 @@ import { ActivityFeed } from "@/components/work/activity-timeline";
 import { WorkCard } from "@/components/work/work-card";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDueLabel } from "@/lib/format";
-import { getDashboard, getDepartment, getHandoverFor } from "@/lib/data";
+import {
+  getDashboard,
+  getDepartment,
+  getHandoverFor,
+  listApprovalsAwaitingMe,
+} from "@/lib/data";
+import { myTurn } from "@/lib/approval";
 import { requireViewer } from "@/lib/session";
 import { HANDOVER_STATUS_LABEL, STATUS_LABEL, type DerivedStatus } from "@/lib/types";
 
@@ -43,6 +50,13 @@ export default async function HomePage() {
   const { mine, counts, recent, urgent } = await getDashboard(viewer);
   const handover = await getHandoverFor(viewer);
 
+  // 내 차례인 결재. 결재함 「대기」와 **같은 판정**을 쓴다 — 홈이 3건이라고
+  // 하는데 결재함을 열면 1건인 화면은 둘 다 못 믿게 만든다.
+  const awaiting = await listApprovalsAwaitingMe(viewer);
+  const myTurnCount = awaiting.filter(
+    (a) => myTurn(a, a.steps, viewer.id) !== null,
+  ).length;
+
   return (
     <div className="px-5 py-6 sm:px-7 lg:px-8">
       <PageHeader
@@ -69,6 +83,30 @@ export default async function HomePage() {
             </span>
           </span>
           <ArrowRight aria-hidden className="size-5 shrink-0 text-accent-text" />
+        </Link>
+      ) : null}
+
+      {/* ── 내 차례인 결재 ───────────────────────────────────────────────
+          인계 다음, 요약보다 위다. 결재는 「내가 처리해 주기를 다른 사람이
+          기다리고 있는 일」이라 내 업무의 마감보다 급하다. */}
+      {myTurnCount > 0 ? (
+        <Link
+          href="/approvals"
+          data-variant="plain"
+          className="mb-5 flex items-center gap-4 rounded-md border border-primary/30 bg-primary-5 px-5 py-4 transition-colors duration-150 hover:border-primary"
+        >
+          <Stamp aria-hidden className="size-5 shrink-0 text-primary" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-body-sm font-bold text-gray-90">
+              내 차례인 결재가 {myTurnCount}건 있습니다
+            </span>
+            <span className="mt-0.5 block text-body-xs text-gray-60">
+              {awaiting.length > myTurnCount
+                ? `내 칸이 있는 문서 ${awaiting.length}건 가운데 ${myTurnCount}건이 지금 차례입니다. 나머지는 앞 순서를 기다리는 중입니다.`
+                : "서명하거나 반려할 문서입니다."}
+            </span>
+          </span>
+          <ArrowRight aria-hidden className="size-5 shrink-0 text-primary" />
         </Link>
       ) : null}
 

@@ -87,6 +87,8 @@ try {
         handover: works.handovers.length,
         handover_item: works.handoverItems.length,
         access_log: works.accessLogs.length,
+        approval: works.approvals.length,
+        approval_step: works.approvalSteps.length,
       },
       null,
       2,
@@ -212,6 +214,8 @@ function build(org, works) {
     handovers,
     handoverItems,
     accessLogs,
+    approvals,
+    approvalSteps,
   } = works;
 
   const L = [];
@@ -544,10 +548,60 @@ function build(org, works) {
     "",
   );
 
+  // --- approval -------------------------------------------------------------
+  p(
+    "-- -----------------------------------------------------------------------------",
+    "-- 10. 결재 (시행규칙 별지 제2호서식 · 내부결재문서)",
+    "--",
+    "-- 서명은 평소 절차(public.sign_approval)로만 찍힌다. 시드에서만 예외적으로",
+    "-- 시각을 직접 적는다 — 「다섯 달치 결재가 이미 쌓인 상태」를 만들어야 하고,",
+    "-- 절차로 만들면 서명 시각이 전부 지금으로 찍히기 때문이다(이력과 같은 이유).",
+    "--",
+    "-- 가드 트리거는 UPDATE 만 보므로 INSERT 는 걸리지 않지만, 방송 트리거는",
+    "-- INSERT 에도 붙어 있어 시드가 실시간 신호를 수십 건 흘린다. 그래서 끈다.",
+    "-- -----------------------------------------------------------------------------",
+    "alter table approval      disable trigger user;",
+    "alter table approval_step disable trigger user;",
+    "alter table approval      disable row level security;",
+    "alter table approval_step disable row level security;",
+    "",
+    "insert into approval (",
+    "  id, work_id, form, doc_no, title, body, retention, security,",
+    "  state, drafter_id, created_at, closed_at",
+    ") values",
+    rows(
+      approvals.map(
+        (a) =>
+          `${q(a.id)}, ${q(a.work_id)}, ${q(a.form)}, ${a.doc_no ? q(a.doc_no) : "NULL"}, ` +
+          `${q(a.title)}, ${q(a.body)}, ${a.retention ?? "NULL"}, ${q(a.security)}, ` +
+          `${q(a.state)}::approval_state, ${q(a.drafter_id)}, ${ts(a.created_at)}, ${ts(a.closed_at)}`,
+      ),
+    ) + "\non conflict (id) do nothing;",
+    "",
+    "insert into approval_step (",
+    "  id, approval_id, seq, kind, approver_id, position,",
+    "  signed_at, rejected_at, opinion",
+    ") values",
+    rows(
+      approvalSteps.map(
+        (s) =>
+          `${q(s.id)}, ${q(s.approval_id)}, ${s.seq}, ${q(s.kind)}::approval_kind, ` +
+          `${q(s.approver_id)}, ${q(s.position)}, ${ts(s.signed_at)}, ${ts(s.rejected_at)}, ` +
+          `${s.opinion ? q(s.opinion) : "NULL"}`,
+      ),
+    ) + "\non conflict (id) do nothing;",
+    "",
+    "alter table approval      enable row level security;",
+    "alter table approval_step enable row level security;",
+    "alter table approval      enable trigger user;",
+    "alter table approval_step enable trigger user;",
+    "",
+  );
+
   // --- access_log -----------------------------------------------------------
   p(
     "-- -----------------------------------------------------------------------------",
-    "-- 10. 열람기록",
+    "-- 11. 열람기록",
     "-- -----------------------------------------------------------------------------",
     "do $$ begin",
     "if not exists (select 1 from access_log) then",
@@ -567,7 +621,7 @@ function build(org, works) {
 
   p(
     "-- -----------------------------------------------------------------------------",
-    "-- 11. 트리거를 다시 켠다",
+    "-- 12. 트리거를 다시 켠다",
     "--",
     "-- 여기서부터는 평소대로 동작한다. 사용자가 무언가 고치면 이력이 자동으로 쌓인다.",
     "-- -----------------------------------------------------------------------------",

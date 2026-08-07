@@ -1,14 +1,16 @@
 {
   "department": 89,
-  "profile": 16,
+  "profile": 20,
   "work": 18,
   "work_member": 40,
   "document": 3,
   "doc_section": 10,
   "comment": 10,
   "attachment": 8,
-  "activity": 64,
+  "activity": 74,
   "handover": 1,
   "handover_item": 3,
-  "access_log": 20
+  "access_log": 20,
+  "approval": 5,
+  "approval_step": 17
 }

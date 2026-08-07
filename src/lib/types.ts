@@ -323,6 +323,24 @@ export interface AttachmentWithUploader extends Attachment {
   uploader: Profile;
 }
 
+export interface ApprovalStepWithApprover extends ApprovalStep {
+  approver: Profile;
+}
+
+/**
+ * 화면이 받는 결재 문서 한 벌.
+ *
+ * work 가 null 일 수 있다. 결재선에 이름이 있으면 그 업무를 볼 수 없어도 문서
+ * 한 장은 보이기 때문이다(0017 의 approval_select). 다른 과 주무관에게 협조를
+ * 구하면서 그 과의 업무를 통째로 열어 줄 이유는 없다 — 화면은 그 자리에
+ * 제목 대신 「열람 권한이 없는 업무」라고 적는다.
+ */
+export interface ApprovalWithSteps extends Approval {
+  drafter: Profile;
+  steps: ApprovalStepWithApprover[];
+  work: Pick<Work, "id" | "title"> | null;
+}
+
 export interface HandoverNoteWithAuthor extends HandoverNote {
   author: Profile;
 }
@@ -395,6 +413,79 @@ export const HANDOVER_STATUS_LABEL: Record<HandoverStatus, string> = {
   confirmed: "인계자 확인",
   completed: "인수 완료",
 };
+
+/**
+ * 결재유형 8종의 이름. 법정 용어를 그대로 쓴다.
+ *
+ * 「승인」·「검토자」 같은 사기업 낱말로 바꾸면 공무원이 화면을 보고 무엇을 하는
+ * 칸인지 다시 배워야 한다. DB의 approval_kind 열거형과 **같은 목록**이다.
+ */
+export const APPROVAL_KIND_LABEL: Record<ApprovalKind, string> = {
+  draft: "기안",
+  review: "결재",
+  final: "최종결재",
+  delegated: "전결",
+  acting: "대결",
+  concur_seq: "협조",
+  concur_par: "협조",
+  post_report: "사후보고",
+};
+
+/** 결재란 아래 줄(협조)로 내려갈 유형. 시행규칙 제4조의 「검토·협조」층이다. */
+export const CONCUR_KINDS: readonly ApprovalKind[] = ["concur_seq", "concur_par"];
+
+export const APPROVAL_STATE_LABEL: Record<ApprovalState, string> = {
+  drafting: "기안 중",
+  in_progress: "진행 중",
+  completed: "완결",
+  rejected: "반려",
+  withdrawn: "회수",
+};
+
+/**
+ * 별지 제2호서식이 담는 문서 갈래.
+ *
+ * 발신문서(별지 제1호서식)는 여기 없다. 그건 온나라의 자리이고, 그 경계가
+ * 이 제품이 온나라를 대체하지 않는다는 주장의 근거다.
+ */
+export const APPROVAL_FORM_LABEL: Record<ApprovalForm, string> = {
+  report: "보고서",
+  plan: "계획서",
+  review: "검토서",
+  cooperation: "업무협조",
+};
+
+/** 문서번호의 가운데 마디. app.next_doc_no() 가 붙이는 값과 같아야 한다. */
+export const APPROVAL_FORM_DOC_LABEL: Record<ApprovalForm, string> = {
+  report: "보고",
+  plan: "계획",
+  review: "검토",
+  cooperation: "협조",
+};
+
+export const APPROVAL_FORMS = [
+  "report",
+  "plan",
+  "review",
+  "cooperation",
+] as const satisfies readonly ApprovalForm[];
+
+/** 폼으로 넘어온 값은 믿지 않는다. DB의 approval_form_check 와 같은 목록이다. */
+export function isApprovalForm(v: unknown): v is ApprovalForm {
+  return typeof v === "string" && (APPROVAL_FORMS as readonly string[]).includes(v);
+}
+
+/**
+ * 보존연한(년). 「공공기록물 관리에 관한 법률 시행령」 제26조.
+ * 준영구·영구는 여기 없다 — 그 둘이 필요한 문서는 애초에 발신문서다(0016 주석).
+ */
+export const RETENTION_YEARS = [1, 3, 5, 10, 30] as const;
+
+/** 제목·본문의 상한. DB의 approval_title_check · approval_body_check 와 같은 값이다. */
+export const APPROVAL_TITLE_MAX = 200;
+export const APPROVAL_BODY_MAX = 20000;
+/** 의견·반려 사유의 상한. DB의 approval_step_opinion_check 와 같은 값이다. */
+export const APPROVAL_OPINION_MAX = 500;
 
 export const ACCESS_KIND_LABEL: Record<AccessKind, string> = {
   "work.viewed": "업무 열람",

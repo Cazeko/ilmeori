@@ -15,6 +15,8 @@ import "server-only";
 import {
   accessLogs,
   activities,
+  approvalSteps,
+  approvals,
   attachments,
   comments,
   docSections,
@@ -32,6 +34,8 @@ import {
   derivedStatus,
   type AccessLogWithActor,
   type ActivityWithActor,
+  type Approval,
+  type ApprovalWithSteps,
   type AttachmentWithUploader,
   type CommentWithAuthor,
   type Department,
@@ -388,6 +392,99 @@ function isDueSoon(due: string | null, derived: DerivedStatus) {
   if (!due || derived === "done") return false;
   const d = daysUntil(due);
   return d >= 0 && d <= 7;
+}
+
+// ---------------------------------------------------------------------------
+// 결재
+//
+// 누가 무엇을 보는가는 0017 의 approval_select 와 같은 규칙이다.
+//   기안 중  → 기안자만. 아직 아무에게도 보내지 않은 초안이다
+//   그 뒤    → 기안자 + 그 업무를 볼 수 있는 사람 + 결재선에 이름이 있는 사람
+//
+// 마지막 한 겹이 협조를 가능하게 한다 — 다른 과 사람이 그 과의 업무를 통째로
+// 볼 이유는 없지만, 자기 이름이 결재란에 올라간 그 문서 한 장은 봐야 한다.
+// ---------------------------------------------------------------------------
+
+function toApprovalView(
+  a: Approval,
+  viewer: Profile,
+  state: DemoState,
+): ApprovalWithSteps | null {
+  const steps = approvalSteps
+    .filter((s) => s.approval_id === a.id)
+    .sort((x, y) => x.seq - y.seq)
+    .map((s) => ({ ...s, approver: requireProfile(s.approver_id) }));
+
+  const raw = works.find((w) => w.id === a.work_id);
+  const work = raw ? toListItem(raw, state) : null;
+  const canReadWork = work ? canRead(work, viewer, work.members) : false;
+
+  const visible =
+    a.drafter_id === viewer.id ||
+    (a.state !== "drafting" &&
+      (canReadWork || steps.some((s) => s.approver_id === viewer.id)));
+  if (!visible) return null;
+
+  return {
+    ...a,
+    drafter: requireProfile(a.drafter_id),
+    steps,
+    // 업무를 볼 수 없으면 제목도 주지 않는다. DB 구현에서는 조인이 애초에
+    // null 을 돌려주고, 화면은 그 자리에 「열람 권한이 없는 업무」라고 적는다.
+    work: canReadWork && work ? { id: work.id, title: work.title } : null,
+  };
+}
+
+export async function listApprovals(
+  viewer: Profile,
+  limit = 100,
+): Promise<ApprovalWithSteps[]> {
+  const state = await getDemoState();
+  return approvals
+    .map((a) => toApprovalView(a, viewer, state))
+    .filter((a): a is ApprovalWithSteps => a !== null)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, limit);
+}
+
+export async function getApprovalsForWork(
+  viewer: Profile,
+  workId: string,
+): Promise<ApprovalWithSteps[]> {
+  const state = await getDemoState();
+  return approvals
+    .filter((a) => a.work_id === workId)
+    .map((a) => toApprovalView(a, viewer, state))
+    .filter((a): a is ApprovalWithSteps => a !== null)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+/** 내 칸이 아직 남아 있는 결재 문서. 홈의 「결재 대기」가 쓴다. */
+export async function listApprovalsAwaitingMe(
+  viewer: Profile,
+): Promise<ApprovalWithSteps[]> {
+  const state = await getDemoState();
+  const mine = new Set(
+    approvalSteps
+      .filter(
+        (s) => s.approver_id === viewer.id && !s.signed_at && !s.rejected_at,
+      )
+      .map((s) => s.approval_id),
+  );
+  return approvals
+    .filter((a) => mine.has(a.id))
+    .map((a) => toApprovalView(a, viewer, state))
+    .filter((a): a is ApprovalWithSteps => a !== null)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function getApproval(
+  viewer: Profile,
+  id: string,
+): Promise<ApprovalWithSteps | null> {
+  const state = await getDemoState();
+  const a = approvals.find((x) => x.id === id);
+  return a ? toApprovalView(a, viewer, state) : null;
 }
 
 // ---------------------------------------------------------------------------

@@ -31,8 +31,11 @@ export async function getViewer(): Promise<Profile | null> {
     // profile 행이 없으면 들어올 자격이 없는 계정이다.
     const { data } = await supabase
       .from("profile")
+      // rank 를 빠뜨리면 안 된다. 타입은 `data as Profile` 로 넘어가지만 실제 값은
+      // undefined 가 되고, 결재선 자동 생성이 「나보다 위인 사람」을 한 명도 찾지
+      // 못한다(rank 비교가 전부 false 가 된다). 화면은 오류 없이 빈 결재선을 준다.
       .select(
-        "id, name, department_id, position, email, avatar_url, is_active, is_demo",
+        "id, name, department_id, position, rank, email, avatar_url, is_active, is_demo",
       )
       .eq("id", user.id)
       .maybeSingle();

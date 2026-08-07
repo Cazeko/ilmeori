@@ -144,6 +144,95 @@ const MESSAGES = {
     "이미 실행된 인계입니다. 보충 내용을 더하거나 지울 수 없습니다. 권한이 실제로 옮겨 간 뒤의 인계서는 그때 무엇이 적혀 있었는지가 곧 기록입니다.",
   ],
 
+  // ── 결재 ──────────────────────────────────────────────────────────────
+  "approval.created": [
+    "success",
+    "결재 문서를 만들었습니다. 아직 상신되지 않았고 나 말고는 아무도 볼 수 없습니다. 결재선을 확인한 뒤 상신해 주세요.",
+  ],
+  "approval.updated": ["success", "결재 문서를 고쳤습니다."],
+  "approval.deleted": [
+    "success",
+    "기안 중이던 문서를 지웠습니다. 상신한 뒤에는 지울 수 없습니다.",
+  ],
+  "approval.submitted": [
+    "success",
+    "상신했습니다. 문서번호가 붙었고 기안란에 서명이 찍혔습니다.",
+  ],
+  "approval.signed": ["success", "서명했습니다."],
+  "approval.rejected": [
+    "success",
+    "반려했습니다. 사유가 결재란에 남고 기안자에게 그대로 보입니다.",
+  ],
+  "approval.withdrawn": [
+    "success",
+    "회수했습니다. 회수한 사실은 업무 이력에 남습니다.",
+  ],
+  "approval.step_added": ["success", "결재란을 추가했습니다."],
+  "approval.step_removed": ["success", "결재란을 뺐습니다."],
+  "approval.line_copied": ["success", "결재선을 가져왔습니다."],
+  "approval.line_copied_partial": [
+    "warning",
+    "결재선을 가져왔지만 일부 칸이 빠졌습니다. 우리 부서에 같은 서열이 없거나 이미 결재선에 있는 사람이었습니다. 결재란을 확인하고 필요하면 직접 추가해 주세요.",
+  ],
+  "approval.source_missing": [
+    "danger",
+    "가져올 결재 문서를 찾을 수 없습니다. 볼 수 있는 문서에서만 결재선을 가져올 수 있습니다.",
+  ],
+  "approval.no_work": [
+    "danger",
+    "결재를 올릴 업무를 골라 주세요. 결재 문서는 업무에 매달립니다.",
+  ],
+  "approval.title_required": ["danger", "결재 문서의 제목을 적어 주세요."],
+  "approval.title_long": ["danger", "제목이 너무 깁니다. 200자까지 적을 수 있습니다."],
+  "approval.body_long": [
+    "danger",
+    "본문이 너무 깁니다. 20,000자까지 적을 수 있습니다. 더 긴 자료는 업무에 첨부해 주세요.",
+  ],
+  "approval.opinion_long": [
+    "danger",
+    "의견이 너무 깁니다. 500자까지 적을 수 있습니다.",
+  ],
+  "approval.need_reason": [
+    "danger",
+    "반려 사유를 적어 주세요. 사유 없는 반려는 「왜 반려됐는지 물어보러 가야 하는」 상황을 그대로 남깁니다.",
+  ],
+  "approval.no_approver": [
+    "danger",
+    "결재선에 결재자가 없습니다. 혼자 서명하고 끝나는 문서는 결재가 아닙니다. 결재란을 추가한 뒤 상신해 주세요.",
+  ],
+  "approval.no_draft_step": [
+    "danger",
+    "결재선에 기안란이 없거나 기안자의 자리가 아닙니다. 기안란을 확인해 주세요.",
+  ],
+  "approval.line_reversed": [
+    "danger",
+    "기안란이 결재선의 첫 칸이어야 합니다. 기안란보다 앞선 칸을 빼 주세요.",
+  ],
+  "approval.duplicate_approver": [
+    "warning",
+    "이미 결재선에 있는 사람입니다. 한 사람이 한 문서에 두 칸을 가질 수 없습니다.",
+  ],
+  "approval.draft_step_locked": [
+    "danger",
+    "기안란은 뺄 수 없습니다. 기안자의 자리이고, 상신하는 순간 그 칸에 서명이 찍힙니다.",
+  ],
+  "approval.cannot_withdraw": [
+    "danger",
+    "이미 결재가 시작된 문서는 회수할 수 없습니다. 한 사람이라도 읽고 서명했다면 없던 일로 되돌릴 수 없습니다.",
+  ],
+  "approval.locked": [
+    "danger",
+    "완결·반려·회수된 결재는 고칠 수 없습니다. 내용을 바꾸려면 새로 기안해 주세요.",
+  ],
+  "approval.too_many_steps": [
+    "danger",
+    "결재란이 너무 많습니다. 한 문서에 12칸까지입니다. 결재란은 표가 아니라 서식이라 칸이 옆으로 늘어나고, 그보다 많으면 좁은 화면에서도 종이에서도 읽을 수 없습니다.",
+  ],
+  "approval.stale_turn": [
+    "warning",
+    "그 사이 결재가 움직였습니다. 다른 사람이 먼저 처리했거나 앞 순서가 아직 끝나지 않았습니다. 새로고침한 뒤 결재란을 다시 확인해 주세요.",
+  ],
+
   // ── 공통 실패 ─────────────────────────────────────────────────────────
   invalid: ["danger", "입력한 내용을 다시 확인해 주세요."],
   denied: ["danger", "이 작업을 할 권한이 없습니다."],
@@ -209,6 +298,25 @@ export function classifyError(error: PostgrestError | null): FeedbackCode {
   if (error.message.includes("마지막 소유자")) return "member.last_owner";
   if (error.message.includes("보충을 더 담을 수 없습니다")) {
     return "handover.note.too_many";
+  }
+
+  // 결재 절차가 거절한 것들. 절차는 check_violation(23514)으로 던지므로 코드만
+  // 보면 전부 「저장하지 못했습니다」가 된다 — 그러면 사용자는 무엇을 고쳐야
+  // 하는지 알 수 없다. 앞에서 미리 거르지 못하는 것들만 여기서 이름을 붙인다
+  // (동시에 두 사람이 눌렀거나, 폼을 거치지 않은 요청).
+  if (error.message.includes("결재선에 결재자가 없습니다")) {
+    return "approval.no_approver";
+  }
+  if (error.message.includes("반려 사유")) return "approval.need_reason";
+  if (error.message.includes("회수할 수 없습니다")) {
+    return "approval.cannot_withdraw";
+  }
+  if (
+    error.message.includes("이미 처리한 결재칸") ||
+    error.message.includes("앞 순서의 결재") ||
+    error.message.includes("전결로 끝난")
+  ) {
+    return "approval.stale_turn";
   }
 
   switch (error.code) {

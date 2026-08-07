@@ -11,6 +11,7 @@ import {
   Repeat,
   ScrollText,
   Search,
+  Stamp,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -37,6 +38,7 @@ const NAV: Array<{ heading: string; items: NavItem[] }> = [
     items: [
       { href: "/", label: "홈", icon: LayoutDashboard },
       { href: "/works", label: "업무 보드", icon: Columns3 },
+      { href: "/approvals", label: "결재", icon: Stamp },
       { href: "/handover", label: "인계·인수", icon: ArrowLeftRight },
     ],
   },

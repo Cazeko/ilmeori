@@ -10,13 +10,16 @@ import {
   History,
   MessageSquare,
   PencilLine,
+  Stamp,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { StatusBadge } from "@/components/status-badge";
+import { ApprovalRow } from "@/components/approval/approval-row";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PersonChip } from "@/components/ui/avatar";
 import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Notice } from "@/components/ui/notice";
 import { TabNav, type TabItem } from "@/components/ui/tab-nav";
@@ -34,6 +37,7 @@ import { formatDate, formatDateTime, formatDueLabel } from "@/lib/format";
 import {
   getAccessLogsForWork,
   getActivities,
+  getApprovalsForWork,
   getAttachments,
   getComments,
   getWork,
@@ -46,7 +50,7 @@ import { canMutate, isSupabaseConfigured } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
 import { ACCESS_KIND_LABEL, VISIBILITY_LABEL } from "@/lib/types";
 
-const TABS = ["doc", "talk", "history", "people"] as const;
+const TABS = ["doc", "talk", "approval", "history", "people"] as const;
 type Tab = (typeof TABS)[number];
 
 function parseTab(value: unknown): Tab {
@@ -65,11 +69,16 @@ export async function generateMetadata({
 /**
  * 업무 상세.
  *
- * 탭 넷이 각각 다른 질문에 답한다.
+ * 탭 다섯이 각각 다른 질문에 답한다.
  *   문서   — 이 일의 내용이 무엇인가
  *   대화   — 왜 그렇게 정했는가
+ *   결재   — 무엇이 결재를 받았는가
  *   이력   — 누가 언제 무엇을 했는가
  *   참여자 — 누가 볼 수 있는가
+ *
+ * 결재를 별도 메뉴로만 두지 않고 여기에도 붙이는 이유는, 결재 문서가 업무에
+ * 매달리기 때문이다. 결재함은 그것을 모아 보는 화면일 뿐이다.
+ * (브리티웍스가 결재를 별도 메뉴가 아니라 메일·업무 포털 안에 넣은 것과 같은 판단)
  *
  * 탭은 주소로 움직인다(?tab=history). 그래야 "이 업무 이력 좀 보세요"를
  * 링크 하나로 보낼 수 있다.
@@ -110,14 +119,21 @@ export default async function WorkDetailPage({
   const editingId = typeof sp.edit === "string" ? sp.edit : null;
 
   // 한 화면에 필요한 것을 한꺼번에 가져온다. 순서대로 기다리면 왕복이 그만큼 쌓인다.
-  const [{ document: doc, sections }, comments, activities, attachments, accessLogs] =
-    await Promise.all([
-      getWorkDocument(work.id),
-      getComments(work.id),
-      getActivities(work.id),
-      getAttachments(work.id),
-      getAccessLogsForWork(work.id),
-    ]);
+  const [
+    { document: doc, sections },
+    comments,
+    activities,
+    attachments,
+    accessLogs,
+    approvals,
+  ] = await Promise.all([
+    getWorkDocument(work.id),
+    getComments(work.id),
+    getActivities(work.id),
+    getAttachments(work.id),
+    getAccessLogsForWork(work.id),
+    getApprovalsForWork(viewer, work.id),
+  ]);
 
   // 부를 수 있는 사람 목록은 참여자 탭에서 소유자에게만 필요하다.
   // 다른 탭을 볼 때마다 전 직원을 읽어 올 이유가 없다.
@@ -142,6 +158,13 @@ export default async function WorkDetailPage({
       href: `/works/${work.id}?tab=talk`,
       icon: MessageSquare,
       count: comments.length,
+    },
+    {
+      key: "approval",
+      label: "결재",
+      href: `/works/${work.id}?tab=approval`,
+      icon: Stamp,
+      count: approvals.length,
     },
     {
       key: "history",
@@ -320,6 +343,60 @@ export default async function WorkDetailPage({
                 comments={comments}
                 viewer={viewer}
               />
+            ) : null}
+
+            {tab === "approval" ? (
+              <section aria-labelledby="approval-heading">
+                <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2
+                      id="approval-heading"
+                      className="mb-1 text-h3 font-bold text-gray-90"
+                    >
+                      결재
+                    </h2>
+                    <p className="max-w-2xl text-body-sm break-keep text-gray-60">
+                      이 업무에서 올린 내부결재문서(별지 제2호서식)입니다. 결재
+                      사건은 별도 표가 아니라 이 업무의 이력에 함께 쌓입니다.
+                    </p>
+                  </div>
+                  {canWrite ? (
+                    <ButtonLink
+                      href={`/approvals/new?work=${work.id}`}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      <Stamp aria-hidden className="size-4" />
+                      결재 올리기
+                    </ButtonLink>
+                  ) : null}
+                </div>
+
+                {approvals.length > 0 ? (
+                  <ul className="divide-y divide-gray-10 overflow-hidden rounded-md border border-gray-10">
+                    {approvals.map((a) => (
+                      <ApprovalRow
+                        key={a.id}
+                        approval={a}
+                        viewerId={viewer.id}
+                        showWork={false}
+                      />
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="rounded-md border border-gray-10 bg-white">
+                    <EmptyState
+                      icon={Stamp}
+                      title="아직 올린 결재가 없습니다"
+                      description={
+                        canWrite
+                          ? "이 업무에서 결정된 것을 문서로 남기고 결재선을 태울 수 있습니다. 결재선은 부서 서열을 보고 자동으로 채워집니다."
+                          : "결재를 올리려면 이 업무의 편집 권한이 있어야 합니다."
+                      }
+                    />
+                  </div>
+                )}
+              </section>
             ) : null}
 
             {tab === "history" ? (

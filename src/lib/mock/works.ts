@@ -18,6 +18,9 @@
 import type {
   AccessLog,
   Activity,
+  Approval,
+  ApprovalKind,
+  ApprovalStep,
   Attachment,
   Comment,
   DocSection,
@@ -726,6 +729,19 @@ const ACT_SEEDS: ActSeed[] = [
   [17, "고은비", "work.status_changed", "상태를 검토에서 완료로 바꿨습니다", "2026-07-14T18:02:00+09:00"],
   [18, "노태경", "work.created", "업무를 만들었습니다", "2026-04-28T10:10:00+09:00"],
   [18, "노태경", "work.status_changed", "상태를 검토에서 완료로 바꿨습니다", "2026-06-23T11:35:00+09:00"],
+
+  // 결재 — 새 이력 표를 만들지 않는다. 결재는 업무에서 일어나는 일이고,
+  // 업무의 이력은 activity 하나다(0016 §2). 문구는 0017 의 절차가 쓰는 것과 같다.
+  [5, "박준호", "approval.submitted", "결재 「2026년 음식물류폐기물 대행 원가산정 용역 결과 협조 요청」을 상신했습니다", "2026-08-06T09:20:00+09:00"],
+  [5, "정다은", "approval.signed", "「2026년 음식물류폐기물 대행 원가산정 용역 결과 협조 요청」 결재란에 서명했습니다", "2026-08-06T14:05:00+09:00"],
+  [5, "배도현", "approval.signed", "「2026년 음식물류폐기물 대행 원가산정 용역 결과 협조 요청」 협조란에 서명했습니다 (의견 있음)", "2026-08-07T10:12:00+09:00"],
+  [6, "박준호", "approval.submitted", "결재 「2025년 음식물류폐기물 대행 원가산정 용역 결과 보고」를 상신했습니다", "2025-09-30T15:02:00+09:00"],
+  [6, "정다은", "approval.signed", "「2025년 음식물류폐기물 대행 원가산정 용역 결과 보고」 전결란에 서명했습니다", "2025-09-30T16:40:00+09:00"],
+  [6, "정다은", "approval.completed", "결재 「2025년 음식물류폐기물 대행 원가산정 용역 결과 보고」가 완결되었습니다", "2025-09-30T16:40:00+09:00"],
+  [1, "김서연", "approval.submitted", "결재 「제108회 전국체육대회 수송·교통 분야 세부 추진계획」을 상신했습니다", "2026-08-05T11:10:00+09:00"],
+  [1, "황수아", "approval.signed", "「제108회 전국체육대회 수송·교통 분야 세부 추진계획」 결재란에 서명했습니다", "2026-08-05T17:22:00+09:00"],
+  [8, "박준호", "approval.submitted", "결재 「재활용 선별시설 반입수수료 조정(안)」을 상신했습니다", "2026-07-24T16:30:00+09:00"],
+  [8, "정다은", "approval.rejected", "결재 「재활용 선별시설 반입수수료 조정(안)」을 반려했습니다 — 인상 근거가 「폐기물관리법 시행규칙」 개정안과 맞는지 먼저 확인해 주세요. 조례 개정 일정도 함께 적어 주시기 바랍니다.", "2026-07-25T09:40:00+09:00"],
 ];
 
 export const activities: Activity[] = ACT_SEEDS.map(
@@ -767,6 +783,212 @@ export const handoverItems: HandoverItem[] = [
   { handover_id: HANDOVER_ID, work_id: workId(8), transferred: false },
   { handover_id: HANDOVER_ID, work_id: workId(9), transferred: false },
 ];
+
+// ---------------------------------------------------------------------------
+// 결재 — 「내부결재문서」(행정업무규정 시행규칙 별지 제2호서식)
+//
+// 발신문서(별지 제1호서식)는 여기 없다. 그건 온나라의 자리다.
+// 이 다섯 건이 결재함의 칸을 하나씩 채운다 — 진행 중 둘, 완결(전결) 하나,
+// 반려 하나, 기안 중 하나. 데모 계정마다 다른 칸이 차게 짰다.
+//
+//   박준호  기안자.   진행 중 1 · 완결 1 · 반려 1 · 기안 중 1
+//   최민재  협조자.   대기 1 (전국체전 계획서의 병렬협조 칸)
+//   김서연  기안자.   진행 중 1 (최종결재를 기다리는 중)
+//   이하람  인수자.   자원순환과 업무를 볼 수 있으므로 전임자의 결재도 그대로 보인다
+// ---------------------------------------------------------------------------
+
+const aprId = (n: number) =>
+  `ab000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+const stepId = (n: number) =>
+  `57000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+
+type StepSeed = {
+  kind: ApprovalKind;
+  who: string;
+  signed?: string;
+  rejected?: string;
+  opinion?: string;
+};
+
+type ApprovalSeed = {
+  n: number;
+  work: number;
+  form: Approval["form"];
+  /** 상신하는 순간 app.next_doc_no() 가 붙인다. 기안 중에는 없다. */
+  docNo: string | null;
+  title: string;
+  body: string;
+  retention: number | null;
+  state: Approval["state"];
+  drafter: string;
+  created: string;
+  /** 완결·반려·회수된 시각. 셋 중 무엇이었는지는 state 가 말한다. */
+  closed?: string;
+  steps: StepSeed[];
+};
+
+const APPROVAL_SEEDS: ApprovalSeed[] = [
+  {
+    n: 1,
+    work: 5,
+    form: "cooperation",
+    docNo: "HS-협조-20260806-0001",
+    title: "2026년 음식물류폐기물 대행 원가산정 용역 결과 협조 요청",
+    body: [
+      "1. 관련: 「폐기물관리법」 제14조 및 우리 시 「폐기물 처리 대행 계약 사무처리 규정」 제7조",
+      "2. 2026년 음식물류폐기물 수집·운반 대행 원가산정 용역의 중간 결과를 붙임과 같이 알려 드리며, 2027년도 대행료 반영을 위한 협조를 요청합니다.",
+      "3. 산정된 대행료 단가는 전년 대비 3.8% 인상으로, 인상 요인은 인건비 2.4%p·유류비 1.1%p·차량 감가상각 0.3%p입니다.",
+      "4. 대행업체와의 단가 협의는 8월 넷째 주에 예정되어 있으며, 협의 결과에 따라 최종 수치가 달라질 수 있습니다.",
+    ].join("\n\n"),
+    retention: 5,
+    state: "in_progress",
+    drafter: "박준호",
+    created: "2026-08-06T09:20:00+09:00",
+    steps: [
+      { kind: "draft", who: "박준호", signed: "2026-08-06T09:20:00+09:00" },
+      { kind: "review", who: "정다은", signed: "2026-08-06T14:05:00+09:00" },
+      { kind: "final", who: "한상우" },
+      {
+        kind: "concur_par",
+        who: "배도현",
+        signed: "2026-08-07T10:12:00+09:00",
+        opinion:
+          "2027년도 예산 요구서 제출 기한(8/8)과 겹칩니다. 단가 협의 결과가 나오는 대로 예산재정과에 먼저 알려 주시기 바랍니다.",
+      },
+    ],
+  },
+  {
+    n: 2,
+    work: 6,
+    form: "report",
+    docNo: "HS-보고-20250930-0001",
+    title: "2025년 음식물류폐기물 대행 원가산정 용역 결과 보고",
+    body: [
+      "1. 2025년 음식물류폐기물 수집·운반 대행 원가산정 용역이 완료되어 그 결과를 보고합니다.",
+      "2. 산정 결과 대행료 단가는 전년 대비 4.1% 인상되었으며, 인상률의 근거 자료는 용역 최종보고서 제3장에 정리되어 있습니다.",
+      "3. 시의회 행정사무감사에서 인상률 근거 자료가 재차 요구된 바 있어, 산출 근거를 별도 요약본으로 함께 보관하겠습니다.",
+    ].join("\n\n"),
+    retention: 10,
+    state: "completed",
+    drafter: "박준호",
+    created: "2025-09-30T15:02:00+09:00",
+    closed: "2025-09-30T16:40:00+09:00",
+    steps: [
+      { kind: "draft", who: "박준호", signed: "2025-09-30T15:02:00+09:00" },
+      // 전결이 찍히면 문서는 그 자리에서 끝난다. 뒤 칸에는 사선이 그어진다.
+      { kind: "delegated", who: "정다은", signed: "2025-09-30T16:40:00+09:00" },
+      { kind: "final", who: "한상우" },
+    ],
+  },
+  {
+    n: 3,
+    work: 1,
+    form: "plan",
+    docNo: "HS-계획-20260805-0001",
+    title: "제108회 전국체육대회 수송·교통 분야 세부 추진계획",
+    body: [
+      "1. 제108회 전국체육대회(2027년) 개최에 따른 수송·교통 분야 세부 추진계획을 붙임과 같이 수립하고자 합니다.",
+      "2. 대회 기간 중 선수단·임원 수송은 전용 차량으로, 관람객 수송은 시내버스 임시노선과 셔틀로 나누어 운영합니다.",
+      "3. 동탄 트램 1호선 개통 일정이 확정되지 않아, 트램을 전제로 한 노선안과 전제하지 않은 노선안 두 가지를 함께 담았습니다.",
+      "4. 대중교통과 협조를 받아 임시노선 운행 소요 예산을 8월 중 산출할 예정입니다.",
+    ].join("\n\n"),
+    retention: 5,
+    state: "in_progress",
+    drafter: "김서연",
+    created: "2026-08-05T11:10:00+09:00",
+    steps: [
+      { kind: "draft", who: "김서연", signed: "2026-08-05T11:10:00+09:00" },
+      { kind: "review", who: "황수아", signed: "2026-08-05T17:22:00+09:00" },
+      { kind: "final", who: "문지호" },
+      // 병렬협조는 줄을 서지 않는다. 최종결재를 기다리지 않고 지금 처리할 수 있다.
+      { kind: "concur_par", who: "최민재" },
+    ],
+  },
+  {
+    n: 4,
+    work: 8,
+    form: "plan",
+    docNo: "HS-계획-20260724-0001",
+    title: "재활용 선별시설 반입수수료 조정(안)",
+    body: [
+      "1. 선별시설 운영원가 상승분을 반영하여 반입수수료를 조정하고자 합니다.",
+      "2. 조정안: 톤당 62,000원 → 71,000원(14.5% 인상)",
+      "3. 수수료 조정은 조례 개정 사항으로, 의회법무과 협의를 거쳐 조례규칙심의회에 상정할 예정입니다.",
+    ].join("\n\n"),
+    retention: 5,
+    state: "rejected",
+    drafter: "박준호",
+    created: "2026-07-24T16:30:00+09:00",
+    closed: "2026-07-25T09:40:00+09:00",
+    steps: [
+      { kind: "draft", who: "박준호", signed: "2026-07-24T16:30:00+09:00" },
+      {
+        kind: "review",
+        who: "정다은",
+        rejected: "2026-07-25T09:40:00+09:00",
+        opinion:
+          "인상 근거가 「폐기물관리법 시행규칙」 개정안과 맞는지 먼저 확인해 주세요. 조례 개정 일정도 함께 적어 주시기 바랍니다.",
+      },
+      // 앞에서 반려되어 차례가 오지 않은 칸. 사선은 긋지 않는다 — 전결이 아니라
+      // 반려로 끝난 문서이고, 둘은 다른 사실이다.
+      { kind: "concur_seq", who: "박도윤" },
+    ],
+  },
+  {
+    n: 5,
+    work: 9,
+    form: "review",
+    // 기안 중인 문서에는 번호가 없다. 번호는 상신과 함께 태어난다.
+    docNo: null,
+    title: "청소차량 운행기록 전산화 도입 검토",
+    body: [
+      "1. 종량제 수거차량 운행기록을 수기 대장에서 차량 단말 기반으로 전환하는 방안을 검토하였습니다.",
+      "2. 민원 발생 시 수거 시각 확인에 평균 2일이 소요되던 것을 당일 확인으로 줄일 수 있습니다.",
+      "3. 단말 설치 대상 차량과 소요 예산은 별지와 같습니다.",
+    ].join("\n\n"),
+    retention: 3,
+    state: "drafting",
+    drafter: "박준호",
+    created: "2026-08-07T18:05:00+09:00",
+    steps: [
+      { kind: "draft", who: "박준호" },
+      { kind: "review", who: "정다은" },
+      { kind: "final", who: "한상우" },
+    ],
+  },
+];
+
+export const approvals: Approval[] = APPROVAL_SEEDS.map((a) => ({
+  id: aprId(a.n),
+  work_id: workId(a.work),
+  form: a.form,
+  doc_no: a.docNo,
+  title: a.title,
+  body: a.body,
+  retention: a.retention,
+  security: "normal",
+  state: a.state,
+  drafter_id: person(a.drafter).id,
+  created_at: a.created,
+  closed_at: a.closed ?? null,
+}));
+
+export const approvalSteps: ApprovalStep[] = APPROVAL_SEEDS.flatMap((a, ai) =>
+  a.steps.map((s, si) => ({
+    // 문서마다 열 칸까지. 칸이 열을 넘는 결재선은 결재란으로 그릴 수 없다.
+    id: stepId(ai * 10 + si + 1),
+    approval_id: aprId(a.n),
+    seq: si + 1,
+    kind: s.kind,
+    approver_id: person(s.who).id,
+    // 서명 당시의 직위를 글자로 박는다. 인사이동 뒤에 옛 문서의 결재란이
+    // 바뀌면 그건 문서 위조다(0016 의 같은 말).
+    position: person(s.who).position ?? "직원",
+    signed_at: s.signed ?? null,
+    rejected_at: s.rejected ?? null,
+    opinion: s.opinion ?? null,
+  })),
+);
 
 // ---------------------------------------------------------------------------
 // 열람기록 — 누가 무엇을 열어 봤는지. 사용자는 이 표에 쓰기 권한이 없다.
