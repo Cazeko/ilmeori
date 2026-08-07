@@ -13,6 +13,7 @@ import {
   type DocSectionWithEditor,
   type Document,
   type Handover,
+  type HandoverNoteWithAuthor,
   type MemberWithProfile,
   type Profile,
   type ProfileWithDepartment,
@@ -515,6 +516,56 @@ export async function getHandoverFor(
     .maybeSingle();
   if (error) throw error;
   return data ? buildHandover(viewer, data as unknown as RawHandover) : null;
+}
+
+/**
+ * 인계자가 서식 항목에 보탠 글.
+ *
+ * HandoverView에 넣지 않고 따로 가져온다. 규칙이 조립하는 초안
+ * (buildHandoverDraft)과 사람이 적은 글은 **끝까지 섞이지 않아야** 하고,
+ * 그 경계는 타입에서부터 갈라 두는 편이 지켜진다.
+ *
+ * 정책(handover_note_select)이 당사자에게만 돌려주므로 여기서 다시 거르지 않는다.
+ */
+export async function getHandoverNotes(
+  handoverId: string,
+): Promise<HandoverNoteWithAuthor[]> {
+  if (!UUID.test(handoverId)) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("handover_note")
+    .select(`*, author:author_id ( ${PROFILE_SELECT} )`)
+    .eq("handover_id", handoverId)
+    // 적은 순서대로. 서식 안에서는 나중에 보탠 것이 아래에 와야 읽힌다.
+    .order("created_at");
+
+  // 표가 아직 없는 동안만 봐준다.
+  //
+  // 이 파일의 다른 조회는 오류를 그대로 던진다. 여기만 다른 이유는 배포와
+  // 마이그레이션이 **같이 움직이지 않기** 때문이다. 코드는 깃헙에 올리면
+  // Vercel이 알아서 올리고, 0014는 사람이 SQL Editor에서 돌린다. 그 사이에
+  // /handover 를 열면 표가 없어 이 질의가 실패하고, 그러면 보충 한 칸 때문에
+  // **제품의 결론인 인계 화면이 통째로 오류 화면**이 된다.
+  //
+  // 표가 없을 때의 사실은 "보충이 0건"과 정확히 같다. 그래서 0건으로 이어 그리되,
+  // 서버 로그에는 남긴다 — 조용히 넘어가면 마이그레이션을 안 돌린 것을 아무도
+  // 모른 채 지나간다. 그 밖의 오류는 지금까지처럼 던진다.
+  if (error) {
+    // 표 이름까지 확인한다. 두 코드(42P01·PGRST205)는 "이 이름의 표를 못 찾겠다"는
+    // 뜻이고 둘 다 메시지에 그 이름을 담는다. 이름을 안 보면 조인해 온 다른 표의
+    // 문제까지 0건으로 삼켜 버린다.
+    const missingTable =
+      (error.code === "42P01" || error.code === "PGRST205") &&
+      error.message.includes("handover_note");
+    if (!missingTable) throw error;
+    console.error(
+      "[handover_note] 표가 없습니다. supabase/migrations/0014_handover_note.sql 을 실행해야 인계자 보충 칸이 동작합니다.",
+    );
+    return [];
+  }
+
+  return (data ?? []) as unknown as HandoverNoteWithAuthor[];
 }
 
 export async function getHandover(

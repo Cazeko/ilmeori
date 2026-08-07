@@ -16,6 +16,7 @@ import {
   type CommentWithAuthor,
   type DocSectionWithEditor,
   type Document,
+  type HandoverBlockKey,
   type Profile,
   type WorkListItem,
 } from "@/lib/types";
@@ -41,6 +42,14 @@ import {
  */
 
 export type DraftBlock = {
+  /**
+   * 서식 항목을 가리키는 고정 키.
+   *
+   * 화면의 React key와 인계자가 보탠 글(handover_note.block_key)이 이것으로 묶인다.
+   * 항목 이름을 키로 쓰면 문구를 한 번 다듬는 순간 예전 보충이 어느 칸 것인지
+   * 알 수 없게 된다.
+   */
+  key: HandoverBlockKey;
   /** 서식상의 항목 이름 */
   heading: string;
   /** 본문 문단들 */
@@ -339,6 +348,7 @@ export async function buildHandoverDraft(
 
   const blocks: DraftBlock[] = [
     {
+      key: "1-duties",
       heading: "1-가. 담당 업무",
       // 인수자가 다른 과 사람이면 대상 업무가 그 사람 눈에는 0건일 수 있다
       // (부서 공개 업무는 RLS가 다른 과에 내주지 않는다). 그때 제목만 있고 본문이
@@ -348,6 +358,7 @@ export async function buildHandoverDraft(
       sources: [`업무 ${works.length}건의 기본 정보와 참여자 목록`],
     },
     {
+      key: "1-progress",
       heading: "1-나. 주요 업무계획 및 진행사항",
       paragraphs: progress.length > 0 ? progress : [EMPTY_WORKS],
       sources: [
@@ -356,6 +367,7 @@ export async function buildHandoverDraft(
       ],
     },
     {
+      key: "1-issues",
       heading: "1-다. 현안사항 및 문제점",
       paragraphs: issues,
       sources: [
@@ -374,24 +386,32 @@ export async function buildHandoverDraft(
       ],
     },
     {
+      key: "1-pending",
       heading: "1-라. 주요 미결사항",
       paragraphs: pending.length > 0 ? pending : ["미결 업무가 없습니다."],
       sources: ["완료되지 않은 업무의 상태와 기한"],
     },
     {
+      key: "2-docs",
       heading: "2. 관련 문서 현황",
       paragraphs: docs.length > 0 ? docs : ["등록된 문서와 첨부가 없습니다."],
       sources: [`문서 ${documentCount}건 · 첨부 ${attachmentCount}건`],
     },
     {
+      key: "3-assets",
       heading: "3. 주요 물품 및 예산 등 인계·인수가 필요한 사항",
+      // 이 문단은 **사실만** 적는다. "직접 적어야 합니다" 같은 지시는 넣지 않는다.
+      // 인계자가 실제로 적어 넣은 뒤에도 이 문단은 그대로 남으므로, 지시가 섞여
+      // 있으면 다 적은 칸에서 "적었습니다 … 적어야 합니다"가 한 상자 안에 나온다.
+      // 지시는 아직 비어 있을 때만 화면과 종이가 각자 덧붙인다.
       paragraphs: [
-        "이 시스템에는 물품·예산 정보가 없습니다. 재무회계시스템과 물품관리대장을 확인해 인계자가 직접 적어야 합니다.",
+        "이 시스템에는 물품·예산 정보가 없습니다. 재무회계시스템과 물품관리대장에 있는 내용이라, 규칙은 이 칸을 채우지 않습니다.",
       ],
       sources: [],
       needsHuman: true,
     },
     {
+      key: "4-notes",
       heading: "4. 그 밖의 참고사항",
       paragraphs: notes,
       sources: ["연간 반복 업무 연결 정보", "참여 부서 수"],

@@ -1,15 +1,26 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getHandoverFor, listProfiles, listWorks, roleIn } from "@/lib/data";
+import {
+  getHandoverFor,
+  listProfiles,
+  listWorks,
+  roleIn,
+} from "@/lib/data";
 import { getDemoState, resetDemoState, setDemoState } from "@/lib/demo-state";
 import { isSupabaseConfigured } from "@/lib/env";
 import { buildHandoverDraft } from "@/lib/handover-draft";
 import { requireViewer } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
-import type { Handover } from "@/lib/types";
+import {
+  handoverBlockAnchor,
+  isHandoverBlockKey,
+  HANDOVER_NOTE_MAX,
+  type Handover,
+  type HandoverBlockKey,
+} from "@/lib/types";
 import { classifyError } from "./feedback";
-import { finish, openSession } from "./guard";
+import { changed, finish, openSession } from "./guard";
 
 /**
  * 인계·인수.
@@ -228,6 +239,144 @@ export async function startHandover(formData: FormData) {
 
   revalidatePath("/handover");
   finish("/handover", "handover.started");
+}
+
+// ---------------------------------------------------------------------------
+// 인계자가 보태는 글
+// ---------------------------------------------------------------------------
+
+/**
+ * 초안을 손보는 유일한 길.
+ *
+ * 화면은 「인계자가 확인하고 고쳐야 하는 초안」이라고 적어 두고 오랫동안 고칠
+ * 수단을 주지 않았다. 특히 3번(물품·예산)은 코드가 스스로 "직접 적어야 합니다"
+ * 라고 적고 표시까지 달아 두고 적을 칸이 없었다.
+ *
+ * 그렇다고 전문 편집을 열지는 않는다. 규칙이 뽑은 문단을 사람이 덮어쓰면
+ * 그 옆에 붙은 근거 꼬리표가 그 순간 거짓말이 된다. 이 제품의 주장이
+ * 「문장마다 어느 기록에서 나왔는지 적는다」이므로, 그것만은 지켜야 한다.
+ * 그래서 규칙이 뽑은 본문은 그대로 두고 사람이 적은 것을 **항목마다 따로 쌓는다.**
+ *
+ * 확인 단계(confirmed)에서도 열어 둔다. 잠기는 것은 실행된 뒤다 —
+ * 「내용을 확인했습니다」는 아직 되돌릴 수 있는 걸음이고, 실행은 아니다.
+ */
+/**
+ * 한 인계 건에 쌓을 수 있는 보충 수. **DB의 trg_handover_note_limit 과 같은 값이다.**
+ *
+ * 실제로 막는 것은 DB다. 여기서 한 번 더 세는 이유는 사용자에게 읽을 수 있는
+ * 말을 해 주기 위해서다 — 트리거가 던지는 예외는 화면에 그대로 옮길 수 없다.
+ * 상한을 넘겨서 손해를 보는 쪽은 인계자가 아니라 **인수자**다. 인계서를 받아
+ * 읽어야 하는 사람의 화면과 인쇄본이 무거워지고, 실행이 끝나면 아무도 지울 수 없다.
+ */
+const HANDOVER_NOTE_LIMIT = 30;
+
+/** 성공하면 그 항목으로 돌아온다. 일곱 칸짜리 문서에서 맨 위로 튕기면 무엇이 달라졌는지 못 본다. */
+function blockPath(key: HandoverBlockKey): string {
+  return `/handover#${handoverBlockAnchor(key)}`;
+}
+
+export async function addHandoverNote(formData: FormData) {
+  const { viewer, supabase } = await openSession();
+
+  const rawKey = formData.get("blockKey");
+  const rawId = formData.get("handoverId");
+  const rawBody = formData.get("body");
+
+  // 폼에 없는 값도 얼마든지 실어 보낼 수 있다. 아는 칸 이름이 아니면 여기서 끝낸다.
+  // (DB의 handover_note_block_key_check도 같은 목록을 요구한다)
+  if (!isHandoverBlockKey(rawKey)) finish("/handover", "invalid");
+
+  const view = await getHandoverFor(viewer);
+  if (!view) finish("/handover", "invalid");
+  // 화면에 떠 있던 인계와 지금 진행 중인 인계가 다르면, 그 사이 취소되고 새로
+  // 시작됐다는 뜻이다. 엉뚱한 인계서에 글이 들어가는 것보다 다시 하라고 말하는
+  // 편이 낫다.
+  if (rawId !== view.handover.id) finish("/handover", "stale");
+  // 인계서는 넘기는 사람이 쓰고 서명하는 문서다. 인수자가 문장을 넣을 수 있으면
+  // 서명란의 뜻이 사라진다. 정책(handover_note_insert)도 같은 것을 요구한다.
+  if (view.from.id !== viewer.id) finish("/handover", "denied");
+  if (view.handover.status === "completed") {
+    finish("/handover", "handover.note.locked");
+  }
+
+  if (typeof rawBody !== "string") finish("/handover", "invalid");
+  const body = rawBody.trim();
+  // 빈 글이 쌓이면 종이에 이름과 날짜만 찍힌 줄이 나온다. DB의 check도 같다.
+  if (!body) finish("/handover", "invalid");
+  // 잘라서 넣지 않는다. 입력칸이 maxLength로 막고 있으므로 여기까지 긴 글이
+  // 온 것은 폼을 거치지 않은 요청이고, 그때 조용히 자르면 **끝이 잘린 문장이
+  // 결재 문서에 그대로 인쇄된다.** 자른 사실을 아무도 모른다는 것이 문제다.
+  if (body.length > HANDOVER_NOTE_MAX) finish("/handover", "handover.note.long");
+
+  // 한 인계 건에 쌓을 수 있는 수. 상한이 없으면 인계자가 자기 인계서 하나로
+  // 인수자의 화면과 인쇄본을 못 쓰게 만들 수 있고, 실행된 뒤에는 아무도 지울 수
+  // 없다. 일곱 칸짜리 서식에 서른 줄이면 실제 쓰임에는 넉넉하다.
+  const { count, error: countError } = await supabase
+    .from("handover_note")
+    .select("id", { count: "exact", head: true })
+    .eq("handover_id", view.handover.id);
+  if (countError) finish("/handover", classifyError(countError));
+  if ((count ?? 0) >= HANDOVER_NOTE_LIMIT) {
+    finish("/handover", "handover.note.too_many");
+  }
+
+  const { error } = await supabase.from("handover_note").insert({
+    handover_id: view.handover.id,
+    block_key: rawKey,
+    body,
+    // author_id를 폼에서 받지 않는다. 남의 이름으로 인계서에 문장을 넣는 경로를 없앤다.
+    author_id: viewer.id,
+  });
+  // 실패는 항목이 아니라 화면 맨 위로 돌려보낸다. 알림 판이 거기 있고,
+  // 항목으로 튀면 무엇이 잘못됐는지 적힌 줄을 지나치게 된다.
+  if (error) finish("/handover", classifyError(error));
+
+  revalidatePath("/handover");
+  finish(blockPath(rawKey), "handover.note.added");
+}
+
+/**
+ * 보충 지우기 — 실행 전에만, 자기가 적은 것만.
+ *
+ * 고쳐 쓰는 길은 두지 않았다. 보충에는 적은 사람과 시각이 함께 붙고 그 날짜가
+ * 인쇄본에 그대로 찍히므로, 몸통만 나중에 바뀌면 종이에 찍힌 날짜가 거짓이 된다.
+ * 지우고 다시 적으면 새 시각이 붙는다 — 그쪽이 사실에 가깝다.
+ *
+ * 지우는 것 자체는 인계 취소와 같은 판단이다. 아직 아무 권한도 옮겨 가지 않은
+ * 초안에서 한 줄을 빼는 것은 기록을 지우는 것이 아니라 오타를 고치는 것이다.
+ */
+export async function deleteHandoverNote(formData: FormData) {
+  const { viewer, supabase } = await openSession();
+
+  const rawKey = formData.get("blockKey");
+  const rawNoteId = formData.get("noteId");
+  if (!isHandoverBlockKey(rawKey)) finish("/handover", "invalid");
+  if (typeof rawNoteId !== "string" || !rawNoteId) finish("/handover", "invalid");
+
+  const view = await getHandoverFor(viewer);
+  if (!view) finish("/handover", "invalid");
+  if (view.from.id !== viewer.id) finish("/handover", "denied");
+  if (view.handover.status === "completed") {
+    finish("/handover", "handover.note.locked");
+  }
+
+  const { data, error } = await supabase
+    .from("handover_note")
+    .delete()
+    .eq("id", rawNoteId)
+    // 지금 보고 있는 인계의 것만. id 하나만 믿으면 남의 인계서의 줄을 지우는
+    // 요청이 정책에만 기대게 된다.
+    .eq("handover_id", view.handover.id)
+    .eq("author_id", viewer.id)
+    .select("id");
+
+  if (error) finish("/handover", classifyError(error));
+  // 여기까지 온 건은 바로 위에서 실행 전임을 확인했다. 그러므로 0행은
+  // "이미 실행됐다"가 아니라 그 사이 사라졌다는 뜻이다(cancelHandover와 같은 자리).
+  if (!changed(data)) finish("/handover", "stale");
+
+  revalidatePath("/handover");
+  finish(blockPath(rawKey), "handover.note.deleted");
 }
 
 /**

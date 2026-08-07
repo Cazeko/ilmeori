@@ -159,6 +159,61 @@ export interface HandoverItem {
   transferred: boolean;
 }
 
+/**
+ * 「업무인계·인수서」의 항목 키.
+ *
+ * 이 일곱 개는 우리가 정한 것이 아니라 「행정업무의 운영 및 혁신에 관한 규정
+ * 시행규칙」별지 제12호서식이 정한 것이다. 그래서 DB의 check 제약
+ * (handover_note_block_key_check)에도 같은 목록이 들어 있다.
+ * 항목 이름(heading)이 아니라 키를 저장하는 이유는, 문구를 다듬는 순간
+ * 예전에 적어 둔 보충이 어느 칸 것인지 알 수 없게 되기 때문이다.
+ */
+export const HANDOVER_BLOCK_KEYS = [
+  "1-duties",
+  "1-progress",
+  "1-issues",
+  "1-pending",
+  "2-docs",
+  "3-assets",
+  "4-notes",
+] as const;
+
+export type HandoverBlockKey = (typeof HANDOVER_BLOCK_KEYS)[number];
+
+/** 폼으로 넘어온 값은 하나도 믿지 않는다. 아는 칸 이름인지 여기서 확인한다. */
+export function isHandoverBlockKey(v: unknown): v is HandoverBlockKey {
+  return (
+    typeof v === "string" &&
+    (HANDOVER_BLOCK_KEYS as readonly string[]).includes(v)
+  );
+}
+
+/** 보충을 적고 나면 그 항목으로 돌아온다. 일곱 칸짜리 문서에서 맨 위로 튕기지 않도록. */
+export function handoverBlockAnchor(key: HandoverBlockKey): string {
+  return `block-${key}`;
+}
+
+/**
+ * 보충 한 줄의 길이 상한. DB의 handover_note_body_check 와 **같은 값**이어야 한다.
+ * 더 적을 것이 있으면 한 줄을 더 적으면 된다 — 쌓이는 구조라 그래도 된다.
+ */
+export const HANDOVER_NOTE_MAX = 1000;
+
+/**
+ * 인계자가 서식 항목에 직접 보탠 글.
+ *
+ * 규칙이 뽑은 문단(DraftBlock.paragraphs)과 **섞지 않는다.** 섞으면 어느 문장이
+ * 어느 기록에서 나왔는지 말할 수 없게 되고, 그 순간 근거 꼬리표가 거짓이 된다.
+ */
+export interface HandoverNote {
+  id: string;
+  handover_id: string;
+  block_key: HandoverBlockKey;
+  body: string;
+  author_id: string;
+  created_at: string;
+}
+
 // ---------------------------------------------------------------------------
 // 화면이 실제로 받는 모양 — 조인 결과
 //
@@ -200,6 +255,10 @@ export interface CommentWithAuthor extends Comment {
 
 export interface AttachmentWithUploader extends Attachment {
   uploader: Profile;
+}
+
+export interface HandoverNoteWithAuthor extends HandoverNote {
+  author: Profile;
 }
 
 export interface AccessLogWithActor extends AccessLog {

@@ -27,12 +27,14 @@ import { Avatar } from "@/components/ui/avatar";
 import { ProgressSteps } from "@/components/handover/progress-steps";
 import { PrintButton } from "@/components/handover/print-button";
 import { HandoverPrintSheet } from "@/components/handover/print-sheet";
+import { BlockNotes } from "@/components/handover/block-notes";
 import { StatusBadge } from "@/components/status-badge";
 import { formatFullDateTime, josa } from "@/lib/format";
-import { getDepartment, getHandoverFor } from "@/lib/data";
+import { getDepartment, getHandoverFor, getHandoverNotes } from "@/lib/data";
 import { buildHandoverDraft } from "@/lib/handover-draft";
 import { requireViewer } from "@/lib/session";
 import { canMutate, isSupabaseConfigured } from "@/lib/env";
+import { handoverBlockAnchor, type HandoverNoteWithAuthor } from "@/lib/types";
 
 export const metadata: Metadata = { title: "인계·인수" };
 
@@ -87,10 +89,26 @@ export default async function HandoverPage({
   // 소유 권한이 바뀐 업무를 건너뛰기 때문이다. 결론을 말할 때는 옮겨 간 쪽을 쓴다.
   const transferredCount = items.filter((i) => i.transferred).length;
 
-  const [fromDept, toDept] = await Promise.all([
+  const [fromDept, toDept, notes] = await Promise.all([
     from.department_id ? getDepartment(from.department_id) : null,
     to.department_id ? getDepartment(to.department_id) : null,
+    getHandoverNotes(handover.id),
   ]);
+
+  // 인계자가 보탠 글을 항목별로 나눠 둔다. 초안(규칙)과 보충(사람)은 여기서도
+  // 섞지 않는다 — buildHandoverDraft는 이 글들을 보지 않고, 그래서 근거 꼬리표는
+  // 언제나 규칙이 뽑은 문단만 가리킨다.
+  const notesByBlock = new Map<string, HandoverNoteWithAuthor[]>();
+  for (const n of notes) {
+    const list = notesByBlock.get(n.block_key);
+    if (list) list.push(n);
+    else notesByBlock.set(n.block_key, [n]);
+  }
+
+  // 보충을 적을 수 있는 사람 — 인계자 본인, 실행 전, DB가 붙어 있을 때.
+  // 실행 후를 막는 것은 0011의 완료된 인계 잠금과 같은 규칙이고, 실제로 막는 것은
+  // 정책(handover_note_insert)이다. 여기서는 눌리지 않을 칸을 그리지 않을 뿐이다.
+  const canWriteNotes = isSender && !done && canMutate;
 
   return (
     <div className="px-5 py-6 sm:px-7 lg:px-8 print:p-0">
@@ -98,6 +116,7 @@ export default async function HandoverPage({
           print:hidden 이 붙어 있어, 인쇄하면 이 한 벌만 나온다. */}
       <HandoverPrintSheet
         draft={draft}
+        notesByBlock={notesByBlock}
         from={from}
         to={to}
         fromDept={fromDept}
@@ -178,9 +197,29 @@ export default async function HandoverPage({
               항목은 채우지 않고 비워 둔 채로 표시합니다. 그대로 제출하는 문서가
               아니라{" "}
               <strong className="font-bold text-gray-90">
-                인계자가 확인하고 고쳐야 하는 초안
+                인계자가 확인하고 보태야 하는 초안
               </strong>
-              입니다. 항목마다 어느 기록에서 나왔는지 아래에 적었습니다.
+              입니다. 항목마다 어느 기록에서 나왔는지 아래에 적었습니다.{" "}
+              {/* 「칸을 뒀습니다」는 그 칸이 실제로 보이는 사람에게만 하는 말이다.
+                  인수자가 볼 때·실행이 끝난 뒤·데모 모드에서는 BlockNotes가
+                  입력칸을 그리지 않으므로, 없는 칸을 있다고 적으면 안 된다. */}
+              {canWriteNotes ? (
+                <>
+                  <strong className="font-bold text-gray-90">
+                    항목마다 「보충 적기」 칸을 뒀습니다.
+                  </strong>{" "}
+                  규칙이 뽑은 문단은 고쳐 쓰지 못하게 두었습니다 — 덮어쓰면 그
+                  문장이 근거를 잃고, 옆에 붙은 근거 표시가 거짓이 되기
+                  때문입니다. 보탠 글은 누가 언제 적었는지와 함께 「인계자
+                  보충」으로 따로 표시하며, 인쇄본에도 그렇게 나옵니다.
+                </>
+              ) : (
+                <>
+                  인계자가 보탠 글이 있으면 규칙이 뽑은 문단과 섞지 않고
+                  「인계자 보충」으로 따로 표시합니다. 누가 언제 적었는지가 함께
+                  남고, 인쇄본에도 그렇게 나옵니다.
+                </>
+              )}
               {handover.generated_at ? (
                 <>
                   <br />
@@ -218,22 +257,50 @@ export default async function HandoverPage({
                 }
               />
               <CardBody className="flex flex-col gap-6">
-                {draft.blocks.map((block) => (
-                  <section key={block.heading}>
+                {draft.blocks.map((block) => {
+                  const blockNotes = notesByBlock.get(block.key) ?? [];
+                  // 원래 비어 있던 칸에 사람이 적어 넣었으면, 화면도 그 사실을
+                  // 말해야 한다. 다 적은 뒤에도 「사람이 직접 적어야 합니다」라는
+                  // 노란 경고가 그대로 남아 있으면 아직 할 일이 남은 것으로 읽힌다.
+                  const filledByHand =
+                    block.needsHuman && blockNotes.length > 0;
+
+                  return (
+                  <section
+                    key={block.key}
+                    // 보충을 적고 나면 이 자리로 돌아온다(handoverBlockAnchor).
+                    // 붙박이 머리줄에 가리지 않게 여백을 둔다.
+                    id={handoverBlockAnchor(block.key)}
+                    className="scroll-mt-20"
+                  >
                     <h3 className="text-body font-bold text-gray-90">
                       {block.heading}
                     </h3>
 
                     {block.needsHuman ? (
-                      <p className="mt-2 flex items-start gap-2 rounded-md border border-warning/30 bg-warning-bg px-3.5 py-2.5 text-body-sm break-keep text-gray-70">
+                      <p
+                        className={cn(
+                          "mt-2 flex items-start gap-2 rounded-md border px-3.5 py-2.5 text-body-sm break-keep text-gray-70",
+                          filledByHand
+                            ? "border-gray-10 bg-gray-5"
+                            : "border-warning/30 bg-warning-bg",
+                        )}
+                      >
                         <PenLine
                           aria-hidden
-                          className="mt-0.5 size-4 shrink-0 text-warning"
+                          className={cn(
+                            "mt-0.5 size-4 shrink-0",
+                            filledByHand ? "text-gray-60" : "text-warning",
+                          )}
                         />
                         <span>
                           <strong className="font-bold text-gray-90">
-                            사람이 직접 적어야 합니다.{" "}
+                            {filledByHand
+                              ? "인계자가 직접 적었습니다. "
+                              : "사람이 직접 적어야 합니다. "}
                           </strong>
+                          {/* 이 문단에는 지시가 들어 있지 않다(handover-draft.ts).
+                              앞의 굵은 한 줄만 상태에 따라 갈린다. */}
                           {block.paragraphs.join(" ")}
                         </span>
                       </p>
@@ -250,6 +317,9 @@ export default async function HandoverPage({
                       </div>
                     )}
 
+                    {/* 근거 꼬리표는 **위 문단만** 가리킨다. 그래서 사람이 보탠
+                        글보다 앞에 둔다. 아래로 내리면 인계자가 손으로 적은
+                        문장까지 "이 기록에서 나왔다"고 말하는 꼴이 된다. */}
                     {block.sources.length > 0 ? (
                       <p className="mt-2 flex flex-wrap items-center gap-1.5 text-body-xs text-gray-60">
                         <Sparkles
@@ -267,8 +337,18 @@ export default async function HandoverPage({
                         ))}
                       </p>
                     ) : null}
+
+                    <BlockNotes
+                      handoverId={handover.id}
+                      blockKey={block.key}
+                      heading={block.heading}
+                      notes={blockNotes}
+                      canWrite={canWriteNotes}
+                      needsHuman={block.needsHuman}
+                    />
                   </section>
-                ))}
+                  );
+                })}
 
                 {/* 서식의 마지막 — 서명란 */}
                 <section className="border-t border-gray-10 pt-5">
@@ -358,13 +438,41 @@ export default async function HandoverPage({
                   </p>
                 ) : handover.status === "generated" ? (
                   <>
-                    <p className="mb-4 text-body-sm break-keep text-gray-60">
-                      초안의 각 항목이 실제와 맞는지 확인해 주세요. 특히{" "}
-                      <strong className="font-bold text-gray-80">
-                        물품·예산 항목은 비어 있어
-                      </strong>{" "}
-                      직접 적으셔야 합니다.
-                    </p>
+                    {/* 「직접 적으셔야 합니다」라고만 적어 두고 적을 칸을 주지
+                        않으면, 화면이 시키는 일을 화면이 못 하게 막는 셈이 된다.
+                        그 칸이 어디 있는지까지 말한다. 이미 적었으면 남은 일로
+                        세지 않는다. */}
+                    {(notesByBlock.get("3-assets")?.length ?? 0) > 0 ? (
+                      <p className="mb-4 text-body-sm break-keep text-gray-60">
+                        초안의 각 항목이 실제와 맞는지 확인해 주세요. 물품·예산
+                        항목에는{" "}
+                        <strong className="font-bold text-gray-80">
+                          직접 적으신 내용이 들어가 있습니다.
+                        </strong>
+                      </p>
+                    ) : canWriteNotes ? (
+                      <p className="mb-4 text-body-sm break-keep text-gray-60">
+                        초안의 각 항목이 실제와 맞는지 확인해 주세요. 특히{" "}
+                        <strong className="font-bold text-gray-80">
+                          물품·예산 항목은 비어 있어
+                        </strong>{" "}
+                        직접 적으셔야 합니다.{" "}
+                        <Link href={`#${handoverBlockAnchor("3-assets")}`}>
+                          그 항목으로 가기
+                        </Link>
+                      </p>
+                    ) : (
+                      // 데모 모드다. 적을 칸이 없는 곳으로 보내면 안 된다.
+                      <p className="mb-4 text-body-sm break-keep text-gray-60">
+                        초안의 각 항목이 실제와 맞는지 확인해 주세요. 물품·예산
+                        항목은 비어 있습니다 —{" "}
+                        <strong className="font-bold text-gray-80">
+                          데모 모드에서는 읽기만 됩니다.
+                        </strong>{" "}
+                        데이터베이스에 연결하면 이 화면에서 그 칸에 직접 적을 수
+                        있습니다.
+                      </p>
+                    )}
                     <form action={confirmHandover}>
                       <Button type="submit" block>
                         내용을 확인했습니다
@@ -384,7 +492,8 @@ export default async function HandoverPage({
                       )} 바뀝니다.{" "}
                       <strong className="font-bold text-danger">
                         되돌릴 수 없습니다.
-                      </strong>
+                      </strong>{" "}
+                      인계서에 보탠 내용도 그때부터 더하거나 지울 수 없습니다.
                     </p>
                     <ConfirmDialog
                       trigger="인계 실행"
@@ -450,6 +559,19 @@ export default async function HandoverPage({
                     아직 실행되지 않은 인계이므로 넘어간 업무는 없습니다.
                     취소하면 초안과 대상 목록이 사라지고 새로 시작할 수
                     있습니다. 실행한 뒤에는 취소할 수 없습니다.
+                    {/* 초안은 언제든 다시 조립되지만 손으로 적은 보충은 다시
+                        만들 수 없다. 이 시스템에서 사람이 직접 타이핑한 유일한
+                        내용이 확인 절차 없는 버튼 하나로 사라지는 자리다. */}
+                    {notes.length > 0 ? (
+                      <>
+                        {" "}
+                        <strong className="font-bold text-danger">
+                          직접 적으신 보충 {notes.length}건도 함께 사라집니다.
+                        </strong>{" "}
+                        이것만은 다시 만들어 드릴 수 없으니, 필요하면 인쇄하거나
+                        옮겨 적어 두신 뒤에 취소해 주세요.
+                      </>
+                    ) : null}
                   </p>
                   <form action={cancelHandover}>
                     <Button type="submit" variant="secondary" size="sm">

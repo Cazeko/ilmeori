@@ -1,4 +1,8 @@
-import type { Department, Profile } from "@/lib/types";
+import type {
+  Department,
+  HandoverNoteWithAuthor,
+  Profile,
+} from "@/lib/types";
 import type { HandoverDraft } from "@/lib/handover-draft";
 import { formatDate, formatFullDateTime, todayKST } from "@/lib/format";
 
@@ -27,6 +31,7 @@ function who(p: Pick<Profile, "name" | "position">) {
 
 export function HandoverPrintSheet({
   draft,
+  notesByBlock,
   from,
   to,
   fromDept,
@@ -36,6 +41,13 @@ export function HandoverPrintSheet({
   method,
 }: {
   draft: HandoverDraft;
+  /**
+   * 인계자가 항목에 보탠 글. 종이에서도 규칙이 뽑은 문단과 **섞지 않는다.**
+   * 결재에 올라간 뒤 "이 문장은 누가 썼느냐"는 물음에 종이만 보고 답할 수
+   * 있어야 하기 때문이다. 화면에서는 색으로 나누지만 종이에는 색이 없으므로
+   * 왼쪽 선과 이름·날짜 한 줄로 나눈다.
+   */
+  notesByBlock: ReadonlyMap<string, HandoverNoteWithAuthor[]>;
   from: Profile;
   to: Profile;
   fromDept: Department | null;
@@ -49,6 +61,10 @@ export function HandoverPrintSheet({
     { label: "인계자", person: from, dept: fromDept },
     { label: "인수자", person: to, dept: toDept },
   ];
+
+  const hasNotes = draft.blocks.some(
+    (b) => (notesByBlock.get(b.key)?.length ?? 0) > 0,
+  );
 
   return (
     <article className="print-sheet hidden print:block">
@@ -101,24 +117,46 @@ export function HandoverPrintSheet({
         </tbody>
       </table>
 
-      {draft.blocks.map((block) => (
-        <section key={block.heading} className="mt-5">
-          <h2 className="font-bold">{block.heading}</h2>
-          {block.needsHuman ? (
-            <>
-              <p className="mt-1">{block.paragraphs.join(" ")}</p>
-              {/* 지어내지 않는다는 원칙은 종이에서도 같다. 빈칸으로 인쇄해 손으로 적게 한다. */}
-              <div className="mt-1 h-16 border border-black" />
-            </>
-          ) : (
-            block.paragraphs.map((p, i) => (
-              <p key={i} className="mt-1 whitespace-pre-line">
-                {p}
-              </p>
-            ))
-          )}
-        </section>
-      ))}
+      {draft.blocks.map((block) => {
+        const notes = notesByBlock.get(block.key) ?? [];
+        return (
+          <section key={block.key} className="mt-5">
+            <h2 className="font-bold">{block.heading}</h2>
+            {block.needsHuman ? (
+              <>
+                <p className="mt-1">{block.paragraphs.join(" ")}</p>
+                {/* 지어내지 않는다는 원칙은 종이에서도 같다.
+                    아직 비어 있으면 「직접 적어야 한다」는 말과 손으로 적을
+                    자리를 함께 남긴다. 인계자가 화면에서 적어 넣었으면 그것이
+                    곧 이 칸의 본문이므로 둘 다 인쇄하지 않는다 —
+                    적어 넣은 글 위에 "적어야 합니다"가 남으면 종이가 화면과
+                    다른 말을 하게 된다. */}
+                {notes.length === 0 ? (
+                  <>
+                    <p className="mt-1">인계자가 직접 적어야 하는 칸입니다.</p>
+                    <div className="mt-1 h-16 border border-black" />
+                  </>
+                ) : null}
+              </>
+            ) : (
+              block.paragraphs.map((p, i) => (
+                <p key={i} className="mt-1 whitespace-pre-line">
+                  {p}
+                </p>
+              ))
+            )}
+
+            {notes.map((n) => (
+              <div key={n.id} className="note">
+                <p className="note-label">
+                  인계자 보충 — {who(n.author)}, {formatDate(n.created_at)}
+                </p>
+                <p className="whitespace-pre-line">{n.body}</p>
+              </div>
+            ))}
+          </section>
+        );
+      })}
 
       {/* ── 서명란 ─────────────────────────────────────────────────────────
           별지 제12호서식에는 인계자·인수자·입회자 서명란이 있다.
@@ -157,8 +195,13 @@ export function HandoverPrintSheet({
           {draft.evidence.documents}건 · 대화 {draft.evidence.comments}건 · 이력{" "}
           {draft.evidence.activities}건 · 첨부 {draft.evidence.attachments}건 —
           에서 서식 순서대로 뽑아 정리한 것입니다. 항목별 근거는 화면에서 확인할 수
-          있습니다. 사람이 확인하고 고쳐야 하는 초안이며, 그대로 제출하는 문서가
+          있습니다. 사람이 확인하고 보태야 하는 초안이며, 그대로 제출하는 문서가
           아닙니다.
+          {/* 보탠 글이 있을 때만 적는다. 없는데 적어 두면 종이만 든 사람이
+              어딘가에 사람이 쓴 문장이 있다고 여기고 찾게 된다. */}
+          {hasNotes
+            ? " 왼쪽에 선이 그어진 「인계자 보충」은 규칙이 뽑은 것이 아니라 인계자가 직접 적어 넣은 것이며, 적은 사람과 날짜를 함께 적었습니다."
+            : ""}
         </p>
         {/* 두 시각은 다르다. generated_at 은 인계를 시작한 때이고, 이 종이의 내용은
             **인쇄하는 순간의 기록으로 다시 조립한 것**이다. 그 사이에 대화 한 줄이

@@ -572,6 +572,246 @@ check(
 );
 
 // ---------------------------------------------------------------------------
+console.log("\n[9-1] 인계 건의 주인 — 넘겨받는 사람이 남의 인계서를 가로챌 수 없다");
+// ---------------------------------------------------------------------------
+// 0014의 보충 정책이 handover.from_profile_id 를 신뢰 기준으로 쓴다.
+// 그런데 0002의 handover_update 는 당사자 둘 모두에게 UPDATE 를 열어 두고 어떤
+// 칸을 고치는지는 보지 않았다. 인수자가 from_profile_id 를 자기로 바꾸면
+// 남의 인계서에 자기 문장을 넣고 원래 인계자를 밀어낼 수 있었다(PGlite 로 재현).
+// 0015가 정책과 트리거 두 겹으로 막는다.
+{
+  const [hg] = await admin(
+    `insert into handover (from_profile_id, to_profile_id, status)
+     values ($1, $2, 'generated') returning id`,
+    [kim, choi],
+  );
+
+  check(
+    "인수자는 인계 건을 고칠 수 없다 (인계서는 넘기는 사람의 문서다)",
+    await denied(
+      choi,
+      `update handover set from_profile_id = $2 where id = $1 returning id`,
+      [hg.id, choi],
+    ),
+  );
+  check(
+    "인수자는 인계를 완료로 만들 수 없다 (실행은 execute_handover 만 한다)",
+    await denied(choi, `update handover set status = 'completed' where id = $1 returning id`, [hg.id]),
+  );
+  {
+    const r = await as(
+      kim,
+      `update handover set to_profile_id = $2 where id = $1 returning id`,
+      [hg.id, park],
+    );
+    check(
+      "인계자라도 인수자를 바꿔칠 수 없다 (취소하고 새로 시작해야 기록에 남는다)",
+      !r.ok && /인계자와 인수자는 바꿀 수 없습니다/.test(r.error ?? ""),
+      r.ok ? "바뀌었다" : r.error,
+    );
+  }
+  {
+    const r = await as(kim, `update handover set status = 'confirmed' where id = $1 returning id`, [hg.id]);
+    check("인계자는 확인 단계로 넘길 수 있다 (막은 것은 칸이지 흐름이 아니다)",
+      r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+  }
+  {
+    // 「완료」는 권한이 실제로 옮겨 갔다는 뜻이다. 손으로 적을 수 있으면 업무가
+    // 한 건도 안 넘어간 인계서에 완료 도장이 찍히고, 그 뒤로는 0011의 잠금 때문에
+    // 되돌리지도 취소하지도 못한다 — 되돌릴 수 없는 거짓이 남는다.
+    const r = await as(
+      kim,
+      `update handover set status = 'completed', completed_at = now() where id = $1 returning id`,
+      [hg.id],
+    );
+    check(
+      "인계자도 손으로 완료 도장을 찍을 수 없다 (실행 절차로만 기록된다)",
+      !r.ok && /인계 완료는 실행 절차로만/.test(r.error ?? ""),
+      r.ok ? "찍혔다" : r.error,
+    );
+  }
+  await admin(`delete from handover where id = $1`, [hg.id]);
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n[9-2] 인계서에 사람이 보태는 칸 — 규칙이 뽑은 문단은 못 고친다");
+// ---------------------------------------------------------------------------
+// 화면은 「인계자가 확인하고 보태야 하는 초안」이라고 적어 두고 오랫동안 고칠
+// 수단을 주지 않았다. 그렇다고 전문 편집을 열면 규칙이 뽑은 문단을 사람이
+// 덮어쓸 수 있게 되고, 그 옆의 근거 꼬리표가 그 순간 거짓말이 된다.
+// 그래서 보태는 것만 열었다. 여기서 확인하는 것은 그 경계가 DB에서 지켜지는가다.
+const NOTE_INSERT = `insert into handover_note (handover_id, block_key, body, author_id)
+                     values ($1, $2, $3, $4) returning id`;
+{
+  const [hn] = await admin(
+    `insert into handover (from_profile_id, to_profile_id, status)
+     values ($1, $2, 'generated') returning id`,
+    [kim, choi],
+  );
+
+  {
+    const r = await as(kim, NOTE_INSERT, [hn.id, "3-assets", "물품관리대장 확인: 노트북 1대", kim]);
+    check("인계자는 항목에 보충을 적을 수 있다", r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+  }
+  check(
+    "인수자는 남의 인계서에 문장을 넣을 수 없다 (인계서는 넘기는 사람이 쓴다)",
+    await denied(choi, NOTE_INSERT, [hn.id, "3-assets", "제가 대신 적습니다", choi]),
+  );
+  check(
+    "남의 이름으로 보충을 적을 수 없다",
+    await denied(kim, NOTE_INSERT, [hn.id, "3-assets", "인수자가 적은 것처럼", choi]),
+  );
+  check(
+    "제3자는 남의 인계서 보충을 읽을 수 없다",
+    await denied(lee, `select id from handover_note where handover_id = $1`, [hn.id]),
+  );
+  {
+    const r = await as(choi, `select id from handover_note where handover_id = $1`, [hn.id]);
+    check("인수자는 보충을 읽을 수 있다 (넘겨받는 사람이 못 보면 적을 이유가 없다)",
+      r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+  }
+
+  // 아래 넷은 denied() 로 보지 않는다. denied() 는 "오류가 났거나 0행"이면 참이라,
+  // 칸 이름에 오타가 나서 질의가 죽어도 통과한다. 무엇이 막았는지까지 확인한다.
+  for (const [name, params] of [
+    ["서식에 없는 칸에는 적을 수 없다 (칸은 시행규칙이 정한 일곱 개다)",
+     [hn.id, "8-etc", "여덟 번째 칸", kim]],
+    ["빈 보충은 들어가지 않는다 (종이에 이름과 날짜만 찍힌 줄이 남는다)",
+     [hn.id, "4-notes", "   ", kim]],
+    // btrim(body) 는 공백만 걷어낸다. 줄바꿈만 담긴 글이 그대로 통과했었다.
+    ["줄바꿈만 담긴 보충도 들어가지 않는다", [hn.id, "4-notes", "\n\n\t", kim]],
+    // 걷어낼 문자를 나열하면 반드시 빠진다. 전각 공백과 nbsp 는 한글 환경에서
+    // 실제로 밟는 값이다 — 붙여넣기 한 번이면 들어온다.
+    ["전각 공백만 담긴 보충도 들어가지 않는다", [hn.id, "4-notes", "　　", kim]],
+    ["nbsp·BOM 만 담긴 보충도 들어가지 않는다", [hn.id, "4-notes", " ﻿", kim]],
+    ["1000자를 넘는 보충은 들어가지 않는다 (앱의 상한과 같은 값이다)",
+     [hn.id, "4-notes", "가".repeat(1001), kim]],
+  ]) {
+    const r = await as(kim, NOTE_INSERT, params);
+    check(
+      name,
+      !r.ok && /handover_note_.*_check|23514/i.test(r.error ?? ""),
+      r.ok ? "들어갔다" : `check 제약이 아니라 다른 이유로 막혔다: ${r.error}`,
+    );
+  }
+  {
+    const r = await as(kim, NOTE_INSERT, [hn.id, "4-notes", "가".repeat(1000), kim]);
+    check("1000자까지는 들어간다 (한글도 글자 수로 센다)", r.ok && r.rows.length === 1,
+      r.ok ? "" : r.error);
+  }
+
+  // 서식 칸 일곱 개가 **전부** 실제로 열려 있는가. 둘만 찔러 보면 나머지 다섯에
+  // 오타가 있어도 초록불이고, 그 오타는 화면에 입력칸은 보이는데 저장만 안 되는
+  // 모양으로 나온다.
+  {
+    const sqlKeys = [
+      ...(await readFile(join(HERE, "migrations", "0014_handover_note.sql"), "utf8"))
+        .matchAll(/^\s*'([0-9a-z-]+)',?\s*--/gm),
+    ].map((m) => m[1]);
+    const tsKeys = [
+      ...(await readFile(join(HERE, "..", "src", "lib", "types.ts"), "utf8"))
+        .match(/HANDOVER_BLOCK_KEYS = \[([^\]]+)\]/)[1]
+        .matchAll(/"([^"]+)"/g),
+    ].map((m) => m[1]);
+
+    check(
+      "서식 칸 목록이 DB와 앱에서 같다 (두 벌은 반드시 어긋난다)",
+      sqlKeys.length === 7 && JSON.stringify(sqlKeys) === JSON.stringify(tsKeys),
+      `DB ${JSON.stringify(sqlKeys)} / 앱 ${JSON.stringify(tsKeys)}`,
+    );
+
+    let opened = 0;
+    for (const key of tsKeys) {
+      const r = await as(kim, NOTE_INSERT, [hn.id, key, `${key} 칸에 적는다`, kim]);
+      if (r.ok && r.rows.length === 1) opened += 1;
+    }
+    check(`서식 칸 ${tsKeys.length}개 전부에 적을 수 있다`, opened === tsKeys.length,
+      `${opened}개만 열려 있다`);
+  }
+
+  // 상한은 앱이 아니라 DB가 지킨다. 앱은 사용자에게 읽을 말을 해 주려고 미리
+  // 셀 뿐이고, 서버 액션은 폼을 거치지 않고 부를 수 있다. 상한이 없으면
+  // 인계자가 자기 인계서 하나로 인수자의 화면과 인쇄본을 못 쓰게 만들 수 있고,
+  // 실행이 끝나면 그 줄들은 아무도 지울 수 없다.
+  {
+    const [{ n: already }] = await admin(
+      `select count(*)::int as n from handover_note where handover_id = $1`, [hn.id]);
+    let inserted = 0;
+    let blocked = null;
+    for (let i = already; i < 40; i += 1) {
+      const r = await as(kim, NOTE_INSERT, [hn.id, "4-notes", `${i}번째 줄`, kim]);
+      if (r.ok) inserted += 1;
+      else { blocked = r.error; break; }
+    }
+    const [{ n: total }] = await admin(
+      `select count(*)::int as n from handover_note where handover_id = $1`, [hn.id]);
+    check(
+      "한 인계 건에 30개까지만 쌓인다 (DB가 막는다)",
+      total === 30 && /보충을 더 담을 수 없습니다/.test(blocked ?? ""),
+      blocked ? `${total}건에서 멈췄다` : `${already + inserted}건까지 들어갔다`,
+    );
+  }
+
+  // 적은 순서대로 돌아와야 한다. 서식 안에서 순서가 뒤집히면 나중에 고쳐 적은
+  // 내용이 먼저 적은 것 위로 올라간다.
+  {
+    const r = await as(
+      kim,
+      `select body from handover_note where handover_id = $1 and block_key = '4-notes' order by created_at`,
+      [hn.id],
+    );
+    check(
+      "보충은 적은 순서대로 나온다",
+      r.ok && r.rows.length >= 2 && r.rows[0].body === "가".repeat(1000),
+      r.ok ? r.rows.map((x) => x.body.slice(0, 6)).join(" → ") : r.error,
+    );
+  }
+  {
+    // 고쳐 쓰는 길은 두지 않았다. 적은 시각이 인쇄본에 찍히므로, 몸통만 나중에
+    // 바뀌면 종이에 찍힌 날짜가 거짓이 된다.
+    const r = await as(kim, `update handover_note set body = '슬쩍 바꾼다' where handover_id = $1`, [hn.id]);
+    check(
+      "적어 둔 보충은 고칠 수 없다 (권한층에서 차단)",
+      !r.ok && /permission denied|42501/i.test(r.error ?? ""),
+      r.ok ? "정책만 막고 있다 — GRANT가 열려 있다" : "",
+    );
+  }
+  {
+    // 위에서 여러 건을 적어 두었다. 몇 건이 있었는지 먼저 세고, 지운 수가 그것과
+    // 같은지 본다 — "1행이 지워졌다"로만 보면 정책이 일부만 내주어도 통과한다.
+    const [before] = await admin(
+      `select count(*)::int as n from handover_note where handover_id = $1`, [hn.id]);
+    const r = await as(kim, `delete from handover_note where handover_id = $1 returning id`, [hn.id]);
+    check("실행 전에는 자기가 적은 보충을 지울 수 있다 (오타를 고치는 길)",
+      r.ok && before.n > 0 && r.rows.length === before.n,
+      r.ok ? `${before.n}건 중 ${r.rows.length}건만 지워졌다` : r.error);
+  }
+}
+{
+  // 실행이 끝난 인계 — 0011의 완료된 인계 잠금과 같은 규칙을 따른다.
+  const [hdone] = await admin(
+    `insert into handover (from_profile_id, to_profile_id, status, completed_at)
+     values ($1, $2, 'completed', now()) returning id`,
+    [kim, choi],
+  );
+  const [note] = await admin(NOTE_INSERT, [hdone.id, "4-notes", "실행 전에 적어 둔 것", kim]);
+
+  check(
+    "실행이 끝난 인계에는 보충을 더할 수 없다",
+    await denied(kim, NOTE_INSERT, [hdone.id, "4-notes", "끝난 뒤에 덧붙인다", kim]),
+  );
+  check(
+    "실행이 끝난 인계의 보충은 지울 수 없다 (그때 무엇이 적혀 있었는가가 곧 기록이다)",
+    await denied(kim, `delete from handover_note where id = $1 returning id`, [note.id]),
+  );
+  {
+    const r = await as(kim, `select id from handover_note where id = $1`, [note.id]);
+    check("실행이 끝난 뒤에도 보충은 읽힌다 (잠그는 것은 쓰기이지 읽기가 아니다)",
+      r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+  }
+}
+
+// ---------------------------------------------------------------------------
 console.log("\n[10] 열람 로그 — 누가 봤는지 남는다");
 // ---------------------------------------------------------------------------
 {
@@ -600,6 +840,11 @@ for (const [name, sql, params] of [
   [
     "인계 대상의 이관 표시를 직접 켤 수",
     `update handover_item set transferred = true where handover_id = $1`,
+    [ho.id],
+  ],
+  [
+    "인계서에 적은 보충을 고칠 수",
+    `update handover_note set body = '고쳐 쓴다' where handover_id = $1`,
     [ho.id],
   ],
 ]) {

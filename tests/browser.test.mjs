@@ -1,8 +1,8 @@
 /**
  * 브라우저 왕복 시험 — **거의 전부 자바스크립트를 끈 상태로** 돌린다.
  *
- * 예외는 세 건뿐이고, 셋 다 「스크립트가 있을 때만 나타나야 하는 것」을 본다
- * (인쇄 버튼 1건, 실시간 상자 2건). 나머지는 전부 스크립트를 끈 채로 돈다.
+ * 예외는 네 건뿐이고, 넷 다 「스크립트가 있을 때만 나타나야 하는 것」을 본다
+ * (인쇄 버튼 1건, 실시간 상자 3건). 나머지는 전부 스크립트를 끈 채로 돈다.
  *
  * 이 제품의 화면은 스크립트 없이 전부 동작하는 것을 전제로 만들었다.
  * 그 전제는 코드를 읽어서는 확인되지 않는다. 실제로 물린 적이 있다 —
@@ -15,6 +15,9 @@
  *   [3] 「이 업무가 보이는 이유」와 같은 주소·다른 계정
  *   [4] 기존 동선이 안 깨졌는가
  *   [5] 코드리뷰에서 고친 것들이 실제로 고쳐졌는가
+ *   [6] 실시간 상자가 스크립트 없이는 아예 안 나타나는가
+ *   [7] 인계자가 서식 항목에 보태고, 그것이 종이에도 실리는가
+ *       (0014·0015 를 SQL Editor 에서 돌린 뒤라야 통과한다)
  *
  * 돌리는 법 (playwright 는 이 저장소의 의존성이 아니다 — 시험 전용이라 일부러 뺐다)
  *   npm i -D playwright && npx playwright install chromium
@@ -458,6 +461,150 @@ console.log("\n[6] 실시간 — 스크립트가 없으면 나타나지 않는�
       : live.slice(0, 100).replace(/\n/g, " "),
   );
   await on.close();
+}
+
+// ── 7. 인계서에 사람이 보태기 ───────────────────────────────────────────────
+//
+// 화면은 오랫동안 「인계자가 확인하고 고쳐야 하는 초안」이라고 적어 두고 고칠
+// 칸을 주지 않았다. 특히 3번(물품·예산)은 코드가 "직접 적어야 합니다"라고 적고
+// 표시까지 달아 두고 적을 자리가 없었다.
+//
+// 여기서 보는 것은 넷이다.
+//   · 스크립트 없이 적히는가 (이 앱의 전제다)
+//   · 규칙이 뽑은 문단과 섞이지 않고 「인계자 보충」으로 따로 표시되는가
+//   · 넘겨받는 사람에게는 보이되 고칠 칸은 없는가
+//   · 종이에도 그렇게 실리는가 — 결재에 올라간 뒤 "이 문장은 누가 썼느냐"에
+//     종이만 보고 답할 수 있어야 한다
+//
+// 문구 검사는 **그 줄 안에서** 본다. 화면 전체 글자에서 「인계자 보충」을 찾으면
+// 맨 위 안내문에 그 낱말이 이미 있어서, 보충이 한 줄도 안 그려져도 통과한다.
+// (코드리뷰에서 실제로 그렇게 새어 나갔다)
+//
+// ⚠ 0014·0015 를 SQL Editor 에서 돌린 뒤라야 통과한다.
+//   돌리기 전에는 "표가 없다"고 말하고 **통과로 세지 않는다** —
+//   건너뛴 초록불은 초록불이 아니다(db:realtime 과 같은 규칙).
+console.log("\n[7] 인계서 보충 — 스크립트 없이 적고, 종이에 실린다");
+{
+  const ctx = await browser.newContext({ javaScriptEnabled: false });
+  const page = await login(ctx, "박준호");
+
+  /** 이 실행이 남긴 것만 지우기 위한 표식. */
+  const MARK = `[검증 ${Date.now().toString(36)}]`;
+  const rows = (p = page) => p.locator('li:has(input[name="noteId"])');
+
+  /** 표식이 붙은 보충을 지운다. 지우고 나면 화면이 다시 그려지므로 매번 다시 찾는다. */
+  const sweep = async (mark) => {
+    for (let i = 0; i < 12; i += 1) {
+      const stale = rows().filter({ hasText: mark });
+      if ((await stale.count()) === 0) return true;
+      await stale.first().locator("button[type=submit]").click();
+      await page.waitForLoadState("domcontentloaded");
+    }
+    return (await rows().filter({ hasText: mark }).count()) === 0;
+  };
+
+  try {
+    await page.goto(`${BASE}/handover`, { waitUntil: "domcontentloaded" });
+    // 앞선 실행이 도중에 죽어 남긴 것이 있으면 먼저 치운다. 이때만 공통 표식을
+    // 본다 — 사람이 쓸 리 없는 낱말이라 시연 데이터를 건드리지 않는다.
+    await sweep("[검증");
+
+    const before = await allText(page);
+    ok("물품·예산 항목에 보충 칸이 있다", (await page.locator("#note-3-assets").count()) === 1);
+    ok("시작할 때 보충 줄이 하나도 없다", (await rows().count()) === 0);
+    ok("아직 비어 있으면 「사람이 직접 적어야 합니다」", before.includes("사람이 직접 적어야 합니다"));
+    ok(
+      "종이에는 손으로 적을 빈칸이 인쇄된다",
+      (await page.locator(".print-sheet div.border-black").count()) === 1,
+    );
+
+    const text = `${MARK} 물품관리대장 확인 결과 인계 대상 물품 3건(노트북 1, 계측기 2).`;
+    await page.locator("#note-3-assets").fill(text);
+    await page.locator("form:has(#note-3-assets) button[type=submit]").click();
+    await page.waitForLoadState("domcontentloaded");
+
+    const after = await allText(page);
+    if (after.includes("저장하지 못했습니다")) {
+      // 표가 없는 것과 코드가 틀린 것은 다르다. 무엇을 해야 하는지까지 적어 준다.
+      ok(
+        "보충이 저장된다",
+        false,
+        "supabase/migrations/0014_handover_note.sql 을 SQL Editor 에서 먼저 돌려야 한다",
+      );
+    } else {
+      const row = rows().filter({ hasText: MARK });
+      const rowText = (await row.count()) === 1 ? ((await row.textContent()) ?? "") : "";
+
+      ok("스크립트 없이 보충이 저장된다", rowText.includes(text), page.url());
+      // includes 로 보지 않는다. `/handover#block-3-assets?msg=…` 도 그 검사를
+      // 통과하는데, 그건 조각 이름이 통째로 깨진 바로 그 모양이다.
+      ok(
+        "적은 항목으로 돌아온다",
+        page.url().endsWith("?msg=handover.note.added#block-3-assets"),
+        page.url(),
+      );
+      ok("성공했다고 화면이 말한다", after.includes("보충 내용을 적었습니다"));
+      ok("「인계자 보충」으로 그 줄에 따로 표시된다", rowText.includes("인계자 보충"));
+      ok("누가 적었는지 그 줄에 남는다", /박준호\s*주무관/.test(rowText), rowText.slice(0, 60));
+      ok("언제 적었는지도 그 줄에 남는다", /\d{4}년/.test(rowText), rowText.slice(0, 60));
+      ok(
+        "다 적은 뒤에는 「인계자가 직접 적었습니다」로 바뀐다",
+        after.includes("인계자가 직접 적었습니다"),
+      );
+      // 적어 넣은 글 위에 "아직 적어야 한다"가 남으면 한 상자가 앞뒤로 다른 말을 한다.
+      ok("적어 넣은 뒤에는 「적어야 합니다」가 남지 않는다", !after.includes("직접 적어야 합니다"));
+      ok("규칙이 뽑은 문단은 그대로다 (대화 인용이 사라지지 않았다)", after.includes("[대화 —"));
+
+      const sheet = (await page.locator(".print-sheet").textContent()) ?? "";
+      ok("종이에도 실린다", sheet.includes(text));
+      ok("종이에서는 이름과 날짜가 붙는다", sheet.includes("인계자 보충 — 박준호"));
+      ok(
+        "적어 넣었으면 손으로 적을 빈칸은 인쇄하지 않는다",
+        (await page.locator(".print-sheet div.border-black").count()) === 0,
+      );
+      ok("종이에서도 「적어야 하는 칸」 안내가 사라진다", !sheet.includes("직접 적어야 하는 칸입니다"));
+      ok(
+        "종이 맨 아래 출처에도 사람이 보탠 것이 있다고 적는다",
+        sheet.includes("인계자가 직접 적어 넣은 것"),
+      );
+
+      // ── 넘겨받는 사람 쪽 ──────────────────────────────────────────────
+      // 읽히기는 해야 하고(못 보면 적을 이유가 없다), 고칠 칸은 없어야 한다.
+      const other = await browser.newContext({ javaScriptEnabled: false });
+      try {
+        const p2 = await login(other, "이하람");
+        await p2.goto(`${BASE}/handover`, { waitUntil: "domcontentloaded" });
+        const seen = await allText(p2);
+        ok("인수자도 보충을 읽는다", seen.includes(text));
+        ok("인수자에게는 적는 칸이 없다", (await p2.locator("#note-3-assets").count()) === 0);
+        ok("인수자에게는 지우는 버튼도 없다", (await p2.locator('input[name="noteId"]').count()) === 0);
+        ok(
+          "인수자 화면은 없는 칸을 있다고 말하지 않는다",
+          !seen.includes("항목마다 「보충 적기」 칸을 뒀습니다"),
+        );
+      } finally {
+        await other.close();
+      }
+
+      // 실행 전에는 지울 수 있다 — 오타를 고치는 길. 겸사겸사 뒷정리다.
+      await rows().filter({ hasText: MARK }).first().locator("button[type=submit]").click();
+      await page.waitForLoadState("domcontentloaded");
+      const gone = await allText(page);
+      ok("실행 전에는 지울 수 있다", !gone.includes(text));
+      ok("지웠다고 화면이 말한다", gone.includes("보충 내용을 지웠습니다"));
+      ok("지우면 다시 「사람이 직접 적어야 합니다」", gone.includes("사람이 직접 적어야 합니다"));
+    }
+  } finally {
+    // 중간에 죽어도 검증용 줄을 실제 시연 데이터에 남기지 않는다.
+    let clean = false;
+    try {
+      clean = await sweep(MARK);
+    } catch {
+      clean = false;
+    }
+    ok("뒷정리가 끝났다 (검증용 줄이 남지 않는다)", clean);
+    await ctx.close();
+  }
 }
 
 await browser.close();

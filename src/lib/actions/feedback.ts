@@ -123,6 +123,26 @@ const MESSAGES = {
     "danger",
     "이미 실행된 인계는 취소할 수 없습니다. 권한이 실제로 옮겨 간 기록입니다.",
   ],
+  "handover.note.added": [
+    "success",
+    "보충 내용을 적었습니다. 규칙이 뽑은 문단과 섞지 않고 「인계자 보충」으로 따로 표시하며, 인쇄본에도 그렇게 나옵니다.",
+  ],
+  "handover.note.deleted": [
+    "success",
+    "보충 내용을 지웠습니다. 규칙이 뽑은 문단과 인계 대상 업무는 그대로입니다.",
+  ],
+  "handover.note.long": [
+    "danger",
+    "보충 내용이 너무 깁니다. 한 번에 1000자까지 적을 수 있습니다. 나눠서 적으면 항목 안에 차례로 쌓입니다.",
+  ],
+  "handover.note.too_many": [
+    "danger",
+    "이 인계서에 보충을 더 담을 수 없습니다. 한 건에 30개까지입니다. 필요 없는 것을 지운 뒤 다시 적어 주세요.",
+  ],
+  "handover.note.locked": [
+    "danger",
+    "이미 실행된 인계입니다. 보충 내용을 더하거나 지울 수 없습니다. 권한이 실제로 옮겨 간 뒤의 인계서는 그때 무엇이 적혀 있었는지가 곧 기록입니다.",
+  ],
 
   // ── 공통 실패 ─────────────────────────────────────────────────────────
   invalid: ["danger", "입력한 내용을 다시 확인해 주세요."],
@@ -154,12 +174,25 @@ export function readFeedback(
   return hit ? { tone: hit[0], text: hit[1] } : null;
 }
 
-/** 돌아갈 주소에 결과 코드를 붙인다. 기존 검색 조건은 그대로 둔다. */
+/**
+ * 돌아갈 주소에 결과 코드를 붙인다. 기존 검색 조건은 그대로 둔다.
+ *
+ * 조각(#항목)이 붙어 있으면 맨 뒤로 옮긴다. 주소에서 조각은 언제나 질의 문자열
+ * 뒤에 와야 하는데, 그냥 이어 붙이면 `/handover#3-assets?msg=…` 가 되어
+ * 조각 이름이 `3-assets?msg=…` 로 읽히고 어느 항목으로도 가지 못한다.
+ * (인계서처럼 항목이 일곱 개인 화면은 결과를 그 자리에서 봐야 한다)
+ */
 export function withFeedback(path: string, code: FeedbackCode): string {
-  const [base, query = ""] = path.split("?");
+  // split("#") 로 나누지 않는다. 조각 안에 #이 또 있으면 뒤가 잘려 나가고,
+  // 그러면 돌아갈 자리를 잃는다. 첫 #부터 끝까지가 통째로 조각이다.
+  const hashAt = path.indexOf("#");
+  const hash = hashAt >= 0 ? path.slice(hashAt) : "";
+  const [base, query = ""] = (hashAt >= 0 ? path.slice(0, hashAt) : path).split(
+    "?",
+  );
   const params = new URLSearchParams(query);
   params.set("msg", code);
-  return `${base}?${params.toString()}`;
+  return `${base}?${params.toString()}${hash}`;
 }
 
 /**
@@ -174,6 +207,9 @@ export function classifyError(error: PostgrestError | null): FeedbackCode {
 
   // 트리거가 막은 것들 — 화면이 정확히 설명해 줄 수 있는 유일한 실패들이다.
   if (error.message.includes("마지막 소유자")) return "member.last_owner";
+  if (error.message.includes("보충을 더 담을 수 없습니다")) {
+    return "handover.note.too_many";
+  }
 
   switch (error.code) {
     case "23505": // unique_violation — 이미 참여자인 사람을 다시 추가

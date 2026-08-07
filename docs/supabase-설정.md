@@ -36,13 +36,59 @@ supabase/migrations/0010_grant_layer.sql          GRANT 층을 실제로 세운�
 supabase/migrations/0011_work_field_guard.sql     업무의 칸마다 주인을 정한다
 supabase/migrations/0012_realtime.sql             실시간 공유 — 토픽 정책 · 방송 트리거
 supabase/migrations/0013_access_log_session.sql   열람기록을 열람 세션 단위로
+supabase/migrations/0014_handover_note.sql        인계서에 인계자가 보태는 칸
+supabase/migrations/0015_handover_owner_guard.sql 인계 건의 주인 — 인수자가 가로채지 못하게
 ```
 
 적용 전에 로컬에서 먼저 돌려 볼 수 있다. PGlite(Postgres WASM)로 실제 실행한다.
 
 ```bash
 npm run db:verify   # 마이그레이션이 실제로 도는지
-npm run db:test     # RLS가 실제로 막는지 (98개)
+npm run db:test     # RLS가 실제로 막는지 (125개)
+```
+
+## 1-1. 0014 · 0015 — 인계서 보충 (이미 연결된 프로젝트에 따로 실행)
+
+**둘을 함께 돌린다.** 0014가 인계자가 서식 항목에 보태는 칸(`handover_note`)을 만들고,
+0015가 그 칸이 기대는 전제 — 「인계서는 인계자의 문서다」 — 를 실제로 지킨다.
+
+0015를 빼면 구멍이 하나 열린 채로 남는다. 0002의 `handover_update` 는 당사자 **둘 모두**에게
+UPDATE 를 열어 두고 어떤 칸을 고치는지는 보지 않았다. 그래서 인수자가
+
+```sql
+update handover set from_profile_id = 나, to_profile_id = 상대 where id = ...;
+```
+
+한 줄로 남의 인계서를 자기 것으로 만들고, 거기에 자기 문장을 넣고, 원래 인계자를
+자기 문서에서 밀어낼 수 있다(PGlite 로 재현했다). 업무가 실제로 넘어가지는 않지만
+서명란에 인계자 이름이 찍혀 나가는 문서의 저자가 바뀐다.
+
+**0014를 돌리기 전에 코드를 배포해도 인계 화면이 죽지는 않는다.** 조회 쪽이 「표 없음」만
+0건으로 이어 받고 서버 로그에 무엇을 돌려야 하는지 적는다. 다만 그동안은 **적을 칸은 보이는데
+저장은 안 되는** 상태이므로 오래 두지 않는다.
+
+**둘 다 다시 붙여 넣어도 안전하다.** `create table if not exists` · `drop policy if exists` ·
+`create or replace` 로만 되어 있어, 이미 적용된 프로젝트에 다시 돌려도 같은 상태가 된다.
+0015가 도중에 실패했다면 그냥 다시 돌리면 된다.
+
+> **한 번 물린 것** — 0015의 첫 판이 `alter function ... set app.executing_handover = '1'` 로
+> 함수에 사용자 정의 매개변수를 붙이려다 SQL Editor 에서 막혔다.
+>
+> ```
+> ERROR: 42501: permission denied to set parameter "app.executing_handover"
+> ```
+>
+> **그 문장은 superuser 전용이고 Supabase 의 postgres 는 superuser 가 아니다.**
+> PGlite 검사는 superuser 로 돌기 때문에 그대로 통과했다 — 이 부류는 로컬에서 원리상
+> 안 잡힌다. 지금은 호출 스택을 직접 보는 방식으로 바꿨고, 같은 실수가 다시 나지 않도록
+> `npm run db:verify` 가 마이그레이션 글자를 훑어 잡는다.
+
+확인:
+
+```
+npm run db:verify                                 superuser 전용 문장이 섞였는지도 본다
+npm run db:test                                   125개 (인계서 보충 27개 포함)
+BASE=<주소> npm run test:browser                  [7] 마당 — 적고, 종이에 실리고, 지운다
 ```
 
 ## 1-2. 0012 · 0013 — 실시간 공유 (이미 연결된 프로젝트에 따로 실행)
@@ -355,6 +401,9 @@ DEMO_ACCOUNT_PASSWORD=<시드에 넣은 값>
 supabase/seed/reset-demo.sql   업무 관련 자료만 비운다 (사람·부서·계정은 그대로)
 supabase/seed/demo.sql         다시 채운다
 ```
+
+> 인계자가 적어 둔 보충(`handover_note`)도 함께 비워진다. 되돌리기가 `handover` 를
+> `cascade` 로 지우기 때문이고, 그래서 그 파일에 표 이름을 따로 적지 않았다.
 
 1차예선 심사가 8/20 15:00이니, 그 직전에 한 번 돌려 두면 첫 화면이 깨끗하다.
 

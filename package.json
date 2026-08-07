@@ -11,10 +11,11 @@
     "db:verify": "node supabase/verify.mjs",
     "db:test": "node supabase/rls.test.mjs",
     "test:safe-next": "node tests/safe-next.test.mjs",
+    "test:feedback-url": "node tests/feedback-url.test.mjs",
     "test:browser": "node tests/browser.test.mjs",
     "test:realtime": "node tests/realtime.test.mjs",
     "db:realtime": "node supabase/realtime.probe.mjs",
-    "check": "npm run typecheck && npm run test:safe-next && npm run db:verify && npm run db:test && npm run db:seed:test",
+    "check": "npm run typecheck && npm run test:safe-next && npm run test:feedback-url && npm run db:verify && npm run db:test && npm run db:seed:test",
     "db:seed": "node supabase/gen-seed.mjs",
     "db:seed:test": "node supabase/seed.test.mjs"
   },

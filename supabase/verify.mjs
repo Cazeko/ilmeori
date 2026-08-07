@@ -140,6 +140,55 @@ if (!failed) {
 }
 
 // ---------------------------------------------------------------------------
+// PGlite 가 구조적으로 못 잡는 것 — superuser 라야 되는 문장
+//
+// 여기 PGlite 는 superuser 로 돌고, Supabase 의 postgres 역할은 superuser 가 아니다.
+// 그래서 「로컬은 초록불인데 SQL Editor 에서 42501」이 나올 수 있다. 실제로 났다 —
+// 0015 가 `alter function public.execute_handover(uuid) set app.executing_handover = '1'`
+// 로 함수에 사용자 정의 매개변수를 붙이려다 permission denied to set parameter 로 막혔다.
+// 실행해서는 못 잡으므로 **글자로** 잡는다.
+// ---------------------------------------------------------------------------
+console.log("\nSupabase 에서만 막히는 문장");
+{
+  // `set search_path = ...` 는 점이 없다. 점이 있는 이름(app.foo)이 사용자 정의
+  // 매개변수이고, 그것을 함수·역할·데이터베이스에 **붙여 두는** 것이 superuser 전용이다.
+  // (함수 안에서 set_config 로 그때그때 켜는 것은 누구나 할 수 있다)
+  const RULES = [
+    [
+      /\balter\s+function\b[^;]*\bset\s+[a-z_]+\.[a-z_]+\s*=/gis,
+      "alter function ... set <사용자 정의 매개변수>",
+      "함수 안에서 set_config(...) 로 켜거나, 호출 스택(GET DIAGNOSTICS PG_CONTEXT)을 보는 쪽으로 바꾼다",
+    ],
+    [
+      /\balter\s+(role|database)\b[^;]*\bset\s+[a-z_]+\.[a-z_]+\s*=/gis,
+      "alter role/database ... set <사용자 정의 매개변수>",
+      "세션마다 set_config(...) 로 켠다",
+    ],
+    [/\balter\s+system\b/gi, "alter system", "Supabase 대시보드의 설정으로 바꾼다"],
+  ];
+
+  let flagged = 0;
+  for (const f of files) {
+    const sql = await readFile(join(MIGRATIONS, f), "utf8");
+    // 주석에 적어 둔 것(왜 안 쓰는지 설명하는 문장)은 세지 않는다.
+    const bare = sql
+      .split("\n")
+      .filter((l) => !l.trimStart().startsWith("--"))
+      .join("\n");
+    for (const [re, what, how] of RULES) {
+      if (re.test(bare)) {
+        flagged += 1;
+        failed = true;
+        console.log(`  ✗ ${f} — ${what}`);
+        console.log(`    Supabase 의 postgres 는 superuser 가 아니라 42501 로 막힌다. ${how}`);
+      }
+      re.lastIndex = 0;
+    }
+  }
+  if (flagged === 0) console.log("  ✓ 없음 (superuser 전용 문장이 마이그레이션에 없다)");
+}
+
+// ---------------------------------------------------------------------------
 // 0005 이벤트 트리거가 실제로 동작하는지 — 정의만 있고 안 도는 경우를 잡는다
 // ---------------------------------------------------------------------------
 console.log("\n새 테이블 자동 보호");

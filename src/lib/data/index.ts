@@ -3,7 +3,12 @@ import "server-only";
 import { isSupabaseConfigured } from "@/lib/env";
 import * as mock from "./mock";
 import * as db from "./db";
-import type { Profile, WorkListItem, MemberRole } from "@/lib/types";
+import type {
+  HandoverNoteWithAuthor,
+  MemberRole,
+  Profile,
+  WorkListItem,
+} from "@/lib/types";
 import type { HandoverView, WorkFilter } from "./types";
 
 /**
@@ -52,6 +57,23 @@ export const getHandoverFor = (viewer: Profile): Promise<HandoverView | null> =>
 
 export const getHandover = (viewer: Profile, id: string) =>
   impl.getHandover(viewer, id);
+
+/**
+ * 인계자가 서식 항목에 보탠 글.
+ *
+ * 목업에는 없다 — 언제나 0건이다. 보충은 쿠키가 아니라 DB에만 쌓기 때문이다.
+ * 데모 모드의 변경분은 브라우저 쿠키(4KB)에 담기는데 보충은 한 줄이 1000자까지라
+ * 한 번만 적어도 넘치고, 넘친 쿠키는 브라우저가 **조용히 통째로 버린다.**
+ * 방금 적은 글이 새로고침하면 사라지는 화면은 없는 것만 못하다
+ * (env.ts의 canMutate와 같은 판단이고, logAccess가 여기서 갈리는 이유도 같다).
+ *
+ * 화면은 데모 모드에서 보충 칸 자체를 그리지 않으므로, 적을 곳이 있는데 안
+ * 저장되는 상태는 생기지 않는다.
+ */
+export const getHandoverNotes = (
+  handoverId: string,
+): Promise<HandoverNoteWithAuthor[]> =>
+  isSupabaseConfigured ? db.getHandoverNotes(handoverId) : Promise.resolve([]);
 
 export const listAccessLogs = (viewer: Profile, limit?: number) =>
   impl.listAccessLogs(viewer, limit);
