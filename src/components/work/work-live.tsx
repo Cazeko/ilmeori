@@ -273,7 +273,7 @@ export function WorkLive({
 
   return (
     <div className="mt-4 print:hidden">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-gray-10 bg-white px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-gray-10 bg-surface px-4 py-2.5">
         <p
           className={cn(
             "inline-flex items-center gap-1.5 text-body-xs font-bold",
@@ -306,7 +306,7 @@ export function WorkLive({
                       key={p.id}
                       profile={p}
                       size="sm"
-                      className="-ml-1.5 ring-2 ring-white first:ml-0"
+                      className="-ml-1.5 ring-2 ring-surface first:ml-0"
                     />
                   ))}
                 </span>

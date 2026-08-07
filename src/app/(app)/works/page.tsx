@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AlertTriangle, Filter, Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { KanbanBoard } from "@/components/work/kanban-board";
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { ActionFeedback } from "@/components/ui/feedback";
@@ -89,7 +90,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
   ];
 
   return (
-    <div className="px-5 py-6 sm:px-7 lg:px-8">
+    <PageContainer>
       <PageHeader
         title="업무 보드"
         description="내가 볼 수 있는 업무만 나타납니다. 참여자로 등록되었거나, 공개 범위가 내 소속을 포함하는 업무입니다."
@@ -115,7 +116,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
       <form
         method="get"
         action="/works"
-        className="mb-4 rounded-md border border-gray-10 bg-white p-4"
+        className="mb-4 rounded-md border border-gray-10 bg-surface p-4"
       >
         {/* 칸으로 그리지 않은 조건은 제출할 때 사라진다.
             보관함에서 검색하면 보관함 밖으로 튕겨 나가고, 그건 고장으로 보인다. */}
@@ -194,7 +195,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
               "inline-flex min-h-9 items-center rounded-sm border px-3 text-body-sm font-bold transition-colors duration-150",
               c.on
                 ? "border-primary bg-primary-5 text-primary"
-                : "border-gray-20 bg-white text-gray-60 hover:bg-gray-5",
+                : "border-gray-20 bg-surface text-gray-60 hover:bg-gray-5",
             )}
           >
             {c.label}
@@ -219,6 +220,6 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
       </p>
 
       <KanbanBoard works={works} />
-    </div>
+    </PageContainer>
   );
 }

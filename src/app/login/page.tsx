@@ -94,7 +94,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
         {/* ── 계정 선택 ─────────────────────────────────────────────────── */}
         <div>
-          <div className="rounded-lg border border-gray-10 bg-white p-6 sm:p-7">
+          <div className="rounded-lg border border-gray-10 bg-surface p-6 sm:p-7">
             <h2 className="text-h3 font-bold text-gray-90">
               데모 계정으로 들어가기
             </h2>
@@ -142,7 +142,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
                     <input type="hidden" name="next" value={next} />
                     <button
                       type="submit"
-                      className="group flex w-full cursor-pointer items-start gap-3.5 rounded-md border border-gray-20 bg-white p-4 text-left transition-colors duration-150 hover:border-primary hover:bg-primary-5"
+                      className="group flex w-full cursor-pointer items-start gap-3.5 rounded-md border border-gray-20 bg-surface p-4 text-left transition-colors duration-150 hover:border-primary hover:bg-primary-5"
                     >
                       <Avatar profile={profile} size="lg" />
                       <span className="min-w-0 flex-1">

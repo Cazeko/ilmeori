@@ -157,7 +157,7 @@ export function ApprovalGrid({
             것도 「직위 / 이름 / 날짜」 세 줄로 서로 다르다. 표로 만들면
             스크린리더가 행·열을 읽어 주지만 그 행·열에 뜻이 없다.
             대신 각 칸을 목록 항목으로 두고 읽을 말을 글자로 적는다. */}
-        <div className="flex border border-gray-20 bg-white">
+        <div className="flex border border-gray-20 bg-surface">
           <div className="flex w-16 shrink-0 items-center justify-center border-r border-gray-20 bg-gray-5 text-body-sm font-bold text-gray-70">
             결재
           </div>
@@ -189,7 +189,7 @@ export function ApprovalGrid({
         </div>
 
         {concur.length > 0 ? (
-          <div className="flex border-x border-b border-gray-20 bg-white">
+          <div className="flex border-x border-b border-gray-20 bg-surface">
             <div className="flex w-16 shrink-0 items-center justify-center border-r border-gray-20 bg-gray-5 text-body-sm font-bold text-gray-70">
               협조
             </div>
@@ -243,7 +243,7 @@ export function ApprovalGrid({
         ) : null}
 
         {post.length > 0 ? (
-          <div className="flex border-x border-b border-gray-20 bg-white">
+          <div className="flex border-x border-b border-gray-20 bg-surface">
             <div className="flex w-16 shrink-0 items-center justify-center border-r border-gray-20 bg-gray-5 text-body-sm font-bold text-gray-70">
               사후
             </div>
@@ -298,7 +298,7 @@ export function ApprovalOpinions({
                 "rounded-md border px-4 py-3",
                 s.rejected_at
                   ? "border-danger/25 bg-danger-bg"
-                  : "border-gray-10 bg-white",
+                  : "border-gray-10 bg-surface",
               )}
             >
               <p className="text-body-xs font-bold text-gray-60">

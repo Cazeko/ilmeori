@@ -75,9 +75,34 @@
   /* 명도를 25% 낮춘 값. 흰 배경 5.48:1 / accent-bg 위 4.95:1 로 둘 다 통과한다. */
   --color-accent-text: #a55221;
 
+  /* --- 판과 바탕: 색을 두 층으로 ---------------------------------------------
+     화면 전체가 순백(#fff) 위에 옅은 회색(#f4f5f6) 바탕이면, 판(카드)이 바탕에서
+     떠 보이는 것이 아니라 **바탕이 판에 눌린 것처럼** 보인다. 하루 종일 띄워 두는
+     업무 화면에서는 그 흰색이 눈에 남는다. 두 층을 함께 한 칸씩 내린다.
+
+       판(카드·헤더·사이드바·입력칸)  #ffffff → #fafafa   (--color-surface)
+       바탕(본문 영역·옅은 채움)      #f4f5f6 → #f0f1f2   (--color-gray-5)
+
+     둘 사이 명도비는 1.09 → 1.08 로 거의 그대로다. 층이 구분되던 정도를 유지한
+     채 전체만 내려앉는다.
+
+     ── 왜 --color-white 를 덮어쓰지 않는가 ──────────────────────────────────
+     Tailwind 의 `bg-white` 와 `text-white` 는 **같은 토큰**을 본다. 덮어쓰면
+     판만 내려가는 것이 아니라 파란 버튼 위의 글자까지 #fafafa 가 된다.
+     실제로 재 보면 `bg-danger` 위의 흰 글자가 4.56 → **4.37 로 떨어져 미달**이다.
+     「판의 색」과 「색 위에 얹는 글자색」은 다른 뜻이므로 토큰을 따로 둔다.
+     그래서 `bg-white` 는 전부 `bg-surface` 로 바꿨고, 인쇄용 `print:bg-white`
+     하나만 순백으로 남겼다 — 종이는 순백이다.
+
+     대비 실측 (판 #fafafa 위):
+       gray-90 15.50 · gray-60 6.04 · primary 8.69 · accent-text 5.25
+       status doing 5.74 · review 5.79 · done 5.75 · overdue 5.74 · todo 6.04
+     전부 4.5:1 이상. 바탕(#f0f1f2) 위에서는 오히려 조금씩 올라간다. */
+  --color-surface: #fafafa;
+
   /* --- Gray (KRDS 13단계) --- */
   --color-gray-0: #ffffff;
-  --color-gray-5: #f4f5f6;
+  --color-gray-5: #f0f1f2;
   --color-gray-10: #e6e8ea;
   --color-gray-20: #cdd1d5;
   --color-gray-30: #b1b8be;
@@ -104,7 +129,9 @@
      제품의 중심 색 언어. KRDS 시스템 색상 의미 체계에 매핑해 파생했다.
      '지연'은 저장된 상태가 아니라 (기한 초과 && 미완료)로 계산되는 파생 상태다. */
   --color-status-todo: #6d7882; /* 대기   ← gray-50 */
-  --color-status-todo-bg: #f4f5f6;
+  /* gray-5 와 함께 내린다. 판(#fafafa) 위에 놓이는 배지라, 여기만 #f4f5f6 로
+     두면 판과의 명도비가 1.03 이 되어 배지가 사실상 안 보인다. */
+  --color-status-todo-bg: #f0f1f2;
   --color-status-doing: #0b78cb; /* 진행중 ← information */
   --color-status-doing-bg: #e7f4fe;
   --color-status-review: #9e6a00; /* 검토   ← warning */
@@ -163,7 +190,9 @@
     line-height: 1.5; /* 체크리스트: 1.5배 이상 */
     font-weight: 400; /* 체크리스트: 굵기 2가지(400/700)만 사용 */
     color: var(--color-gray-90);
-    background: var(--color-gray-0);
+    /* 본문 영역(main)과 같은 바탕. 순백으로 두면 스크롤을 끝까지 당겼을 때
+       화면 위아래로 흰 띠가 비친다. */
+    background: var(--color-gray-5);
     word-break: keep-all; /* 한글 어절 단위 줄바꿈 */
   }
 
@@ -241,6 +270,13 @@
   body {
     background: #fff !important;
     color: #000;
+  }
+
+  /* 화면의 판 색(#fafafa)이 종이로 새어 나가지 않게 한다. 흑백 인쇄에서는
+     옅은 회색 판이 되고, 컬러 프린터에서는 종이 전체에 잉크가 얹힌다.
+     결재에 올라가는 문서는 순백이어야 한다. */
+  .bg-surface {
+    background: #fff !important;
   }
 
   .print-sheet {

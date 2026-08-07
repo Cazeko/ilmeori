@@ -36,7 +36,7 @@ export function ApprovalLineEditor({
 
   return (
     <div className="flex flex-col gap-4">
-      <ol className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-white">
+      <ol className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-surface">
         {approval.steps.map((s: ApprovalStepWithApprover) => (
           <li key={s.id} className="flex items-center gap-3 px-4 py-2.5">
             <span className="w-6 shrink-0 text-body-xs font-bold tabular-nums text-gray-40">
@@ -54,7 +54,10 @@ export function ApprovalLineEditor({
             {s.kind === "draft" ? (
               // 기안란은 뺄 수 없다. 빼면 상신이 「결재선에 기안란이 없습니다」로
               // 막히고, 사용자는 무엇을 되돌려야 하는지 알 수 없다.
-              <span className="shrink-0 text-body-xs text-gray-50">
+              //
+              // gray-50 을 쓰지 않는다. 판이 #fafafa 로 내려간 뒤로 흰 배경에서
+              // 4.51 이던 대비가 4.32 가 되어 본문 글자로는 미달이다.
+              <span className="shrink-0 text-body-xs text-gray-60">
                 기안자 자리
               </span>
             ) : (
@@ -78,7 +81,7 @@ export function ApprovalLineEditor({
       {/* ── 칸 더하기 ──────────────────────────────────────────────────── */}
       <form
         action={addApprovalStep}
-        className="flex flex-col gap-3 rounded-md border border-gray-10 bg-white p-4 sm:flex-row sm:items-end"
+        className="flex flex-col gap-3 rounded-md border border-gray-10 bg-surface p-4 sm:flex-row sm:items-end"
       >
         <input type="hidden" name="approvalId" value={approval.id} />
         <PeoplePicker
@@ -110,7 +113,7 @@ export function ApprovalLineEditor({
 
       {/* ── 결재선 가져오기 ────────────────────────────────────────────── */}
       {sources.length > 0 ? (
-        <details className="rounded-md border border-gray-10 bg-white">
+        <details className="rounded-md border border-gray-10 bg-surface">
           <summary className="min-h-11 cursor-pointer list-none px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
             다른 결재의 결재선 그대로 쓰기
           </summary>

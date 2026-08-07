@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Field, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { createApproval } from "@/lib/actions/approvals";
 import { buildApprovalLine } from "@/lib/approval";
@@ -64,7 +65,7 @@ export default async function NewApprovalPage({
   const approvers = line.filter((s) => s.kind !== "draft");
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-6 sm:px-7 lg:px-8">
+    <PageContainer width="form">
       <nav aria-label="현재 위치" className="mb-4">
         <ol className="flex items-center gap-1 text-body-xs text-gray-60">
           <li>
@@ -155,7 +156,7 @@ export default async function NewApprovalPage({
                     return (
                       <li
                         key={s.approver_id}
-                        className="rounded-sm border border-gray-20 bg-white px-3 py-1.5 text-body-sm"
+                        className="rounded-sm border border-gray-20 bg-surface px-3 py-1.5 text-body-sm"
                       >
                         <span aria-hidden className="mr-1.5 text-gray-30">
                           →
@@ -218,6 +219,6 @@ export default async function NewApprovalPage({
           </div>
         </form>
       )}
-    </div>
+    </PageContainer>
   );
 }

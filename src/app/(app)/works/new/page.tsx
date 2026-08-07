@@ -5,6 +5,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Field, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { WorkForm } from "@/components/work/work-form";
 import { createWork } from "@/lib/actions/works";
@@ -41,7 +42,7 @@ export default async function NewWorkPage({
     : null;
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-6 sm:px-7 lg:px-8">
+    <PageContainer width="form">
       <nav aria-label="현재 위치" className="mb-4">
         <ol className="flex items-center gap-1 text-body-xs text-gray-60">
           <li>
@@ -111,6 +112,6 @@ export default async function NewWorkPage({
           </CardBody>
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 }

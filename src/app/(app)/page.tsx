@@ -9,6 +9,7 @@ import {
   Stamp,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -58,7 +59,7 @@ export default async function HomePage() {
   ).length;
 
   return (
-    <div className="px-5 py-6 sm:px-7 lg:px-8">
+    <PageContainer>
       <PageHeader
         title={`${viewer.name} ${viewer.position ?? ""} 님, 안녕하세요`}
         description={`${department?.name ?? "소속 없음"} · 참여 중인 업무 ${mine.length}건`}
@@ -122,7 +123,7 @@ export default async function HomePage() {
               }
               data-variant="plain"
               className={cn(
-                "block rounded-md border bg-white px-4 py-3.5 transition-colors duration-150 hover:border-primary-30",
+                "block rounded-md border bg-surface px-4 py-3.5 transition-colors duration-150 hover:border-primary-30",
                 key === "overdue" && counts.overdue > 0
                   ? "border-status-overdue/40"
                   : "border-gray-10",
@@ -261,6 +262,6 @@ export default async function HomePage() {
           </Card>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

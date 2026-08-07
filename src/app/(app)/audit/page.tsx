@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Download, Eye, FileText, ScrollText, ShieldCheck } from "lucide-react";
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -37,7 +38,7 @@ export default async function AuditPage() {
     : null;
 
   return (
-    <div className="px-5 py-6 sm:px-7 lg:px-8">
+    <PageContainer>
       <PageHeader
         title="열람기록"
         description={`${department?.name ?? ""} 소속으로 볼 수 있는 업무에 대한 열람기록입니다. 볼 수 없는 업무의 기록은 이 목록에도 나타나지 않습니다.`}
@@ -144,7 +145,7 @@ export default async function AuditPage() {
           </Card>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }
 

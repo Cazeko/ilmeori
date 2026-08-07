@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Notice } from "@/components/ui/notice";
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   APPROVAL_BOXES,
@@ -67,7 +68,7 @@ export default async function ApprovalsPage({
     .sort(byRecent);
 
   return (
-    <div className="px-5 py-6 sm:px-7 lg:px-8">
+    <PageContainer>
       <PageHeader
         title="결재함"
         description="내부결재문서(시행규칙 별지 제2호서식)를 올리고 처리하는 곳입니다. 대외로 나가는 발신문서는 여기서 만들지 않습니다 — 그건 온나라의 자리입니다."
@@ -156,7 +157,7 @@ export default async function ApprovalsPage({
               ) : null}
             </>
           ) : (
-            <div className="rounded-md border border-gray-10 bg-white">
+            <div className="rounded-md border border-gray-10 bg-surface">
               <EmptyState
                 icon={box === "todo" ? Inbox : FileCheck2}
                 title={
@@ -188,7 +189,7 @@ export default async function ApprovalsPage({
                     <Link
                       href={`/approvals/new?form=${f}`}
                       data-variant="plain"
-                      className="flex h-full flex-col justify-between gap-1 rounded-md border border-gray-10 bg-white px-3.5 py-3 hover:border-primary-20 hover:bg-primary-5"
+                      className="flex h-full flex-col justify-between gap-1 rounded-md border border-gray-10 bg-surface px-3.5 py-3 hover:border-primary-20 hover:bg-primary-5"
                     >
                       <span className="text-body-sm font-bold text-gray-90">
                         {APPROVAL_FORM_LABEL[f]}
@@ -204,6 +205,6 @@ export default async function ApprovalsPage({
           ) : null}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

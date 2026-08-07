@@ -110,7 +110,7 @@ export function ApprovalDecision({
  */
 export function ApprovalWithdraw({ approvalId }: { approvalId: string }) {
   return (
-    <details className="rounded-md border border-gray-10 bg-white">
+    <details className="rounded-md border border-gray-10 bg-surface">
       <summary className="min-h-11 cursor-pointer list-none px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
         잘못 올렸다면
       </summary>

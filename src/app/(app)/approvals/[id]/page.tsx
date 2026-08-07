@@ -22,6 +22,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Notice } from "@/components/ui/notice";
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { deleteApproval, submitApproval } from "@/lib/actions/approvals";
 import { myTurn } from "@/lib/approval";
@@ -68,7 +69,7 @@ export default async function ApprovalDetailPage({
   // notFound() 를 쓰지 않는 이유는 work-not-found.tsx 에 적어 두었다.
   if (!approval) {
     return (
-      <div className="px-5 py-6 sm:px-7 lg:px-8">
+      <PageContainer width="doc">
         <PageHeader title="결재 문서를 찾을 수 없습니다" />
         <Card className="max-w-2xl">
           <CardBody className="py-8">
@@ -88,7 +89,7 @@ export default async function ApprovalDetailPage({
             </div>
           </CardBody>
         </Card>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -105,7 +106,7 @@ export default async function ApprovalDetailPage({
   ]);
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-6 sm:px-7 lg:px-8">
+    <PageContainer width="doc">
       <nav aria-label="현재 위치" className="mb-4">
         <ol className="flex items-center gap-1 text-body-xs text-gray-60">
           <li>
@@ -230,7 +231,7 @@ export default async function ApprovalDetailPage({
           >
             본문
           </h2>
-          <div className="rounded-md border border-gray-10 bg-white px-5 py-4">
+          <div className="rounded-md border border-gray-10 bg-surface px-5 py-4">
             {approval.body ? (
               <p className="text-body leading-relaxed break-keep whitespace-pre-wrap text-gray-80">
                 {approval.body}
@@ -294,7 +295,7 @@ export default async function ApprovalDetailPage({
               </form>
             </div>
 
-            <details className="rounded-md border border-gray-10 bg-white">
+            <details className="rounded-md border border-gray-10 bg-surface">
               <summary className="min-h-11 cursor-pointer list-none px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
                 이 초안을 지우려면
               </summary>
@@ -348,6 +349,6 @@ export default async function ApprovalDetailPage({
           </Notice>
         ) : null}
       </div>
-    </div>
+    </PageContainer>
   );
 }

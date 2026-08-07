@@ -155,7 +155,7 @@ export function MemberList({
         <h2 id="visibility-heading" className="mb-2.5 text-h4 font-bold text-gray-90">
           공개 범위
         </h2>
-        <div className="flex items-start gap-3 rounded-md border border-gray-10 bg-white px-4 py-3.5">
+        <div className="flex items-start gap-3 rounded-md border border-gray-10 bg-surface px-4 py-3.5">
           <VisIcon aria-hidden className="mt-0.5 size-5 shrink-0 text-gray-40" />
           <div>
             <p className="text-body-sm font-bold text-gray-90">
@@ -175,7 +175,7 @@ export function MemberList({
         {canManage ? (
           <form
             action={changeVisibility}
-            className="mt-2 flex flex-wrap items-end gap-2 rounded-md border border-gray-10 bg-white px-4 py-3.5"
+            className="mt-2 flex flex-wrap items-end gap-2 rounded-md border border-gray-10 bg-surface px-4 py-3.5"
           >
             <input type="hidden" name="workId" value={workId} />
             <Field
@@ -210,7 +210,7 @@ export function MemberList({
         <h2 id="members-heading" className="mb-2.5 text-h4 font-bold text-gray-90">
           참여자 {members.length}명
         </h2>
-        <ul className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-white">
+        <ul className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-surface">
           {members.map((m) => {
             const style = ROLE_STYLE[m.role];
             const RoleIcon = style.icon;
@@ -365,7 +365,7 @@ export function MemberList({
           {addableCount > 0 ? (
             <form
               action={addMember}
-              className="flex flex-wrap items-end gap-2 rounded-md border border-gray-10 bg-white px-4 py-3.5"
+              className="flex flex-wrap items-end gap-2 rounded-md border border-gray-10 bg-surface px-4 py-3.5"
             >
               <input type="hidden" name="workId" value={workId} />
               <Field
@@ -408,7 +408,7 @@ export function MemberList({
               </Button>
             </form>
           ) : (
-            <p className="rounded-md border border-gray-10 bg-white px-4 py-6 text-center text-body-sm break-keep text-gray-60">
+            <p className="rounded-md border border-gray-10 bg-surface px-4 py-6 text-center text-body-sm break-keep text-gray-60">
               더 부를 사람이 없습니다. 조회할 수 있는 직원이 모두 참여하고 있습니다.
             </p>
           )}
@@ -423,7 +423,7 @@ export function MemberList({
         >
           권한이 뜻하는 것
         </h2>
-        <dl className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-white">
+        <dl className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-surface">
           {ROLES.map((role) => {
             const style = ROLE_STYLE[role];
             const RoleIcon = style.icon;

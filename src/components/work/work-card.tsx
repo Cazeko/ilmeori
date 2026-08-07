@@ -28,7 +28,7 @@ export function WorkCard({ work }: { work: WorkListItem }) {
   return (
     <article
       className={cn(
-        "relative rounded-md border bg-white transition-colors duration-150 hover:border-primary-30",
+        "relative rounded-md border bg-surface transition-colors duration-150 hover:border-primary-30",
         overdue ? "border-gray-10 border-l-4 border-l-status-overdue" : "border-gray-10",
       )}
     >

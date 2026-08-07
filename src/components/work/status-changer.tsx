@@ -48,7 +48,7 @@ export function StatusChanger({
                 className={cn(
                   "min-h-11 cursor-pointer px-3.5 text-body-sm font-bold transition-colors duration-150",
                   i > 0 && "border-l border-gray-20",
-                  active ? ON[s] : "bg-white text-gray-60 hover:bg-gray-5",
+                  active ? ON[s] : "bg-surface text-gray-60 hover:bg-gray-5",
                 )}
               >
                 {STATUS_LABEL[s]}

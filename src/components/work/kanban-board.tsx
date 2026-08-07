@@ -24,7 +24,7 @@ const HEAD: Record<WorkStatus, string> = {
 export function KanbanBoard({ works }: { works: WorkListItem[] }) {
   if (works.length === 0) {
     return (
-      <div className="rounded-md border border-gray-10 bg-white">
+      <div className="rounded-md border border-gray-10 bg-surface">
         <EmptyState
           icon={Inbox}
           title="조건에 맞는 업무가 없습니다"

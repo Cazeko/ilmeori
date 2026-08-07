@@ -110,7 +110,7 @@ export function DocSections({
 
       {canWrite ? (
         <div className="mb-5 flex flex-col gap-2">
-          <details className="rounded-md border border-gray-10 bg-white">
+          <details className="rounded-md border border-gray-10 bg-surface">
             <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-body-sm font-bold text-gray-70">
               <PenLine aria-hidden className="size-4 text-gray-40" />
               문서 이름 바꾸기
@@ -142,7 +142,7 @@ export function DocSections({
 
           {/* 되돌릴 수 없는 동작은 접어 둔다. 펼치는 손짓 한 번이 확인 절차를 대신한다. */}
           {canDelete ? (
-            <details className="rounded-md border border-gray-10 bg-white">
+            <details className="rounded-md border border-gray-10 bg-surface">
               <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-body-sm font-bold text-gray-70">
                 <Trash2 aria-hidden className="size-4 text-gray-40" />
                 문서 삭제
@@ -180,7 +180,7 @@ export function DocSections({
               <li
                 key={s.id}
                 className={cn(
-                  "rounded-md border bg-white",
+                  "rounded-md border bg-surface",
                   heldByOther
                     ? "border-status-doing/40 bg-status-doing-bg/40"
                     : editing
@@ -361,7 +361,7 @@ export function DocSections({
           })}
         </ol>
       ) : (
-        <p className="rounded-md border border-gray-10 bg-white px-4 py-6 text-center text-body-sm text-gray-60">
+        <p className="rounded-md border border-gray-10 bg-surface px-4 py-6 text-center text-body-sm text-gray-60">
           아직 항목이 없습니다.
           {canWrite ? " 아래에서 첫 항목을 추가해 주세요." : null}
         </p>
@@ -370,7 +370,7 @@ export function DocSections({
       {canWrite ? (
         <form
           action={addSection}
-          className="mt-5 rounded-md border border-gray-10 bg-white px-4 py-4"
+          className="mt-5 rounded-md border border-gray-10 bg-surface px-4 py-4"
         >
           <input type="hidden" name="workId" value={workId} />
           <input type="hidden" name="documentId" value={doc.id} />

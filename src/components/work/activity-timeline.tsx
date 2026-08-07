@@ -125,7 +125,7 @@ export function ActivityTimeline({
                   <span
                     aria-hidden
                     className={cn(
-                      "absolute top-0.5 -left-[11px] flex size-[22px] items-center justify-center rounded-full ring-3 ring-white",
+                      "absolute top-0.5 -left-[11px] flex size-[22px] items-center justify-center rounded-full ring-3 ring-surface",
                       TONE[tone].dot,
                     )}
                   >

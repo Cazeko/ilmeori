@@ -13,7 +13,7 @@ import { cn } from "@/lib/cn";
  */
 
 const controlBase = [
-  "w-full rounded-sm border bg-white text-body text-gray-90",
+  "w-full rounded-sm border bg-surface text-body text-gray-90",
   "placeholder:text-gray-60",
   "transition-colors duration-150",
   "disabled:cursor-not-allowed disabled:bg-gray-5 disabled:text-gray-50",

@@ -83,7 +83,7 @@ export function AppShell({
       {/* ── 상단 바 ─────────────────────────────────────────────────────── */}
       {/* 상단 바와 왼쪽 메뉴는 종이에 나올 이유가 없다. 인쇄물은 결재에 올라가는
           문서 한 벌이지 화면의 사진이 아니다. */}
-      <header className="sticky top-0 z-20 flex h-header shrink-0 items-center gap-3 border-b border-gray-10 bg-white px-3 sm:px-4 print:hidden">
+      <header className="sticky top-0 z-20 flex h-header shrink-0 items-center gap-3 border-b border-gray-10 bg-surface px-3 sm:px-4 print:hidden">
         <button
           type="button"
           aria-label="메뉴 열기"
@@ -122,7 +122,7 @@ export function AppShell({
               type="search"
               placeholder="업무 제목으로 찾기"
               autoComplete="off"
-              className="h-9 w-full rounded-sm border border-gray-20 bg-gray-5 pr-3 pl-9 text-body-sm text-gray-90 placeholder:text-gray-60 hover:border-gray-30 focus:bg-white"
+              className="h-9 w-full rounded-sm border border-gray-20 bg-gray-5 pr-3 pl-9 text-body-sm text-gray-90 placeholder:text-gray-60 hover:border-gray-30 focus:bg-surface"
             />
           </div>
         </form>
@@ -167,7 +167,7 @@ export function AppShell({
           id="app-sidebar"
           aria-label="주요 메뉴"
           className={cn(
-            "fixed top-0 bottom-0 left-0 z-30 w-sidebar shrink-0 overflow-y-auto border-r border-gray-10 bg-white transition-transform duration-200",
+            "fixed top-0 bottom-0 left-0 z-30 w-sidebar shrink-0 overflow-y-auto border-r border-gray-10 bg-surface transition-transform duration-200",
             "lg:sticky lg:visible lg:top-header lg:bottom-auto lg:z-10 lg:h-[calc(100dvh-var(--spacing-header))] lg:translate-x-0 lg:self-start",
             // 닫힌 서랍은 화면 밖에 있을 뿐 여전히 문서에 있다. 그대로 두면
             // 탭 키가 보이지 않는 링크들을 훑고 지나간다.

@@ -35,8 +35,8 @@ export function ProgressSteps({ current }: { current: HandoverStatus }) {
               now
                 ? "border-accent bg-accent-bg"
                 : done
-                  ? "border-gray-10 bg-white"
-                  : "border-dashed border-gray-20 bg-white",
+                  ? "border-gray-10 bg-surface"
+                  : "border-dashed border-gray-20 bg-surface",
             )}
           >
             <p className="flex items-center gap-2">

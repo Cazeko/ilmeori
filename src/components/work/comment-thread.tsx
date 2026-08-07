@@ -99,7 +99,7 @@ export function CommentThread({
                       </form>
                     ) : null}
                   </div>
-                  <p className="mt-1 rounded-md rounded-tl-none border border-gray-10 bg-white px-3.5 py-2.5 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
+                  <p className="mt-1 rounded-md rounded-tl-none border border-gray-10 bg-surface px-3.5 py-2.5 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
                     {c.body}
                   </p>
                 </div>

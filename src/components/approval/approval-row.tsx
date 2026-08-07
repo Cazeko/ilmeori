@@ -35,7 +35,7 @@ export function ApprovalRow({
   return (
     <li
       className={cn(
-        "relative border-l-4 bg-white px-4 py-3.5 sm:px-5",
+        "relative border-l-4 bg-surface px-4 py-3.5 sm:px-5",
         mine ? "border-l-primary" : "border-l-transparent",
       )}
     >

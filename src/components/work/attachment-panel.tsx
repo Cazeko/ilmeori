@@ -46,7 +46,7 @@ const ACCEPT = ".hwp,.pdf,.docx,.xlsx,.pptx,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv
 
 /** 파일 선택 버튼도 손가락으로 누르는 크기(44px)를 지킨다. */
 const FILE_INPUT =
-  "min-h-11 w-full cursor-pointer rounded-sm border border-gray-30 bg-white text-body-sm text-gray-80 file:mr-3 file:h-11 file:cursor-pointer file:border-0 file:bg-gray-5 file:px-3 file:text-body-sm file:font-bold file:text-gray-80";
+  "min-h-11 w-full cursor-pointer rounded-sm border border-gray-30 bg-surface text-body-sm text-gray-80 file:mr-3 file:h-11 file:cursor-pointer file:border-0 file:bg-gray-5 file:px-3 file:text-body-sm file:font-bold file:text-gray-80";
 
 type Version = AttachmentWithUploader;
 

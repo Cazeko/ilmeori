@@ -72,7 +72,7 @@ export async function PreviousYearCallout({
       <Link
         href={`/works/${brief.work.id}`}
         data-variant="plain"
-        className="mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-sm bg-white px-3 text-body-sm font-bold text-accent-text ring-1 ring-accent/30 hover:bg-accent hover:text-white hover:ring-accent"
+        className="mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-sm bg-surface px-3 text-body-sm font-bold text-accent-text ring-1 ring-accent/30 hover:bg-accent hover:text-white hover:ring-accent"
       >
         작년 판 열어 보기
         <ArrowRight aria-hidden className="size-4" />

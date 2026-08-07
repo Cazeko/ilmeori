@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { FileSignature, Inbox, RotateCcw, ShieldCheck } from "lucide-react";
 import { startHandover } from "@/lib/actions/handover";
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -64,7 +65,7 @@ export default async function StartHandoverPage({
   );
 
   return (
-    <div className="px-5 py-6 sm:px-7 lg:px-8">
+    <PageContainer width="form">
       <PageHeader
         title="인계 시작"
         description="넘길 사람과 업무만 고르면 「업무인계·인수서」 초안이 만들어집니다. 담당 업무·진행사항·관련 문서는 이 시스템에 쌓인 기록에서 뽑아 채웁니다."
@@ -199,6 +200,6 @@ export default async function StartHandoverPage({
           </div>
         </form>
       )}
-    </div>
+    </PageContainer>
   );
 }

@@ -14,6 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { PageContainer } from "@/components/ui/page-container";
 import { StatusBadge } from "@/components/status-badge";
 import { ApprovalRow } from "@/components/approval/approval-row";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -183,7 +184,7 @@ export default async function WorkDetailPage({
   ];
 
   return (
-    <div className="px-5 py-6 sm:px-7 lg:px-8">
+    <PageContainer>
       {/* ── 위치 ─────────────────────────────────────────────────────────── */}
       <nav aria-label="현재 위치" className="mb-4">
         <ol className="flex items-center gap-1 text-body-xs text-gray-60">
@@ -384,7 +385,7 @@ export default async function WorkDetailPage({
                     ))}
                   </ul>
                 ) : (
-                  <div className="rounded-md border border-gray-10 bg-white">
+                  <div className="rounded-md border border-gray-10 bg-surface">
                     <EmptyState
                       icon={Stamp}
                       title="아직 올린 결재가 없습니다"
@@ -428,7 +429,7 @@ export default async function WorkDetailPage({
                     합니다.
                   </p>
                   {accessLogs.length > 0 ? (
-                    <ul className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-white">
+                    <ul className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-surface">
                       {accessLogs.map((l) => (
                         <li
                           key={l.id}
@@ -449,7 +450,7 @@ export default async function WorkDetailPage({
                       ))}
                     </ul>
                   ) : (
-                    <p className="rounded-md border border-gray-10 bg-white px-4 py-6 text-center text-body-sm text-gray-60">
+                    <p className="rounded-md border border-gray-10 bg-surface px-4 py-6 text-center text-body-sm text-gray-60">
                       아직 열람기록이 없습니다.
                     </p>
                   )}
@@ -521,6 +522,6 @@ export default async function WorkDetailPage({
           </Card>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

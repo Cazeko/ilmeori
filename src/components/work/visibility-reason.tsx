@@ -32,7 +32,7 @@ export function VisibilityReason({
   const reason = whyVisible(work, viewer, role);
 
   return (
-    <details className="mt-5 rounded-md border border-gray-10 bg-white">
+    <details className="mt-5 rounded-md border border-gray-10 bg-surface">
       <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-2.5 text-body-sm text-gray-70 hover:text-gray-90">
         <Eye aria-hidden className="size-4 shrink-0 text-gray-40" />
         <span className="break-keep">

@@ -16,6 +16,7 @@ import {
   resetDemo,
 } from "@/lib/actions/handover";
 import { cn } from "@/lib/cn";
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -58,7 +59,7 @@ export default async function HandoverPage({
 
   if (!view) {
     return (
-      <div className="px-5 py-6 sm:px-7 lg:px-8">
+      <PageContainer>
         <PageHeader title="인계·인수" />
         <ActionFeedback msg={sp.msg} className="mb-4" />
         <Card>
@@ -76,7 +77,7 @@ export default async function HandoverPage({
             }
           />
         </Card>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -111,7 +112,7 @@ export default async function HandoverPage({
   const canWriteNotes = isSender && !done && canMutate;
 
   return (
-    <div className="px-5 py-6 sm:px-7 lg:px-8 print:p-0">
+    <PageContainer className="print:p-0">
       {/* 종이에 나가는 문서. 화면에서는 숨어 있다. 아래 화면용 본문에는
           print:hidden 이 붙어 있어, 인쇄하면 이 한 벌만 나온다. */}
       <HandoverPrintSheet
@@ -233,7 +234,7 @@ export default async function HandoverPage({
               "형식이 hwp냐"보다 "이걸 그대로 결재에 올릴 수 있느냐"가 먼저다.
               브라우저 인쇄로 A4 한 벌이 나오면 그 질문에 종이로 답할 수 있다.
               (버튼은 스크립트가 있을 때만 나타난다. 안내 문장은 늘 남는다) */}
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-gray-10 bg-white px-4 py-3">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-gray-10 bg-surface px-4 py-3">
               <p className="min-w-0 flex-1 text-body-sm break-keep text-gray-60">
                 브라우저 인쇄(<kbd className="font-sans font-bold">Ctrl</kbd>+
                 <kbd className="font-sans font-bold">P</kbd>, macOS는{" "}
@@ -550,7 +551,7 @@ export default async function HandoverPage({
               펼치는 손짓 한 번이 확인 절차를 대신한다 — ConfirmDialog는
               "use client"라 스크립트가 없으면 버튼이 아무 일도 하지 않는다. */}
             {isSender && !done && canMutate ? (
-              <details className="rounded-md border border-gray-10 bg-white">
+              <details className="rounded-md border border-gray-10 bg-surface">
                 <summary className="min-h-11 cursor-pointer list-none px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
                   인계를 잘못 시작했다면
                 </summary>
@@ -598,6 +599,6 @@ export default async function HandoverPage({
           </div>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

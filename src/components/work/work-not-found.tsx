@@ -2,6 +2,7 @@ import { FileQuestion, Repeat } from "lucide-react";
 import { leaveDemo } from "@/app/login/actions";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { isSupabaseConfigured } from "@/lib/env";
 
@@ -47,7 +48,7 @@ export function WorkNotFound({
   const editable = mode === "not-editable";
 
   return (
-    <div className="px-5 py-6 sm:px-7 lg:px-8">
+    <PageContainer>
       <PageHeader
         title={editable ? "고칠 수 없는 업무입니다" : "업무를 찾을 수 없습니다"}
       />
@@ -121,6 +122,6 @@ export function WorkNotFound({
           </div>
         </CardBody>
       </Card>
-    </div>
+    </PageContainer>
   );
 }
