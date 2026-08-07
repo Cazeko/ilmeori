@@ -419,12 +419,22 @@ console.log("\n[6] 실시간 — 스크립트가 없으면 나타나지 않는�
   const on = await browser.newContext({ javaScriptEnabled: true });
   const p2 = await on.newPage();
   await p2.goto(`${BASE}/login`, { waitUntil: "networkidle" });
-  await p2.waitForTimeout(1200);
+  await p2.waitForTimeout(1200); // 하이드레이션 전에 누르면 클릭이 버려진다
   await pick(p2, "박준호");
-  await p2.waitForTimeout(1500);
+  // 고정 대기로 로그인을 기다리지 않는다. 배포본은 로컬보다 느려서, 덜 기다리면
+  // 아직 /login 인 채로 다음 주소로 가고 화면이 엉뚱한 곳을 가리킨다.
+  await p2.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 30_000 });
   await p2.goto(WORK, { waitUntil: "networkidle" });
-  await p2.waitForTimeout(8000); // 구독 왕복에 몇 초가 걸린다
-  const live = await p2.locator("body").innerText();
+
+  // 구독은 세션 확인 → 웹소켓 → 채널 참가 세 왕복이다. 배포본에서는 이게 몇 초 걸리고,
+  // 콜드 스타트가 겹치면 더 걸린다. 고정 대기로 재면 느린 날 빨간불이 뜬다 —
+  // 실제로 배포 직후에 그렇게 헛짚어, 멀쩡한 배포를 결함으로 보고했다.
+  let live = "";
+  for (let i = 0; i < 40; i += 1) {
+    live = await p2.locator("body").innerText();
+    if (/실시간 연결(됨| 끊김)/.test(live)) break; // 「연결 중」은 아직 진행 중이다
+    await p2.waitForTimeout(500);
+  }
   ok(
     "스크립트가 있으면 실시간 상자가 나타난다",
     /실시간 연결(됨| 중| 끊김)/.test(live),
@@ -435,7 +445,7 @@ console.log("\n[6] 실시간 — 스크립트가 없으면 나타나지 않는�
   ok(
     "연결 중에서 멈추지 않는다 (붙거나, 못 붙었다고 말하거나)",
     !live.includes("실시간 연결 중"),
-    "8초가 지나도 「실시간 연결 중」이다",
+    "20초가 지나도 「실시간 연결 중」이다",
   );
   // 그리고 적은 대로여야 한다. 끊겼는데 「연결됨」이라고 적으면 화면이 거짓말이다.
   ok(
@@ -445,7 +455,7 @@ console.log("\n[6] 실시간 — 스크립트가 없으면 나타나지 않는�
       : live.includes("새로고침하면 최신 상태를 볼 수 있습니다"),
     live.includes("실시간 연결됨")
       ? "「연결됨」인데 접속자 줄이 없다"
-      : "0012 를 SQL Editor 에서 돌리면 「연결됨」이 된다",
+      : live.slice(0, 100).replace(/\n/g, " "),
   );
   await on.close();
 }
