@@ -38,13 +38,57 @@ supabase/migrations/0012_realtime.sql             실시간 공유 — 토픽 �
 supabase/migrations/0013_access_log_session.sql   열람기록을 열람 세션 단위로
 supabase/migrations/0014_handover_note.sql        인계서에 인계자가 보태는 칸
 supabase/migrations/0015_handover_owner_guard.sql 인계 건의 주인 — 인수자가 가로채지 못하게
+supabase/migrations/0016_approval.sql             결재 — 표 · 직급 서열 · 결재유형 8종
+supabase/migrations/0017_approval_rls.sql         결재의 권한과 절차 — 서명은 손으로 안 찍힌다
 ```
 
 적용 전에 로컬에서 먼저 돌려 볼 수 있다. PGlite(Postgres WASM)로 실제 실행한다.
 
 ```bash
 npm run db:verify   # 마이그레이션이 실제로 도는지
-npm run db:test     # RLS가 실제로 막는지 (125개)
+npm run db:test     # RLS가 실제로 막는지 (160개)
+```
+
+## 1-0. 0016 · 0017 — 결재 (이미 연결된 프로젝트에 따로 실행)
+
+> ⚠ **이 둘은 코드보다 먼저 돌려야 한다.** 다른 마이그레이션과 순서가 반대다.
+>
+> 0016이 `profile.rank` 를 만들고, 그 칸이 `src/lib/data/db.ts` 의 조회 목록
+> (`PROFILE_SELECT` · `WORK_SELECT`)에 들어갔다. 표에 칸이 없는 채로 코드를 배포하면
+> PostgREST 가 `column profile.rank does not exist` 로 거절하고 **업무 목록이 통째로
+> 비어 보인다.** 0014가 「적을 칸은 보이는데 저장이 안 되는」 정도로 끝났던 것과 다르다.
+>
+> 순서: ① SQL Editor 에서 0016 → 0017 → ② 시드 다시 넣기(선택) → ③ 코드 배포
+
+**0016 을 먼저, 0017 을 나중에.** 한 번에 붙여 넣지 않는다.
+0016 이 `activity_kind` 열거형에 결재 사건 다섯을 더하는데, **열거형에 더한 값은 같은
+트랜잭션 안에서 쓸 수 없다.** SQL Editor 는 붙여 넣은 것을 한 트랜잭션으로 묶으므로,
+둘을 함께 붙이면 0017 의 함수들이 그 값을 참조하는 자리에서 막힌다.
+
+무엇이 들어가는가.
+
+```
+0016  profile.rank          결재 서열 10 시장 / 20 국장 / 30 과장 / 40 팀장 / 50 주무관
+      approval              내부결재문서(시행규칙 별지 제2호서식)
+      approval_step         결재란 한 칸 — 서명 당시 직위를 글자로 박는다
+      activity_kind +5      approval.submitted / signed / rejected / completed / withdrawn
+
+0017  정책 7개              approval 4 · approval_step 3 (UPDATE 정책은 **없다**)
+      절차 4개              submit_approval / sign_approval / reject_approval / withdraw_approval
+      가드 트리거 2개       끝난 결재를 잠그고, 상신된 본문을 얼린다
+```
+
+**둘 다 다시 붙여 넣어도 안전하다.** `add column if not exists` · `create table if not exists` ·
+`drop policy if exists` · `create or replace` 로만 되어 있다.
+
+시드를 다시 넣으면 `profile.rank` 가 직급대로 채워진다(주무관 50 / 팀장 40).
+다시 넣지 않아도 기본값 50 이라 화면은 돌지만, 결재선 자동 생성이 전부 같은 급으로 나온다.
+
+확인:
+
+```
+npm run db:verify                                 표 16개 · 정책 47개
+npm run db:test                                   160개 ([15] 결재 35개 포함)
 ```
 
 ## 1-1. 0014 · 0015 — 인계서 보충 (이미 연결된 프로젝트에 따로 실행)

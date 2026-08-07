@@ -2,10 +2,13 @@ import Link from "next/link";
 import {
   ArrowLeftRight,
   CircleDot,
+  FileCheck,
   FileText,
   MessageSquare,
   Paperclip,
   PenLine,
+  Stamp,
+  Undo2,
   UserPlus,
   Users,
   type LucideIcon,
@@ -27,8 +30,9 @@ import {
  * 사용자에게는 이 표에 INSERT 권한이 없어서, 나중에 고쳐 쓸 수도 없다.
  * 그래서 "일을 하면 기록이 남는다"가 습관이 아니라 구조가 된다.
  *
- * 색은 네 갈래로만 나눈다. 인수인계나 감사에서 실제로 찾는 것은
+ * 색은 다섯 갈래로만 나눈다. 인수인계나 감사에서 실제로 찾는 것은
  * "권한이 언제 누구에게 갔는가"이므로, 그 사건이 눈에 먼저 들어와야 한다.
+ * 결재를 따로 뗀 이유도 같다 — "그때 님이 결재해 주셨는데"의 그 줄이다.
  */
 
 const ICON: Record<ActivityKind, LucideIcon> = {
@@ -49,6 +53,11 @@ const ICON: Record<ActivityKind, LucideIcon> = {
   "attachment.removed": Paperclip,
   "handover.started": ArrowLeftRight,
   "handover.completed": ArrowLeftRight,
+  "approval.submitted": Stamp,
+  "approval.signed": Stamp,
+  "approval.rejected": Undo2,
+  "approval.completed": FileCheck,
+  "approval.withdrawn": Undo2,
 };
 
 const TONE: Record<ActivityTone, { dot: string; chip: string }> = {
@@ -59,6 +68,10 @@ const TONE: Record<ActivityTone, { dot: string; chip: string }> = {
     chip: "bg-status-doing-bg text-status-doing-text",
   },
   인계: { dot: "bg-accent-bg text-accent-text", chip: "bg-accent-bg text-accent-text" },
+  결재: {
+    dot: "bg-status-review-bg text-status-review-text",
+    chip: "bg-status-review-bg text-status-review-text",
+  },
 };
 
 const dayFmt = new Intl.DateTimeFormat("ko-KR", {

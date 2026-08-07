@@ -245,11 +245,23 @@ const PEOPLE: Seed[] = [
   { n: 16, name: "황수아", dept: "전국체전추진단", position: "팀장" },
 ];
 
+// 직급 문자열 → 결재 서열. 0016 의 profile.rank 와 같은 값이다.
+// 표기가 흔들리는 것은 문자열 쪽이므로, 모르는 직급은 가장 아래로 둔다.
+const RANK: Record<string, number> = {
+  시장: 10,
+  국장: 20,
+  실장: 20,
+  과장: 30,
+  팀장: 40,
+  주무관: 50,
+};
+
 export const profiles: Profile[] = PEOPLE.map((p) => ({
   id: profileId(p.n),
   name: p.name,
   department_id: dept(p.dept).id,
   position: p.position,
+  rank: RANK[p.position] ?? 50,
   // 가상 계정임이 주소에서 바로 드러나게 한다. hs.go.kr을 쓰면 실제 계정으로 오해받는다.
   email: `demo${String(p.n).padStart(2, "0")}@ilmeori.demo`,
   avatar_url: null,

@@ -1164,6 +1164,347 @@ console.log("\n[14] 열람기록 — 화면이 다시 그려질 때마다 쌓이
 }
 
 // ---------------------------------------------------------------------------
+console.log("\n[15] 결재 — 서명은 손으로 찍히지 않는다");
+// ---------------------------------------------------------------------------
+// 결재가 증빙인 이유는 「그때 님이 결재해 주셨는데 이제 와서 왜 딴소리」가
+// 성립하기 때문이다. 그러려면 결재란이 나중에 바뀌지 않아야 한다.
+// 여기서 확인하는 것은 그 한 가지다.
+{
+  const boss = await makeUser("정팀장", deptA.id);
+  const head = await makeUser("한과장", deptA.id);
+  const coop = await makeUser("오협조", deptB.id); // 타 부서 협조자
+  await admin(`update profile set rank = 40, position = '팀장' where id = $1`, [boss]);
+  await admin(`update profile set rank = 30, position = '과장' where id = $1`, [head]);
+
+  const [w15] = await admin(
+    `insert into work (title, department_id, owner_id, created_by, visibility)
+     values ('종이컵 구매 건', $1, $2, $2, 'private') returning id`,
+    [deptA.id, kim],
+  );
+  await admin(
+    `insert into work_member (work_id, profile_id, role, added_by) values ($1, $2, 'viewer', $3)`,
+    [w15.id, park, kim],
+  );
+
+  const newApproval = async (title, form) => {
+    const r = await as(
+      kim,
+      `insert into approval (work_id, form, title, drafter_id)
+       values ($1, $2, $3, $4) returning id`,
+      [w15.id, form, title, kim],
+    );
+    return r.rows?.[0]?.id;
+  };
+  const addStep = (approvalId, seq, kind, who, position) =>
+    as(
+      kim,
+      `insert into approval_step (approval_id, seq, kind, approver_id, position)
+       values ($1, $2, $3, $4, $5) returning id`,
+      [approvalId, seq, kind, who, position],
+    );
+  const stepOf = async (approvalId, seq) =>
+    (
+      await admin(`select id from approval_step where approval_id = $1 and seq = $2`, [
+        approvalId,
+        seq,
+      ])
+    )[0]?.id;
+
+  // ── 기안 ────────────────────────────────────────────────────────────────
+  const a1 = await newApproval("종이컵 구매 협조 요청", "cooperation");
+  check("업무를 고칠 수 있는 사람은 결재를 올린다", !!a1);
+  check(
+    "열람자는 결재를 올릴 수 없다",
+    await denied(
+      park,
+      `insert into approval (work_id, form, title, drafter_id)
+       values ($1, 'report', '무단 기안', $2) returning id`,
+      [w15.id, park],
+    ),
+  );
+  check(
+    "기안 중인 결재는 기안자만 본다",
+    await denied(park, `select id from approval where id = $1`, [a1]),
+  );
+
+  // ── 상신 ────────────────────────────────────────────────────────────────
+  check(
+    "결재선이 없으면 상신되지 않는다",
+    await denied(kim, `select public.submit_approval($1)`, [a1]),
+  );
+  await addStep(a1, 1, "draft", kim, "주무관");
+  check(
+    "기안란만 있고 결재자가 없으면 상신되지 않는다",
+    await denied(kim, `select public.submit_approval($1)`, [a1]),
+  );
+  await addStep(a1, 2, "review", boss, "팀장");
+  await addStep(a1, 3, "final", head, "과장");
+  await addStep(a1, 4, "concur_par", coop, "주무관");
+
+  {
+    const r = await as(kim, `select public.submit_approval($1) as doc`, [a1]);
+    check(
+      "상신하면 문서번호가 붙는다",
+      r.ok && /^HS-협조-\d{8}-0001$/.test(r.rows[0]?.doc ?? ""),
+      r.error ?? r.rows[0]?.doc,
+    );
+  }
+  {
+    const r = await admin(
+      `select signed_at from approval_step where approval_id = $1 and kind = 'draft'`,
+      [a1],
+    );
+    check("상신하는 순간 기안란에 서명이 찍힌다", r[0]?.signed_at != null);
+  }
+
+  // ── 누가 이 문서를 보는가 ────────────────────────────────────────────────
+  check(
+    "결재선에 없고 업무도 못 보면 결재 문서가 보이지 않는다",
+    await denied(lee, `select id from approval where id = $1`, [a1]),
+  );
+  {
+    const r = await as(coop, `select id from approval where id = $1`, [a1]);
+    check("결재선에 있으면 업무를 못 봐도 그 문서는 본다", r.ok && r.rows.length === 1);
+  }
+  check(
+    "결재선에 있어도 그 업무까지 열리지는 않는다",
+    await denied(coop, `select id from work where id = $1`, [w15.id]),
+  );
+
+  // ── 서명 ────────────────────────────────────────────────────────────────
+  const s2 = await stepOf(a1, 2);
+  const s3 = await stepOf(a1, 3);
+
+  check("남의 결재칸에 서명할 수 없다", await denied(head, `select public.sign_approval($1)`, [s2]));
+  check(
+    "앞 순서가 남아 있으면 서명할 수 없다",
+    await denied(head, `select public.sign_approval($1)`, [s3]),
+  );
+  check(
+    "서명은 UPDATE 로 찍히지 않는다",
+    await denied(boss, `update approval_step set signed_at = now() where id = $1 returning id`, [s2]),
+  );
+  check(
+    "상신된 결재의 본문은 기안자도 못 고친다",
+    await denied(kim, `update approval set body = '몰래 바꾼 본문' where id = $1 returning id`, [a1]),
+  );
+  check(
+    "진행 상태를 손으로 적을 수 없다",
+    await denied(
+      kim,
+      `update approval set state = 'completed', closed_at = now() where id = $1 returning id`,
+      [a1],
+    ),
+  );
+  check(
+    "상신된 뒤에는 결재선에 칸을 더할 수 없다",
+    await denied(
+      kim,
+      `insert into approval_step (approval_id, seq, kind, approver_id, position)
+       values ($1, 9, 'review', $2, '팀장') returning id`,
+      [a1, park],
+    ),
+  );
+  check(
+    "상신된 뒤에는 결재란을 뺄 수 없다",
+    await denied(kim, `delete from approval_step where id = $1 returning id`, [s3]),
+  );
+
+  {
+    const r = await as(boss, `select public.sign_approval($1, $2) as st`, [s2, "예산 확인했습니다"]);
+    check("내 차례가 오면 서명한다", r.ok && r.rows[0]?.st === "in_progress", r.error);
+  }
+  {
+    const r = await as(coop, `select public.sign_approval($1) as st`, [await stepOf(a1, 4)]);
+    check("병렬협조는 줄을 서지 않는다", r.ok, r.error);
+  }
+  {
+    const r = await as(head, `select public.sign_approval($1) as st`, [s3]);
+    check("마지막 칸이 서명되면 완결된다", r.ok && r.rows[0]?.st === "completed", r.error);
+  }
+  check(
+    "완결된 결재는 기안자도 못 고친다",
+    await denied(kim, `update approval set title = '고친 제목' where id = $1 returning id`, [a1]),
+  );
+  check(
+    "완결된 결재는 지울 수 없다",
+    await denied(kim, `delete from approval where id = $1 returning id`, [a1]),
+  );
+
+  // ── 전결 ────────────────────────────────────────────────────────────────
+  const a2 = await newApproval("비품 구매 전결 건", "report");
+  await addStep(a2, 1, "draft", kim, "주무관");
+  await addStep(a2, 2, "delegated", boss, "팀장");
+  await addStep(a2, 3, "final", head, "과장");
+  await as(kim, `select public.submit_approval($1)`, [a2]);
+  {
+    const r = await as(boss, `select public.sign_approval($1) as st`, [await stepOf(a2, 2)]);
+    check("전결이 찍히면 그 자리에서 완결된다", r.ok && r.rows[0]?.st === "completed", r.error);
+  }
+  check(
+    "전결이 찍히면 그 뒤 순서는 서명할 수 없다",
+    await denied(head, `select public.sign_approval($1)`, [await stepOf(a2, 3)]),
+  );
+
+  // ── 반려 ────────────────────────────────────────────────────────────────
+  const a3 = await newApproval("반려될 건", "plan");
+  await addStep(a3, 1, "draft", kim, "주무관");
+  await addStep(a3, 2, "review", boss, "팀장");
+  await as(kim, `select public.submit_approval($1)`, [a3]);
+  check(
+    "사유 없는 반려는 받지 않는다",
+    await denied(boss, `select public.reject_approval($1, '   ')`, [await stepOf(a3, 2)]),
+  );
+  {
+    const r = await as(boss, `select public.reject_approval($1, $2)`, [
+      await stepOf(a3, 2),
+      "예산 근거가 빠졌습니다",
+    ]);
+    check("사유를 적으면 반려된다", r.ok, r.error);
+  }
+  check(
+    "반려된 결재는 되돌릴 수 없다",
+    await denied(kim, `update approval set state = 'in_progress' where id = $1 returning id`, [a3]),
+  );
+
+  // ── 회수 ────────────────────────────────────────────────────────────────
+  const a4 = await newApproval("회수될 건", "review");
+  await addStep(a4, 1, "draft", kim, "주무관");
+  await addStep(a4, 2, "review", boss, "팀장");
+  await as(kim, `select public.submit_approval($1)`, [a4]);
+  check(
+    "남의 결재를 대신 회수할 수 없다",
+    await denied(boss, `select public.withdraw_approval($1)`, [a4]),
+  );
+  {
+    const r = await as(kim, `select public.withdraw_approval($1)`, [a4]);
+    check("아무도 서명하지 않았으면 회수한다", r.ok, r.error);
+  }
+
+  const a5 = await newApproval("회수 못 할 건", "review");
+  await addStep(a5, 1, "draft", kim, "주무관");
+  await addStep(a5, 2, "review", boss, "팀장");
+  await addStep(a5, 3, "final", head, "과장");
+  await as(kim, `select public.submit_approval($1)`, [a5]);
+  await as(boss, `select public.sign_approval($1)`, [await stepOf(a5, 2)]);
+  check(
+    "서명이 시작된 뒤에는 회수할 수 없다",
+    await denied(kim, `select public.withdraw_approval($1)`, [a5]),
+  );
+
+  // ── 결재선의 모양 ───────────────────────────────────────────────────────
+  // 셋 다 검토에서 나왔다. 막지 않으면 「완결되지 않는 문서」가 만들어진다.
+  {
+    const a = await newApproval("기안란 둘", "report");
+    await addStep(a, 1, "draft", kim, "주무관");
+    const dup = await addStep(a, 2, "draft", boss, "팀장");
+    check("기안란은 한 문서에 하나뿐이다", !dup.ok, dup.error);
+
+    const b = await newApproval("뒤집힌 결재선", "report");
+    await addStep(b, 1, "review", boss, "팀장");
+    await addStep(b, 2, "draft", kim, "주무관");
+    check(
+      "기안란보다 앞선 칸이 있으면 상신되지 않는다",
+      await denied(kim, `select public.submit_approval($1)`, [b]),
+    );
+  }
+
+  // 하루에 만 건을 넘기면 연번이 다섯 자리가 된다. lpad 가 그것을 **자르면**
+  // 이미 쓴 번호대로 되돌아간다. 실무에서 닿을 일은 없지만, 닿으면 조용히 틀린다.
+  {
+    const a = await newApproval("만 번째", "cooperation");
+    await addStep(a, 1, "draft", kim, "주무관");
+    await addStep(a, 2, "review", boss, "팀장");
+    await as(kim, `select public.submit_approval($1)`, [a]);
+    await admin(
+      `update approval
+       set doc_no = 'HS-협조-' || to_char(now() at time zone 'Asia/Seoul', 'YYYYMMDD') || '-9999'
+       where id = $1`,
+      [a],
+    );
+    const b = await newApproval("만 하나째", "cooperation");
+    await addStep(b, 1, "draft", kim, "주무관");
+    await addStep(b, 2, "review", boss, "팀장");
+    const r = await as(kim, `select public.submit_approval($1) as doc`, [b]);
+    check(
+      "하루 만 건을 넘겨도 번호가 되돌아가지 않는다",
+      r.ok && /-10000$/.test(r.rows[0]?.doc ?? ""),
+      r.error ?? r.rows[0]?.doc,
+    );
+  }
+
+  // ── 실시간 신호 ─────────────────────────────────────────────────────────
+  // 기안 중인 문서는 기안자만 본다. 그런데 신호는 업무를 열어 둔 사람 전원에게
+  // 간다. 화면에는 아무것도 안 나타나지만 「초안을 쓰고 있다」가 새어 나간다.
+  {
+    const topic = `work:${w15.id}`;
+    const signals = async () =>
+      (
+        await admin(`select count(*)::int as n from realtime.messages where topic = $1`, [topic])
+      )[0].n;
+
+    await admin(`truncate realtime.messages`);
+    const quiet = await newApproval("신호 시험", "report");
+    await addStep(quiet, 1, "draft", kim, "주무관");
+    await addStep(quiet, 2, "review", boss, "팀장");
+    check("기안 중인 결재는 실시간 신호를 보내지 않는다", (await signals()) === 0, `${await signals()}건`);
+
+    await admin(`truncate realtime.messages`);
+    await as(kim, `select public.submit_approval($1)`, [quiet]);
+    check("상신하면 신호가 나간다", (await signals()) > 0);
+
+    await admin(`truncate realtime.messages`);
+    await as(boss, `select public.sign_approval($1)`, [await stepOf(quiet, 2)]);
+    check("서명해도 신호가 나간다", (await signals()) > 0);
+  }
+
+  // ── 문서번호 · 서열 ─────────────────────────────────────────────────────
+  {
+    const r = await admin(
+      `select count(*)::int as n, count(distinct doc_no)::int as d
+       from approval where doc_no is not null`,
+    );
+    check(
+      "문서번호는 중복되지 않는다",
+      r[0].n === r[0].d && r[0].n >= 5,
+      `${r[0].n}건 / ${r[0].d}종`,
+    );
+  }
+  const a6 = await newApproval("번호 위조 시도", "report");
+  check(
+    "문서번호를 손으로 적을 수 없다",
+    await denied(
+      kim,
+      `update approval set doc_no = 'HS-보고-19700101-0001' where id = $1 returning id`,
+      [a6],
+    ),
+  );
+  check(
+    "남의 결재선에 칸을 끼워 넣을 수 없다",
+    await denied(
+      boss,
+      `insert into approval_step (approval_id, seq, kind, approver_id, position)
+       values ($1, 9, 'review', $2, '팀장') returning id`,
+      [a6, boss],
+    ),
+  );
+  check(
+    "직급 서열은 본인이 바꿀 수 없다",
+    await denied(kim, `update profile set rank = 10 where id = $1 returning id`, [kim]),
+  );
+
+  // 이력은 결재도 함께 받는다. 새 표를 만들지 않았다는 뜻이다.
+  {
+    const r = await admin(
+      `select count(*)::int as n from activity
+       where work_id = $1 and kind::text like 'approval.%'`,
+      [w15.id],
+    );
+    check("결재 사건은 업무 이력에 함께 쌓인다", r[0].n >= 8, `${r[0].n}건`);
+  }
+}
+
+// ---------------------------------------------------------------------------
 await db.close();
 console.log(`\n${pass}개 통과 · ${fail}개 실패`);
 if (fail) {

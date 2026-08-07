@@ -371,11 +371,11 @@ function build(org, works) {
     "-- -----------------------------------------------------------------------------",
     "-- 3. 사람 — 전부 가상 인물이다",
     "-- -----------------------------------------------------------------------------",
-    "insert into profile (id, name, department_id, position, email, is_active, is_demo) values",
+    "insert into profile (id, name, department_id, position, rank, email, is_active, is_demo) values",
     rows(
       profiles.map(
         (x) =>
-          `${q(x.id)}, ${q(x.name)}, ${q(x.department_id)}, ${q(x.position)}, ${q(x.email)}, ${bool(x.is_active)}, ${bool(x.is_demo)}`,
+          `${q(x.id)}, ${q(x.name)}, ${q(x.department_id)}, ${q(x.position)}, ${x.rank}, ${q(x.email)}, ${bool(x.is_active)}, ${bool(x.is_demo)}`,
       ),
     ) + "\non conflict (id) do nothing;",
     "",

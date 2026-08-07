@@ -51,11 +51,11 @@ import type { HandoverView, WorkFilter } from "./types";
 const WORK_SELECT = `
   *,
   department:department_id ( id, name, parent_id, description, sort_order ),
-  owner:owner_id ( id, name, department_id, position, email, avatar_url, is_active, is_demo ),
+  owner:owner_id ( id, name, department_id, position, rank, email, avatar_url, is_active, is_demo ),
   members:work_member (
     work_id, profile_id, role, created_at,
     profile:profile_id (
-      id, name, department_id, position, email, avatar_url, is_active, is_demo,
+      id, name, department_id, position, rank, email, avatar_url, is_active, is_demo,
       department:department_id ( name )
     )
   ),
@@ -81,7 +81,7 @@ function withoutDeletedComments<T extends { is: (c: string, v: null) => T }>(
 }
 
 const PROFILE_SELECT =
-  "id, name, department_id, position, email, avatar_url, is_active, is_demo";
+  "id, name, department_id, position, rank, email, avatar_url, is_active, is_demo";
 
 /**
  * 주소에서 온 id가 uuid 모양인가.
@@ -134,6 +134,7 @@ function toListItem(raw: RawWork): WorkListItem {
         name: m.profile.name,
         department_id: m.profile.department_id,
         position: m.profile.position,
+        rank: m.profile.rank,
         email: m.profile.email,
         avatar_url: m.profile.avatar_url,
         is_active: m.profile.is_active,

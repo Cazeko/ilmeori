@@ -32,6 +32,7 @@ export const TOUCH_KINDS = [
   "section",
   "comment",
   "attachment",
+  "approval",
 ] as const;
 
 export type TouchKind = (typeof TOUCH_KINDS)[number];
@@ -43,6 +44,7 @@ const TOUCH_LABEL: Record<TouchKind, string> = {
   section: "문서 항목",
   comment: "대화",
   attachment: "첨부파일",
+  approval: "결재",
 };
 
 /**

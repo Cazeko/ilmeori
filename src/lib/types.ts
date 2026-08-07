@@ -10,6 +10,27 @@ export type MemberRole = "owner" | "editor" | "viewer";
 export type WorkVisibility = "private" | "department" | "city";
 export type HandoverStatus = "draft" | "generated" | "confirmed" | "completed";
 
+/** 법정 결재유형 8종. 「승인」 같은 사기업 낱말로 바꾸지 않는다. */
+export type ApprovalKind =
+  | "draft" // 기안
+  | "review" // 결재
+  | "final" // 최종결재
+  | "delegated" // 전결
+  | "acting" // 대결
+  | "concur_seq" // 순차협조
+  | "concur_par" // 병렬협조
+  | "post_report"; // 사후보고
+
+export type ApprovalState =
+  | "drafting"
+  | "in_progress"
+  | "completed"
+  | "rejected"
+  | "withdrawn";
+
+/** 시행규칙 별지 제2호서식이 담는 문서 갈래. 발신문서는 여기 없다. */
+export type ApprovalForm = "report" | "plan" | "review" | "cooperation";
+
 export type ActivityKind =
   | "work.created"
   | "work.updated"
@@ -27,7 +48,12 @@ export type ActivityKind =
   | "attachment.added"
   | "attachment.removed"
   | "handover.started"
-  | "handover.completed";
+  | "handover.completed"
+  | "approval.submitted"
+  | "approval.signed"
+  | "approval.rejected"
+  | "approval.completed"
+  | "approval.withdrawn";
 
 export type AccessKind =
   | "work.viewed"
@@ -49,7 +75,10 @@ export interface Profile {
   id: string;
   name: string;
   department_id: string | null;
+  /** 직급. 사람이 읽는 문자열이다. 서열 판정은 rank 로 한다. */
   position: string | null;
+  /** 결재 서열. 10 시장 / 20 국장·실장 / 30 과장 / 40 팀장 / 50 주무관 */
+  rank: number;
   email: string;
   avatar_url: string | null;
   is_active: boolean;
@@ -109,6 +138,43 @@ export interface Activity {
   summary: string;
   detail: Record<string, unknown>;
   created_at: string;
+}
+
+/**
+ * 결재 문서 — 시행규칙 별지 제2호서식(내부결재문서).
+ *
+ * 업무에 매달린다. 결재함은 이것을 모아 보는 화면일 뿐이다.
+ * 서명은 이 표를 UPDATE 해서 찍히지 않는다 — public.sign_approval 만이 찍는다.
+ */
+export interface Approval {
+  id: string;
+  work_id: string;
+  form: ApprovalForm;
+  /** 상신할 때 붙는다. 기안 중에는 null 이다. HS-협조-20260808-0001 */
+  doc_no: string | null;
+  title: string;
+  body: string;
+  /** 보존연한(년). 1·3·5·10·30 */
+  retention: number | null;
+  security: "normal" | "confidential";
+  state: ApprovalState;
+  drafter_id: string;
+  created_at: string;
+  /** 결재가 끝난 시각. 어떻게 끝났는지는 state 가 말한다. */
+  closed_at: string | null;
+}
+
+export interface ApprovalStep {
+  id: string;
+  approval_id: string;
+  seq: number;
+  kind: ApprovalKind;
+  approver_id: string;
+  /** 서명 당시 직위. profile 을 조인하지 않는 이유는 인사이동이다. */
+  position: string;
+  signed_at: string | null;
+  rejected_at: string | null;
+  opinion: string | null;
 }
 
 export interface Attachment {
@@ -341,7 +407,7 @@ export const ACCESS_KIND_LABEL: Record<AccessKind, string> = {
  * 타임라인에서 "권한이 움직인 사건"과 "내용이 바뀐 사건"은 눈에 다르게 보여야 한다.
  * 인수인계 감사에서 실제로 찾는 것은 전자이기 때문이다.
  */
-export type ActivityTone = "권한" | "내용" | "대화" | "인계";
+export type ActivityTone = "권한" | "내용" | "대화" | "인계" | "결재";
 
 export const ACTIVITY_TONE: Record<ActivityKind, ActivityTone> = {
   "work.created": "권한",
@@ -361,6 +427,11 @@ export const ACTIVITY_TONE: Record<ActivityKind, ActivityTone> = {
   "attachment.removed": "내용",
   "handover.started": "인계",
   "handover.completed": "인계",
+  "approval.submitted": "결재",
+  "approval.signed": "결재",
+  "approval.rejected": "결재",
+  "approval.completed": "결재",
+  "approval.withdrawn": "결재",
 };
 
 /**
