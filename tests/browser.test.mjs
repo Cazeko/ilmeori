@@ -18,6 +18,9 @@
  *   [6] 실시간 상자가 스크립트 없이는 아예 안 나타나는가
  *   [7] 인계자가 서식 항목에 보태고, 그것이 종이에도 실리는가
  *       (0014·0015 를 SQL Editor 에서 돌린 뒤라야 통과한다)
+ *   [8] 결재 — 결재함·결재란·업무 상세 탭이 DB 판정과 같은 말을 하는가
+ *   [9] 「온나라로 넘기기」 — 화면·파일·종이 셋이 같은 말을 하는가
+ *   [10] PWA 가 덧붙이는 층인가 (설명서·서비스워커가 익명으로 읽히는가)
  *
  * 돌리는 법 (playwright 는 이 저장소의 의존성이 아니다 — 시험 전용이라 일부러 뺐다)
  *   npm i -D playwright && npx playwright install chromium
@@ -718,6 +721,229 @@ console.log("\n[8] 결재 — 결재함 · 결재란 · 업무 상세 탭");
       "전결 뒤 칸은 사선이고, 그 사실을 글자로도 적는다",
       delegated.includes("전결로 끝나 결재하지 않았습니다"),
     );
+  } finally {
+    await ctx.close();
+  }
+}
+
+// ── 9. 「온나라로 넘기기」 ───────────────────────────────────────────────────
+//
+// 화면·파일·종이 셋이 **같은 모델**에서 나오는지를 본다. 하나라도 다른 말을
+// 하면 근거를 붙이려고 만든 장치가 그 자리에서 거짓이 된다.
+//
+// 파일이 한/글에서 열리는지는 여기서 확인할 수 없다(브라우저가 하는 일이
+// 아니다). 파일 쪽은 `npm run test:hwpx` 가 규격까지 보고, 한/글 실물 확인은
+// 사람이 한 번 해야 한다 — 그때까지 정본은 인쇄(A4)다.
+console.log("\n[9] 온나라로 넘기기 — 근거 꼬리표가 붙은 내보내기");
+{
+  const ctx = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    const park = await login(ctx, "박준호");
+    const submitted = "ab000000-0000-4000-8000-000000000001";
+
+    // ── 문서에서 가는 길 ──────────────────────────────────────────────────
+    await park.goto(`${BASE}/approvals/${submitted}`, {
+      waitUntil: "domcontentloaded",
+    });
+    const detail = await allText(park);
+    ok("상신된 문서에 「온나라로 넘기기」가 있다", detail.includes("온나라로 넘기기"));
+
+    await park.goto(`${BASE}/approvals/${submitted}/export`, {
+      waitUntil: "domcontentloaded",
+    });
+    const ex = await allText(park);
+
+    ok("내보내기 화면이 열린다", ex.includes("한/글 파일로 내려받기"));
+    ok(
+      "온나라를 대체하지 않는다고 화면이 먼저 말한다",
+      ex.includes("최종 결재권자의 서명은 「일머리」에서 받지 않습니다"),
+    );
+    // 이 제품은 「초록불을 본 적이 없으면 통과했다고 세지 않는다」를 지켜 왔다.
+    // 화면에서만 예외를 두면 그 규칙이 무너진다.
+    ok(
+      "한/글 실물 검증이 아직임을 화면이 밝힌다",
+      ex.includes("한/글에서 열리는지는 아직 확인하지 못했습니다"),
+    );
+    ok("인쇄 폴백을 함께 안내한다", ex.includes("Ctrl+P"));
+
+    // ── 근거 꼬리표 — **그 줄 안에서** 본다 ───────────────────────────────
+    // 화면 전체 글자에서 「근거」를 찾으면 맨 아래 안내문으로 통과한다.
+    // (인계서 보충 시험에서 실제로 그렇게 새어 나갔다)
+    const sourced = park.locator("main p:has-text('근거:')");
+    ok("근거 꼬리표가 줄마다 붙는다", (await sourced.count()) >= 5, `${await sourced.count()}줄`);
+    const tags = (await sourced.allTextContents()).join(" | ");
+    ok("협조란 서명이 근거로 실린다", tags.includes("결재 협조란 서명"));
+    ok("「의견 있음」이 근거로 실린다", tags.includes("시행규칙 제4조"));
+    ok("업무 대화가 근거로 실린다", tags.includes("업무 대화"));
+    ok(
+      "대화를 왜 골랐는지가 함께 적힌다",
+      /업무 대화 · .+? · (협의|확인·회신|법령·기준|금액·수치|기한|약속)/.test(tags),
+      tags.slice(0, 120),
+    );
+    // 인계 이야기는 이 결재의 근거가 아니다. 좁게 잡기로 한 규칙이 실제로 도는가.
+    ok(
+      "상관없는 대화(인사이동)는 근거로 안 실린다",
+      !ex.includes("정기인사로 이 업무를 이하람 주무관에게"),
+    );
+    ok(
+      "몇 건 중 몇 건인지 밝힌다",
+      /대화\s*\d+\s*건 중\s*\d+\s*건/.test(ex.replace(/\s+/g, " ")),
+    );
+
+    // ── 종이 ──────────────────────────────────────────────────────────────
+    const sheet = park.locator(".print-sheet");
+    ok("인쇄용 문서가 DOM에 있다", (await sheet.count()) === 1);
+    ok("화면에서는 감춰져 있다", (await sheet.isVisible()) === false);
+    const paper = (await sheet.textContent()) ?? "";
+    ok("종이에 별지 제2호서식이라고 적힌다", paper.includes("별지 제2호서식"));
+    ok("종이에도 문서번호가 찍힌다", /HS-협조-\d{8}-\d{4}/.test(paper));
+    ok("종이에도 결재란이 있다", paper.includes("결재") && paper.includes("협조"));
+    // 종이와 화면이 같은 말을 하는가 — 여기가 이 마당의 핵심이다.
+    ok("종이에도 근거 꼬리표가 실린다", paper.includes("근거: 결재 협조란 서명"));
+    ok(
+      "직위가 서명 당시의 것임을 종이도 밝힌다",
+      paper.includes("서명 당시의 것"),
+    );
+
+    // ── 기안 중인 문서는 내보내지 않는다 ──────────────────────────────────
+    const draft = "ab000000-0000-4000-8000-000000000005";
+    await park.goto(`${BASE}/approvals/${draft}/export`, {
+      waitUntil: "domcontentloaded",
+    });
+    const blocked = await allText(park);
+    ok("기안 중인 문서는 내보내기가 막힌다", blocked.includes("아직 내보낼 수 없습니다"));
+    ok(
+      "왜 막는지를 적는다",
+      blocked.includes("문서번호가 없고 본문도 얼어붙지 않았으므로"),
+    );
+    // 화면만 막고 주소로는 뚫리면 막은 것이 아니다.
+    const direct = await ctx.request.get(`${BASE}/approvals/${draft}/export/hwpx`, {
+      maxRedirects: 0,
+    });
+    ok(
+      "주소를 직접 쳐도 파일이 안 나온다",
+      direct.status() === 303,
+      `status=${direct.status()}`,
+    );
+
+    // ── 실제로 파일이 떨어지는가 ──────────────────────────────────────────
+    const file = await ctx.request.get(`${BASE}/approvals/${submitted}/export/hwpx`);
+    ok("파일이 내려온다", file.status() === 200, `status=${file.status()}`);
+    const headers = file.headers();
+    ok(
+      "첨부로 내려간다(브라우저가 열지 않는다)",
+      (headers["content-disposition"] ?? "").startsWith("attachment;"),
+      headers["content-disposition"],
+    );
+    ok(
+      "한글 파일 이름이 RFC 5987 로 실린다",
+      (headers["content-disposition"] ?? "").includes("filename*=UTF-8''"),
+    );
+    ok(
+      "공문서라 캐시하지 않는다",
+      (headers["cache-control"] ?? "").includes("no-store"),
+      headers["cache-control"],
+    );
+    const body = await file.body();
+    ok("ZIP 이다", body[0] === 0x50 && body[1] === 0x4b, `${body[0]},${body[1]}`);
+    ok(
+      "첫 항목이 무압축 mimetype 이다",
+      body.subarray(30, 38).toString("latin1") === "mimetype" &&
+        body.readUInt16LE(8) === 0,
+    );
+    ok(
+      "내용이 application/hwp+zip 이다",
+      body.subarray(38, 57).toString("latin1") === "application/hwp+zip",
+    );
+
+    // ── 남이 못 보는 문서는 파일도 안 나온다 ──────────────────────────────
+    const outsider = await browser.newContext({ javaScriptEnabled: false });
+    try {
+      await login(outsider, "이하람");
+      const denied = await outsider.request.get(
+        `${BASE}/approvals/${draft}/export/hwpx`,
+        { maxRedirects: 0 },
+      );
+      ok(
+        "볼 수 없는 문서는 파일이 안 나온다",
+        denied.status() === 303,
+        `status=${denied.status()}`,
+      );
+      ok(
+        "결재함으로 돌려보낸다",
+        (denied.headers()["location"] ?? "").includes("/approvals?msg=denied"),
+        denied.headers()["location"],
+      );
+    } finally {
+      await outsider.close();
+    }
+  } finally {
+    await ctx.close();
+  }
+}
+
+// ── 10. PWA 는 덧붙이는 층이다 ──────────────────────────────────────────────
+//
+// 설치하지 않아도, 서비스워커가 없어도, 스크립트가 꺼져 있어도 앱은 그대로
+// 돌아야 한다. 여기서 보는 것은 「얹은 것이 새는 데가 없는가」다.
+console.log("\n[10] PWA — 설명서 · 서비스워커 · 오프라인 안내");
+{
+  const ctx = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    // 셋 다 **로그인하지 않은 채로** 읽혀야 한다. 로그인 화면으로 튕기면
+    // 설치는 「설명서를 못 읽는다」로, 서비스워커는 「스크립트가 아니다」로
+    // 조용히 실패한다.
+    const manifest = await ctx.request.get(`${BASE}/manifest.webmanifest`);
+    ok("설명서가 익명으로 읽힌다", manifest.status() === 200, `${manifest.status()}`);
+    const m = await manifest.json();
+    ok("설치 이름이 있다", m.short_name === "일머리");
+    ok("시작 주소가 있다", m.start_url === "/");
+    ok(
+      "192·512 아이콘이 둘 다 있다",
+      m.icons?.some((i) => i.sizes === "192x192") &&
+        m.icons?.some((i) => i.sizes === "512x512"),
+    );
+    ok(
+      "잘려도 되는 아이콘(maskable)이 따로 있다",
+      m.icons?.some((i) => i.purpose === "maskable"),
+    );
+
+    const sw = await ctx.request.get(`${BASE}/sw.js`);
+    ok("서비스워커가 익명으로 읽힌다", sw.status() === 200, `${sw.status()}`);
+    ok(
+      "서비스워커는 캐시되지 않는다",
+      (sw.headers()["cache-control"] ?? "").includes("no-cache"),
+      sw.headers()["cache-control"],
+    );
+    const swBody = await sw.text();
+    // 이 파일의 주장 자체를 시험한다 — 화면(HTML)은 한 줄도 캐시하지 않는다.
+    ok(
+      "화면 이동은 네트워크로만 간다",
+      swBody.includes('request.mode === "navigate"') &&
+        /navigate[\s\S]{0,400}fetch\(request\)\.catch/.test(swBody),
+    );
+    ok(
+      "GET 이 아니면 손대지 않는다",
+      swBody.includes('request.method !== "GET"'),
+    );
+
+    const offline = await ctx.request.get(`${BASE}/offline`);
+    ok("오프라인 안내가 익명으로 읽힌다", offline.status() === 200);
+    const offlineText = await offline.text();
+    ok("연결이 끊겼다고 말한다", offlineText.includes("연결이 끊겼습니다"));
+    // 미리 담아 두는 유일한 화면이라 내용이 하나도 없어야 한다.
+    ok(
+      "그 화면에는 업무도 이름도 없다",
+      !offlineText.includes("박준호") && !offlineText.includes("자원순환과"),
+    );
+
+    // 스크립트가 꺼져 있어도 앱은 그대로 돈다 — 그게 「덧붙이는 층」의 뜻이다.
+    // (「서비스워커가 등록되지 않았다」를 재려던 줄이 있었는데 상수식이라
+    //  아무것도 증명하지 못했다. 통과 건수만 올리는 줄은 지운다 —
+    //  「초록불을 본 적 없으면 통과했다고 세지 않는다」와 같은 규칙이다)
+    const page = await login(ctx, "박준호");
+    await page.goto(`${BASE}/works`, { waitUntil: "domcontentloaded" });
+    ok("보드는 그대로 돈다", (await allText(page)).includes("업무 보드"));
   } finally {
     await ctx.close();
   }
