@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   ChevronRight,
   EyeOff,
+  FileDown,
   FileQuestion,
   Send,
   Trash2,
@@ -147,9 +148,25 @@ export default async function ApprovalDetailPage({
           )}
         </div>
 
-        <h1 className="mt-2.5 text-h2 leading-snug font-bold break-keep text-gray-90">
-          {approval.title}
-        </h1>
+        <div className="mt-2.5 flex flex-wrap items-start justify-between gap-3">
+          <h1 className="min-w-0 text-h1 leading-snug font-bold break-keep text-gray-90">
+            {approval.title}
+          </h1>
+          {/* 「온나라로 넘기기」는 상신된 뒤에만 열린다. 기안 중인 문서에는
+              문서번호도 서명도 없어서, 그 상태로 나간 종이는 결재를 받은
+              문서처럼 보인다(exportBlockReason 이 같은 판정을 한 번 더 한다). */}
+          {!drafting ? (
+            <ButtonLink
+              href={`/approvals/${approval.id}/export`}
+              variant="secondary"
+              size="sm"
+              className="shrink-0"
+            >
+              <FileDown aria-hidden className="size-4" />
+              온나라로 넘기기
+            </ButtonLink>
+          ) : null}
+        </div>
 
         <dl className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-body-sm">
           <div className="flex items-center gap-2">
