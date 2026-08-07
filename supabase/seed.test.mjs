@@ -12,6 +12,7 @@
  *      즉 **데이터 부분만** 검증한다. 계정 생성은 실제 프로젝트에서 확인해야 한다.
  */
 import { PGlite } from "@electric-sql/pglite";
+import { REALTIME_STUB } from "./realtime-stub.mjs";
 import { readFile, readdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,12 +43,15 @@ end $$;
 
 const db = await PGlite.create();
 await db.exec(STUB);
+await db.exec(REALTIME_STUB);
 
 const dir = join(HERE, "migrations");
-for (const f of (await readdir(dir)).filter((x) => x.endsWith(".sql")).sort()) {
+const migrations = (await readdir(dir)).filter((x) => x.endsWith(".sql")).sort();
+for (const f of migrations) {
   await db.exec(await readFile(join(dir, f), "utf8"));
 }
-console.log("마이그레이션 4개 적용 ✓");
+// 개수를 손으로 적어 두면 마이그레이션이 늘 때마다 화면이 거짓말을 한다.
+console.log(`마이그레이션 ${migrations.length}개 적용 ✓`);
 
 const raw = await readFile(join(HERE, "seed", "demo.sql"), "utf8");
 

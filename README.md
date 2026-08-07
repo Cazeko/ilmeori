@@ -37,7 +37,7 @@
 | 진행상태 관리 | 업무 상태(대기/진행중/검토/완료) + 칸반 보드 |
 | 변경이력 기록 | 모든 사건을 **DB 트리거가 자동 기록** (append-only) |
 | 접근권한 관리 | 업무별 역할(소유/편집/열람)을 **RLS로 DB가 강제** |
-| 실시간 공유 체계 | 변경 즉시 반영 + 접속자 표시 (Supabase Realtime) |
+| 실시간 공유 체계 | 변경 즉시 반영 + 접속자 표시. **채널 권한도 같은 RLS 함수가 지킨다** |
 | 팀 단위 협업 | 업무 보드 · 댓글 · 첨부파일 |
 | 업무 인수인계 | 담당 업무 일괄 이관 + AI 인수인계서 생성 |
 
@@ -88,7 +88,7 @@ axe-core 자동 검사(WCAG 2.1 AA + best-practice)를 10개 화면에 돌려 **
 
 ### 검증
 
-정책이 *존재하는 것*과 *실제로 막는 것*은 다르다. 그래서 실제 Postgres에 사용자를 흉내 내어 접속하는 **행동 테스트 39개**를 짰다.
+정책이 *존재하는 것*과 *실제로 막는 것*은 다르다. 그래서 실제 Postgres에 사용자를 흉내 내어 접속하는 **행동 테스트 98개**를 짰다.
 
 ```bash
 npm run db:test
@@ -100,11 +100,19 @@ npm run db:test
 [5] 권한 상승 — 소속을 바꿔 남의 부서를 엿볼 수 없다
 [6] 섹션 편집 잠금 — DB가 강제한다
 [8] 인수인계 — 제품의 클라이맥스
+[13] 실시간 — 신호는 나가는가, 그리고 아무에게나 가지는 않는가
 ...
-39개 통과 · 0개 실패
+98개 통과 · 0개 실패
 ```
 
 > 이 테스트가 통과한다는 것은 **애플리케이션 코드에 버그가 있어도 권한 없는 사용자에게 데이터가 나가지 않는다**는 뜻이다.
+
+DB 검사가 재현하지 못하는 것(웹소켓·채널 참가 판정·토큰 전달)은 실제 프로젝트에 붙어서 본다.
+
+```bash
+npm run db:realtime    # 실제 계정 셋으로 채널에 붙어 본다
+npm run test:realtime  # 창 두 개를 띄워 놓고 — 한쪽이 고치면 다른 쪽이 따라오는지
+```
 
 ---
 
@@ -167,6 +175,9 @@ supabase/migrations/0001_schema.sql      스키마 · 인덱스
 supabase/migrations/0002_rls.sql         권한 · RLS 정책 35개
 supabase/migrations/0003_triggers.sql    이력 자동기록 · 인계 실행 · Storage
 supabase/migrations/0004_hardening.sql   기본 권한 잠금 · 점검용 뷰
+...                                      (0005~0011 은 docs/supabase-설정.md 참조)
+supabase/migrations/0012_realtime.sql    실시간 공유 — 토픽 정책 · 방송 트리거
+supabase/migrations/0013_access_log_session.sql  열람기록을 세션 단위로
 supabase/seed/demo.sql                   시연 데이터 (생성물)
 ```
 
@@ -174,7 +185,7 @@ supabase/seed/demo.sql                   시연 데이터 (생성물)
 
 ```bash
 npm run db:verify      # 마이그레이션이 실제로 도는지
-npm run db:test        # RLS가 실제로 막는지 (39개)
+npm run db:test        # RLS가 실제로 막는지 (98개)
 npm run db:seed        # src/lib/mock → supabase/seed/demo.sql 생성
 npm run db:seed:test   # 시드가 실제로 들어가는지
 ```
@@ -213,7 +224,7 @@ ilmeori/
 │   ├── seed/demo.sql          시연 데이터 (자동 생성)
 │   ├── gen-seed.mjs           src/lib/mock → SQL 변환
 │   ├── verify.mjs             마이그레이션 검증 (PGlite)
-│   ├── rls.test.mjs           RLS 행동 테스트 39개
+│   ├── rls.test.mjs           RLS 행동 테스트 98개
 │   └── seed.test.mjs          시드 검증
 ├── src/
 │   ├── app/

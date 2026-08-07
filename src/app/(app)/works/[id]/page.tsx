@@ -28,6 +28,7 @@ import { MemberList } from "@/components/work/member-list";
 import { PreviousYearCallout } from "@/components/work/previous-year-callout";
 import { StatusChanger } from "@/components/work/status-changer";
 import { VisibilityReason } from "@/components/work/visibility-reason";
+import { WorkLive } from "@/components/work/work-live";
 import { WorkNotFound } from "@/components/work/work-not-found";
 import { formatDate, formatDateTime, formatDueLabel } from "@/lib/format";
 import {
@@ -41,7 +42,7 @@ import {
   logAccess,
   roleIn,
 } from "@/lib/data";
-import { canMutate } from "@/lib/env";
+import { canMutate, isSupabaseConfigured } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
 import { ACCESS_KIND_LABEL, VISIBILITY_LABEL } from "@/lib/types";
 
@@ -267,6 +268,26 @@ export default async function WorkDetailPage({
         {/* 접근제어는 잘 돌수록 화면에 아무것도 보이지 않는다.
             여기서 규칙을 말로 적고, 같은 자리에서 시험할 수단을 함께 둔다. */}
         <VisibilityReason work={work} viewer={viewer} role={role} />
+
+        {/* 실시간은 덧붙이는 층이다. 스크립트가 없으면 이 상자가 나타나지 않고,
+            데모 모드에는 붙을 DB 자체가 없다(그리고 아무도 고치지 않는다).
+            이 가드를 지우면 데모 모드에서 createClient()가 곧바로 throw 해 화면이 죽는다. */}
+        {isSupabaseConfigured ? (
+          <WorkLive
+            workId={work.id}
+            viewerId={viewer.id}
+            // 화면에 그릴 세 칸만 깎아서 넘긴다. 타입으로 좁히는 것(Pick<…>)은
+            // 컴파일 때의 약속일 뿐이라, 통째로 넘기면 이메일까지 페이지 원본에 실린다.
+            people={work.members.map((m) => ({
+              id: m.profile.id,
+              name: m.profile.name,
+              position: m.profile.position,
+            }))}
+            editing={tab === "doc" && editingId !== null}
+            // 이 화면을 서버가 그린 시각. 값이 바뀌면 화면이 새 데이터로 갈린 것이다.
+            serverAt={new Date().toISOString()}
+          />
+        ) : null}
 
         {canChangeStatus ? (
           <div className="mt-5">

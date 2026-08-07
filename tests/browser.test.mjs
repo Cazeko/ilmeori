@@ -1,5 +1,8 @@
 /**
- * 브라우저 왕복 시험 — **자바스크립트를 끈 상태로** 돌린다.
+ * 브라우저 왕복 시험 — **거의 전부 자바스크립트를 끈 상태로** 돌린다.
+ *
+ * 예외는 세 건뿐이고, 셋 다 「스크립트가 있을 때만 나타나야 하는 것」을 본다
+ * (인쇄 버튼 1건, 실시간 상자 2건). 나머지는 전부 스크립트를 끈 채로 돈다.
  *
  * 이 제품의 화면은 스크립트 없이 전부 동작하는 것을 전제로 만들었다.
  * 그 전제는 코드를 읽어서는 확인되지 않는다. 실제로 물린 적이 있다 —
@@ -384,6 +387,67 @@ console.log("\n[5] 코드리뷰 수정분");
   ok("탭 우회로도 우리 도메인 안에 남는다", page.url().startsWith(`${BASE}/`), page.url());
 
   await ctx.close();
+}
+
+// ── 6. 실시간은 덧붙이는 층이다 ─────────────────────────────────────────────
+console.log("\n[6] 실시간 — 스크립트가 없으면 나타나지 않는다");
+{
+  // 박준호가 볼 수 있는 업무. (같은 주소를 김서연은 못 본다 — 위 [3]에서 확인한다)
+  const WORK = `${BASE}/works/f0000000-0000-4000-8000-000000000005`;
+
+  const off = await browser.newContext({ javaScriptEnabled: false });
+  const p1 = await login(off, "박준호");
+  await p1.goto(WORK, { waitUntil: "domcontentloaded" });
+  const text = await allText(p1);
+  // 「업무 보드」는 왼쪽 메뉴에 늘 있다. 그걸로 보면 업무를 못 열어도 통과한다.
+  ok(
+    "업무 상세가 스크립트 없이 열린다",
+    text.includes("2026년 음식물류폐기물") && !text.includes("없거나 보이지 않습니다"),
+    p1.url(),
+  );
+  ok(
+    "실시간 상자가 아예 그려지지 않는다",
+    !text.includes("실시간 연결"),
+    "눌러도 아무 일 없는 자리를 남기면 고장 난 것으로 읽힌다",
+  );
+  ok(
+    "접속자 표시도 없다",
+    !text.includes("함께 보고 있습니다") && !text.includes("나만 보고 있습니다"),
+  );
+  await off.close();
+
+  const on = await browser.newContext({ javaScriptEnabled: true });
+  const p2 = await on.newPage();
+  await p2.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+  await p2.waitForTimeout(1200);
+  await pick(p2, "박준호");
+  await p2.waitForTimeout(1500);
+  await p2.goto(WORK, { waitUntil: "networkidle" });
+  await p2.waitForTimeout(8000); // 구독 왕복에 몇 초가 걸린다
+  const live = await p2.locator("body").innerText();
+  ok(
+    "스크립트가 있으면 실시간 상자가 나타난다",
+    /실시간 연결(됨| 중| 끊김)/.test(live),
+    live.slice(0, 120).replace(/\n/g, " "),
+  );
+  // 「연결 중」에 멈춰 있는 것도 결함이다 — subscribe 콜백이 한 번도 안 불린 것이고,
+  // 사용자에게는 영원히 돌아가는 표시로 보인다. 붙었든 못 붙었든 답은 나와야 한다.
+  ok(
+    "연결 중에서 멈추지 않는다 (붙거나, 못 붙었다고 말하거나)",
+    !live.includes("실시간 연결 중"),
+    "8초가 지나도 「실시간 연결 중」이다",
+  );
+  // 그리고 적은 대로여야 한다. 끊겼는데 「연결됨」이라고 적으면 화면이 거짓말이다.
+  ok(
+    "연결 상태를 있는 그대로 적는다",
+    live.includes("실시간 연결됨")
+      ? live.includes("보고 있습니다")
+      : live.includes("새로고침하면 최신 상태를 볼 수 있습니다"),
+    live.includes("실시간 연결됨")
+      ? "「연결됨」인데 접속자 줄이 없다"
+      : "0012 를 SQL Editor 에서 돌리면 「연결됨」이 된다",
+  );
+  await on.close();
 }
 
 await browser.close();

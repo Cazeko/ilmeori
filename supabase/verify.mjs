@@ -10,6 +10,7 @@
  *      따라서 문법·의존성·정책 정의는 검증되지만, 실제 인증 동작은 검증되지 않는다.
  */
 import { PGlite } from "@electric-sql/pglite";
+import { REALTIME_STUB } from "./realtime-stub.mjs";
 import { readFile, readdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -84,6 +85,7 @@ const run = async (label, sql) => {
 
 console.log("\nSupabase 환경 스텁 구성");
 await run("auth / storage 스키마", SUPABASE_STUB);
+await run("realtime 스텁 (하네스 전용 — 마이그레이션에는 없다)", REALTIME_STUB);
 
 console.log("\n마이그레이션 실행");
 const files = (await readdir(MIGRATIONS)).filter((f) => f.endsWith(".sql")).sort();

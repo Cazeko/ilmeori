@@ -34,14 +34,48 @@ supabase/migrations/0008_delete_paths.sql         지울 수 없던 두 곳
 supabase/migrations/0009_document_history.sql     문서 이력의 빈자리
 supabase/migrations/0010_grant_layer.sql          GRANT 층을 실제로 세운다
 supabase/migrations/0011_work_field_guard.sql     업무의 칸마다 주인을 정한다
+supabase/migrations/0012_realtime.sql             실시간 공유 — 토픽 정책 · 방송 트리거
+supabase/migrations/0013_access_log_session.sql   열람기록을 열람 세션 단위로
 ```
 
 적용 전에 로컬에서 먼저 돌려 볼 수 있다. PGlite(Postgres WASM)로 실제 실행한다.
 
 ```bash
 npm run db:verify   # 마이그레이션이 실제로 도는지
-npm run db:test     # RLS가 실제로 막는지 (67개)
+npm run db:test     # RLS가 실제로 막는지 (98개)
 ```
+
+## 1-2. 0012 · 0013 — 실시간 공유 (이미 연결된 프로젝트에 따로 실행)
+
+**이걸 돌리지 않으면 실시간이 통째로 꺼진 상태가 된다.** 화면은 「실시간 연결 끊김」이라고
+정직하게 적고 나머지는 그대로 동작하지만, 접속자 표시도 자동 갱신도 없다.
+
+0012 가 realtime 스키마에 하는 일은 **정책 두 개**뿐이다. 표도 함수도 만들지 않는다 —
+Supabase 가 그 스키마를 잠가 두었기 때문이다(`permission denied for schema realtime`).
+검사 하네스(PGlite)에는 흉내용 스텁이 있지만 그건 `supabase/realtime-stub.mjs` 안에만 있고
+마이그레이션에는 한 줄도 들어가지 않는다. **둘을 섞으면 로컬은 초록불인데 배포가 죽는다.**
+
+**0013 도 함께 돌린다.** 실시간 갱신은 그 업무를 열어 둔 사람 전원의 화면을 다시 그리게
+하고, 그 서버 렌더가 열람기록을 한 줄씩 더 남긴다. 옆자리 사람이 스무 번 저장하면 내
+열람기록에 「업무 열람」이 예순 줄 넘게 찍힌다. 0013 이 같은 사람의 같은 업무 열람을
+10분 단위로 묶는다(파일 내려받기는 그대로 매번 남는다 — 그건 횟수가 곧 뜻이다).
+
+돌린 뒤 확인:
+
+```bash
+node supabase/realtime.probe.mjs    # 또는 npm run db:realtime
+```
+
+실제 계정 셋으로 채널에 붙어 본다. 볼 수 있는 사람은 들어가고, 못 보는 사람은 거부되고,
+남이 고치면 신호가 오고, 그 신호에 내용이 실려 있지 않은지까지 본다.
+
+> **첫 시도가 `MissingPartition` 으로 실패할 수 있다.** private 채널을 한 번도 쓴 적 없는
+> 프로젝트에서 `realtime.messages` 의 당일 파티션이 아직 없을 때 나온다. 실제로 이 프로젝트에서
+> 한 번 났고, **두 번째 시도부터는 정상**이었다(Realtime 이 스스로 만든다). 실패 문구가
+> `Unauthorized ...` 로 바뀌면 파티션 문제는 끝난 것이고, 남은 것은 정책 문제다.
+
+> 대시보드에서 눌러야 하는 것은 **없다.** publication 에 표를 추가할 필요도 없다 —
+> postgres_changes 가 아니라 broadcast 를 쓰기 때문이다.
 
 ## 1-1. 0007~0011 — 이미 연결된 프로젝트에 따로 실행해야 하는 것
 
@@ -336,6 +370,8 @@ supabase/seed/demo.sql         다시 채운다
 4. 계정 전환 → 다른 계정에서 **보이는 업무가 달라지는지**
 5. 업무 상세 → 이력 탭에 다섯 달치 기록이 있는지
 6. 인계·인수 → 확인 → 실행 → 주담당이 실제로 바뀌는지
+7. 창 두 개로 같은 업무를 열고 한쪽에서 항목 편집 → **다른 쪽이 저절로 따라오는지**
+   (`npm run test:realtime` 이 이걸 자동으로 한다)
 
 4번이 되면 RLS가 실제로 동작한다는 뜻이다. 발표에서 그대로 보여 줄 수 있는 장면이기도 하다.
 
