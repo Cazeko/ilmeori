@@ -9,7 +9,7 @@ import type {
   Profile,
   WorkListItem,
 } from "@/lib/types";
-import type { HandoverView, WorkFilter } from "./types";
+import type { ApprovalSummary, HandoverView, WorkFilter } from "./types";
 
 /**
  * 데이터 접근 층 — 화면과 저장소 사이의 유일한 경계.
@@ -28,7 +28,7 @@ import type { HandoverView, WorkFilter } from "./types";
 
 const impl = isSupabaseConfigured ? db : mock;
 
-export type { HandoverView, WorkFilter };
+export type { ApprovalSummary, HandoverView, WorkFilter };
 
 export const listWorks = (viewer: Profile, filter?: WorkFilter) =>
   impl.listWorks(viewer, filter);
@@ -62,6 +62,16 @@ export const getApproval = (viewer: Profile, id: string) =>
 
 export const listApprovalsAwaitingMe = (viewer: Profile) =>
   impl.listApprovalsAwaitingMe(viewer);
+
+/**
+ * 업무 카드에 붙는 결재 진행률 — 화면에 뜬 업무 전부를 **한 번에** 묻는다.
+ *
+ * 업무 목록에 끼워 넣지 않은 이유는 data/types.ts 의 ApprovalSummary 주석에 있다.
+ */
+export const getApprovalSummaries = (
+  viewer: Profile,
+  workIds: readonly string[],
+) => impl.getApprovalSummaries(viewer, workIds);
 
 export const getDepartments = () => impl.getDepartments();
 export const getDepartment = (id: string) => impl.getDepartment(id);

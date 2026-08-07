@@ -18,7 +18,12 @@ import { DEMO_COOKIE } from "@/lib/demo-cookie";
  */
 
 // 로그인 없이 접근 가능한 경로
-const PUBLIC_PATHS = ["/login", "/auth", "/error"];
+//
+// /offline 이 여기 있는 이유 — 서비스워커가 설치할 때 미리 담아 두는 화면이다.
+// 인증을 걸면 담기는 것이 로그인 화면이 되고, 그러면 연결이 끊긴 사람에게
+// 「비밀번호를 입력하세요」가 뜬다. 지금 할 수 없는 일을 시키는 화면이다.
+// 그 화면에는 업무도 이름도 한 줄 없다(src/app/offline/page.tsx).
+const PUBLIC_PATHS = ["/login", "/auth", "/error", "/offline"];
 
 function buildCsp(nonce: string, isDev: boolean): string {
   // 데모 모드에서는 Supabase로 나가는 통로 자체를 열지 않는다.
@@ -39,6 +44,12 @@ function buildCsp(nonce: string, isDev: boolean): string {
     `font-src 'self' data: https://cdn.jsdelivr.net`,
     `img-src 'self' data: blob: ${supabaseOrigin}`,
     `connect-src 'self' ${supabaseOrigin} ${supabaseWs}`,
+    // 서비스워커. worker-src 를 안 적으면 script-src 로 떨어지는데, 거기에는
+    // 'strict-dynamic' 이 걸려 있어 'self' 가 무시된다 — 그러면 등록이 막힌다.
+    `worker-src 'self'`,
+    // 웹 앱 설명서. default-src 로도 덮이지만, 막히면 「설치가 안 된다」로만
+    // 보이고 원인이 CSP 라는 것이 화면 어디에도 안 나오므로 못박아 둔다.
+    `manifest-src 'self'`,
     `frame-ancestors 'none'`,
     `form-action 'self'`,
     `base-uri 'self'`,
@@ -135,7 +146,13 @@ export const config = {
     /*
      * 정적 자산을 제외한 모든 경로.
      * 이미지·폰트·파비콘까지 세션 검증을 돌릴 이유가 없다.
+     *
+     * sw.js 와 manifest.webmanifest 는 **인증 쿠키 없이** 요청된다.
+     * (`<link rel="manifest">` 는 기본이 익명이고, 서비스워커 갱신 요청도 그렇다)
+     * 빼 두지 않으면 둘 다 /login 으로 튕겨 로그인 화면 HTML 이 돌아오고,
+     * 설치는 「설명서를 읽을 수 없다」로, 서비스워커는 「스크립트가 아니다」로
+     * 조용히 실패한다. 둘 다 내용이 없는 파일이라 감출 것도 없다.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
   ],
 };

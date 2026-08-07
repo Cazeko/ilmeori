@@ -69,7 +69,26 @@ const nextConfig: NextConfig = {
   },
 
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      {
+        /**
+         * 서비스워커는 캐시되면 안 된다.
+         *
+         * 브라우저는 서비스워커 파일을 최대 24시간 캐시할 수 있다. 무엇을
+         * 캐시할지 정하는 파일이 스스로 캐시되면, 고친 규칙이 그만큼 늦게
+         * 적용된다 — 「화면은 캐시하지 않는다」를 고쳐야 하는 날 그 지연은
+         * 하루가 된다. 등록 쪽 updateViaCache:"none" 과 짝을 이룬다.
+         */
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          // 서비스워커는 문서와 별개의 실행 맥락이라 CSP 를 따로 받는다.
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
+        ],
+      },
+    ];
   },
 };
 

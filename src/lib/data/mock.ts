@@ -28,7 +28,8 @@ import {
 } from "@/lib/mock/works";
 import { departments, profiles } from "@/lib/mock/org";
 import { getDemoState, type DemoState } from "@/lib/demo-state";
-import type { HandoverView, WorkFilter } from "./types";
+import type { ApprovalSummary, HandoverView, WorkFilter } from "./types";
+import { approvalProgress, byRecent } from "@/lib/approval";
 import { daysUntil } from "@/lib/format";
 import {
   derivedStatus,
@@ -476,6 +477,47 @@ export async function listApprovalsAwaitingMe(
     .map((a) => toApprovalView(a, viewer, state))
     .filter((a): a is ApprovalWithSteps => a !== null)
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+/**
+ * 업무 카드에 붙는 결재 진행률. db 구현과 **같은 규칙**으로 고른다 —
+ * 기안 중인 문서는 빼고, 가장 최근에 움직인 것 하나가 배지가 된다.
+ */
+export async function getApprovalSummaries(
+  viewer: Profile,
+  workIds: readonly string[],
+): Promise<Map<string, ApprovalSummary>> {
+  const wanted = new Set(workIds);
+  if (wanted.size === 0) return new Map();
+
+  const state = await getDemoState();
+  const visible = approvals
+    .filter((a) => wanted.has(a.work_id) && a.state !== "drafting")
+    .map((a) => toApprovalView(a, viewer, state))
+    .filter((a): a is ApprovalWithSteps => a !== null);
+
+  const grouped = new Map<string, ApprovalWithSteps[]>();
+  for (const a of visible) {
+    const list = grouped.get(a.work_id);
+    if (list) list.push(a);
+    else grouped.set(a.work_id, [a]);
+  }
+
+  const byWork = new Map<string, ApprovalSummary>();
+  for (const [workId, list] of grouped) {
+    const latest = [...list].sort(byRecent)[0];
+    const progress = approvalProgress(latest.steps);
+    byWork.set(workId, {
+      count: list.length,
+      latest: {
+        id: latest.id,
+        state: latest.state,
+        signed: progress.signed,
+        total: progress.total,
+      },
+    });
+  }
+  return byWork;
 }
 
 export async function getApproval(

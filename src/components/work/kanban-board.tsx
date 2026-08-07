@@ -1,6 +1,7 @@
 import { Inbox } from "lucide-react";
 import { WorkCard } from "@/components/work/work-card";
 import { EmptyState } from "@/components/ui/empty-state";
+import type { ApprovalSummary } from "@/lib/data/types";
 import { STATUS_LABEL, type WorkListItem, type WorkStatus } from "@/lib/types";
 
 /**
@@ -21,7 +22,14 @@ const HEAD: Record<WorkStatus, string> = {
   done: "border-t-status-done",
 };
 
-export function KanbanBoard({ works }: { works: WorkListItem[] }) {
+export function KanbanBoard({
+  works,
+  approvals,
+}: {
+  works: WorkListItem[];
+  /** 업무 id → 결재 진행률. 화면이 한 번에 가져와 내려 준다. */
+  approvals?: ReadonlyMap<string, ApprovalSummary>;
+}) {
   if (works.length === 0) {
     return (
       <div className="rounded-md border border-gray-10 bg-surface">
@@ -47,9 +55,15 @@ export function KanbanBoard({ works }: { works: WorkListItem[] }) {
             aria-labelledby={`col-${status}`}
             className={`rounded-md border border-t-3 border-gray-10 bg-gray-5/60 ${HEAD[status]}`}
           >
+            {/* 높이를 못박는다(min-h-12 = 48px).
+                「지연 N」 배지는 지연이 있는 열에만 붙는데, 배지에 위아래 여백이
+                있어서 그 열만 머리글이 몇 px 높아진다. 그러면 **첫 카드의 시작
+                선이 열마다 어긋나고**, 2~4px 만 달라도 사람은 삐뚤다고 느낀다.
+                좌우 여백도 아래 목록과 같은 값(px-3)이어야 머리글 글자와 카드
+                왼쪽 모서리가 한 선에 선다. */}
             <h2
               id={`col-${status}`}
-              className="flex items-baseline gap-2 px-3 py-2.5 text-body-sm font-bold text-gray-80"
+              className="flex min-h-12 items-center gap-2 px-3 text-body-sm font-bold text-gray-80"
             >
               {STATUS_LABEL[status]}
               <span className="tabular-nums text-gray-60">{items.length}</span>
@@ -60,10 +74,10 @@ export function KanbanBoard({ works }: { works: WorkListItem[] }) {
               ) : null}
             </h2>
 
-            <ul className="flex flex-col gap-2.5 px-2.5 pb-3">
+            <ul className="flex flex-col gap-2 px-3 pb-3">
               {items.map((w) => (
                 <li key={w.id}>
-                  <WorkCard work={w} />
+                  <WorkCard work={w} approval={approvals?.get(w.id)} />
                 </li>
               ))}
               {items.length === 0 ? (

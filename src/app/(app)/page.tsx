@@ -18,6 +18,7 @@ import { WorkCard } from "@/components/work/work-card";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDueLabel } from "@/lib/format";
 import {
+  getApprovalSummaries,
   getDashboard,
   getDepartment,
   getHandoverFor,
@@ -57,6 +58,13 @@ export default async function HomePage() {
   const myTurnCount = awaiting.filter(
     (a) => myTurn(a, a.steps, viewer.id) !== null,
   ).length;
+
+  // 「지금 손대야 하는 일」 카드에도 결재 진행률을 붙인다. 급한 업무일수록
+  // 「결재가 어디까지 갔는가」가 다음 행동을 정한다.
+  const approvals = await getApprovalSummaries(
+    viewer,
+    urgent.map((w) => w.id),
+  );
 
   return (
     <PageContainer>
@@ -168,7 +176,7 @@ export default async function HomePage() {
               <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                 {urgent.map((w) => (
                   <li key={w.id}>
-                    <WorkCard work={w} />
+                    <WorkCard work={w} approval={approvals.get(w.id)} />
                   </li>
                 ))}
               </ul>

@@ -1,11 +1,14 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { approvalProgress, byRecent } from "@/lib/approval";
 import { daysUntil } from "@/lib/format";
 import {
   derivedStatus,
   type AccessLogWithActor,
   type ActivityWithActor,
+  type ApprovalKind,
+  type ApprovalState,
   type ApprovalWithSteps,
   type AttachmentWithUploader,
   type CommentWithAuthor,
@@ -21,7 +24,7 @@ import {
   type Work,
   type WorkListItem,
 } from "@/lib/types";
-import type { HandoverView, WorkFilter } from "./types";
+import type { ApprovalSummary, HandoverView, WorkFilter } from "./types";
 
 /**
  * Supabase 구현.
@@ -341,6 +344,15 @@ const APPROVAL_SELECT = `
 
 type RawApproval = ApprovalWithSteps;
 
+/**
+ * 진행률 배지 질의의 상한.
+ *
+ * 이 상한에 걸리면 배지가 빠진 카드가 생기고, **배지가 없는 것은 「결재가 없다」로
+ * 읽힌다.** 그래서 걸리면 조용히 지나가지 않고 서버 로그에 남긴다. 값 자체는
+ * 넉넉하다 — 화면 하나에 뜨는 업무는 수십 건이고 업무당 결재는 몇 건이다.
+ */
+const SUMMARY_LIMIT = 500;
+
 function toApproval(raw: RawApproval): ApprovalWithSteps {
   return {
     ...raw,
@@ -418,6 +430,77 @@ export async function listApprovalsAwaitingMe(
     .order("created_at", { ascending: false });
   if (docError) throw docError;
   return ((data ?? []) as unknown as RawApproval[]).map(toApproval);
+}
+
+/**
+ * 여러 업무의 결재 진행률을 **한 번에** 가져온다.
+ *
+ * 업무 카드마다 부르면 보드 한 장이 스무 번을 왕복한다. 화면에 뜬 업무의
+ * id 를 통째로 받아 한 질의로 끝낸다.
+ *
+ * 결재란은 `kind`·`signed_at` 두 칸만 읽는다. 진행률에 필요한 것이 그것뿐이고,
+ * 서명자 이름까지 끌고 오면 보드 한 장이 목록 화면보다 무거워진다.
+ */
+export async function getApprovalSummaries(
+  _viewer: Profile,
+  workIds: readonly string[],
+): Promise<Map<string, ApprovalSummary>> {
+  const ids = [...new Set(workIds.filter((id) => UUID.test(id)))];
+  if (ids.length === 0) return new Map();
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("approval")
+    .select("id, work_id, state, created_at, closed_at, steps:approval_step ( kind, signed_at )")
+    .in("work_id", ids)
+    // 기안 중인 문서는 카드에 올리지 않는다(data/types.ts 의 ApprovalSummary 주석).
+    .neq("state", "drafting")
+    .order("created_at", { ascending: false })
+    .limit(SUMMARY_LIMIT);
+  if (error) throw error;
+
+  const rows = (data ?? []) as unknown as Array<{
+    id: string;
+    work_id: string;
+    state: ApprovalState;
+    created_at: string;
+    closed_at: string | null;
+    steps: Array<{ kind: ApprovalKind; signed_at: string | null }>;
+  }>;
+
+  // 상한에 걸렸으면 배지가 없는 카드가 생긴다. 배지가 없는 것은 「결재가 없다」로
+  // 읽히므로, 조용히 지나가지 않고 서버 로그에 남긴다(결재함의 100건 상한을
+  // 화면이 말하게 한 것과 같은 판단이고, 여기는 말할 자리가 없어 로그로 간다).
+  if (rows.length >= SUMMARY_LIMIT) {
+    console.error(
+      `[approval] 진행률 배지 질의가 상한(${SUMMARY_LIMIT}건)에 걸렸습니다. 일부 업무 카드에 배지가 빠집니다.`,
+    );
+  }
+
+  // 업무별로 모은 뒤 「가장 최근에 움직인 것」을 고른다. 결재함의 정렬과 **같은
+  // 규칙**(byRecent)이라, 카드의 배지와 결재함 맨 위 문서가 어긋나지 않는다.
+  const grouped = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const list = grouped.get(row.work_id);
+    if (list) list.push(row);
+    else grouped.set(row.work_id, [row]);
+  }
+
+  const byWork = new Map<string, ApprovalSummary>();
+  for (const [workId, list] of grouped) {
+    const latest = [...list].sort(byRecent)[0];
+    const progress = approvalProgress(latest.steps ?? []);
+    byWork.set(workId, {
+      count: list.length,
+      latest: {
+        id: latest.id,
+        state: latest.state,
+        signed: progress.signed,
+        total: progress.total,
+      },
+    });
+  }
+  return byWork;
 }
 
 export async function getApproval(

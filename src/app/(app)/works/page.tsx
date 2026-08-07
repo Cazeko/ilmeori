@@ -9,7 +9,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
-import { getDepartmentTree, listWorks } from "@/lib/data";
+import { getApprovalSummaries, getDepartmentTree, listWorks } from "@/lib/data";
 import { canMutate } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
 
@@ -47,6 +47,12 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
   });
   const allVisible = await listWorks(viewer, { q, departmentId });
   const overdueCount = allVisible.filter((w) => w.derived === "overdue").length;
+
+  // 결재 진행률은 업무마다 묻지 않는다. 화면에 뜬 업무 전부를 한 번에 가져온다.
+  const approvals = await getApprovalSummaries(
+    viewer,
+    works.map((w) => w.id),
+  );
 
   /** 지금 걸린 조건을 유지한 채 하나만 바꾼 주소를 만든다 */
   const linkWith = (patch: Record<string, string | null>) => {
@@ -95,11 +101,26 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
         title="업무 보드"
         description="내가 볼 수 있는 업무만 나타납니다. 참여자로 등록되었거나, 공개 범위가 내 소속을 포함하는 업무입니다."
         action={
-          canMutate ? (
-            <ButtonLink href="/works/new">
-              <Plus aria-hidden className="size-4" />새 업무
-            </ButtonLink>
-          ) : null
+          <>
+            {/* 「기한이 지난 업무」는 화면에서 가장 급한 사실이다. 조건 칩 줄
+                오른쪽 끝에 홀로 떠 있으면 그 급함이 여백에 묻힌다. 화면 머리의
+                동작 자리로 올려 「새 업무」 왼쪽에 둔다. */}
+            {overdueCount > 0 && !overdueOnly && !archived ? (
+              <ButtonLink
+                href={linkWith({ overdue: "1", mine: null })}
+                variant="secondary"
+                className="border-status-overdue/40 bg-status-overdue-bg text-status-overdue-text hover:bg-status-overdue-bg"
+              >
+                <AlertTriangle aria-hidden className="size-4" />
+                기한이 지난 업무 {overdueCount}건
+              </ButtonLink>
+            ) : null}
+            {canMutate ? (
+              <ButtonLink href="/works/new">
+                <Plus aria-hidden className="size-4" />새 업무
+              </ButtonLink>
+            ) : null}
+          </>
         }
       />
 
@@ -123,11 +144,16 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
         {overdueOnly ? <input type="hidden" name="overdue" value="1" /> : null}
         {archived ? <input type="hidden" name="archived" value="1" /> : null}
 
+        {/* items-end 로 맞춘다. 라벨이 붙은 칸(검색·부서)은 라벨 높이만큼 위가
+            길고, 라벨이 없는 것(체크박스·버튼)은 그렇지 않다. 가운데로 맞추면
+            체크박스만 몇 px 내려앉아 한 줄이 삐뚤어 보인다.
+            검색칸은 flex-1 로 두지 않는다 — 넓은 화면에서 혼자 다 먹으면
+            시선이 그쪽으로 쏠려, 정작 먼저 읽혀야 할 보드가 뒤로 밀린다. */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <Field
             id="works-q"
             label="검색"
-            className="min-w-0 flex-1"
+            className="min-w-0 flex-1 sm:max-w-xs"
           >
             {(p) => (
               <Input
@@ -141,7 +167,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
             )}
           </Field>
 
-          <Field id="works-dept" label="부서" className="sm:w-64">
+          <Field id="works-dept" label="부서" className="min-w-0 sm:w-56">
             {(p) => (
               <Select {...p} name="dept" defaultValue={departmentId ?? ""}>
                 <option value="">전체 부서</option>
@@ -164,8 +190,10 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
             )}
           </Field>
 
-          {/* 체크박스는 라벨과 같은 영역을 눌러도 켜지도록 감싼다 */}
-          <label className="flex min-h-11 cursor-pointer items-center gap-2 px-1 text-body-sm font-bold text-gray-70">
+          {/* 체크박스는 라벨과 같은 영역을 눌러도 켜지도록 감싼다.
+              h-11 은 옆의 입력칸·버튼과 같은 높이다. min-h 로 두면 내용에 따라
+              높이가 달라져 밑선이 어긋난다. */}
+          <label className="flex h-11 cursor-pointer items-center gap-2 px-1 text-body-sm font-bold text-gray-70">
             <input
               type="checkbox"
               name="mine"
@@ -176,7 +204,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
             내 업무만
           </label>
 
-          <Button type="submit" className="sm:w-auto">
+          <Button type="submit" className="sm:ml-auto sm:w-auto">
             <Filter aria-hidden className="size-4" />
             적용
           </Button>
@@ -201,17 +229,6 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
             {c.label}
           </Link>
         ))}
-
-        {overdueCount > 0 && !overdueOnly ? (
-          <Link
-            href={linkWith({ overdue: "1", mine: null })}
-            className="ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-sm bg-status-overdue-bg px-3 text-body-sm font-bold text-status-overdue-text"
-            data-variant="plain"
-          >
-            <AlertTriangle aria-hidden className="size-4" />
-            기한이 지난 업무 {overdueCount}건
-          </Link>
-        ) : null}
       </div>
 
       {/* 결과 수가 바뀐 것을 스크린리더에도 알린다 */}
@@ -219,7 +236,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
         업무 {works.length}건이 표시되고 있습니다.
       </p>
 
-      <KanbanBoard works={works} />
+      <KanbanBoard works={works} approvals={approvals} />
     </PageContainer>
   );
 }

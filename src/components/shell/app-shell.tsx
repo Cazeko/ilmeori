@@ -18,6 +18,8 @@ import {
 import { leaveDemo } from "@/app/login/actions";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
+import { BrandMark } from "@/components/brand-mark";
+import { RegisterServiceWorker } from "@/components/pwa/register-sw";
 import type { Profile } from "@/lib/types";
 
 /**
@@ -80,6 +82,10 @@ export function AppShell({
 
   return (
     <div className="flex min-h-dvh flex-col">
+      {/* 그리는 것이 없다. 스크립트가 없으면 아무 일도 일어나지 않고, 앱은
+          지금까지와 똑같이 돈다. 로그인한 영역에서만 등록하는 이유는 그 파일에. */}
+      <RegisterServiceWorker />
+
       {/* ── 상단 바 ─────────────────────────────────────────────────────── */}
       {/* 상단 바와 왼쪽 메뉴는 종이에 나올 이유가 없다. 인쇄물은 결재에 올라가는
           문서 한 벌이지 화면의 사진이 아니다. */}
@@ -95,23 +101,35 @@ export function AppShell({
           <Menu aria-hidden className="size-5" />
         </button>
 
+        {/* ── 왼쪽: 표식 ────────────────────────────────────────────────
+            사이드바와 같은 폭을 차지한다. 그래야 로고 아래 첫 메뉴 항목이
+            한 선에 서고, 머리와 옆줄이 두 덩어리가 아니라 한 판으로 읽힌다. */}
         <Link
           href="/"
           data-variant="plain"
           className="flex shrink-0 items-center gap-2 lg:w-[calc(var(--spacing-sidebar)-1rem)]"
         >
-          <span className="flex size-7 items-center justify-center rounded-sm bg-primary text-[13px] font-bold text-white">
-            일
+          <BrandMark className="size-8" />
+          <span className="text-body font-bold tracking-tight text-gray-90">
+            일머리
           </span>
-          <span className="text-body font-bold text-gray-90">일머리</span>
         </Link>
 
-        {/* 검색은 GET 폼이다. 자바스크립트 없이도 동작하고, 결과가 주소에 남는다. */}
-        <form action="/works" method="get" role="search" className="min-w-0 flex-1">
+        {/* ── 가운데: 검색 ──────────────────────────────────────────────
+            검색은 GET 폼이다. 자바스크립트 없이도 동작하고, 결과가 주소에 남는다.
+            폭을 max-w-md 로 묶고 가운데에 세운다 — 남는 자리를 다 먹게 두면
+            화면에서 가장 무거운 것이 검색칸이 되고, 정작 먼저 읽혀야 할
+            화면 제목과 보드가 그 뒤로 밀린다. */}
+        <form
+          action="/works"
+          method="get"
+          role="search"
+          className="flex min-w-0 flex-1 justify-center"
+        >
           <label htmlFor="global-search" className="sr-only">
             업무 검색
           </label>
-          <div className="relative max-w-md">
+          <div className="relative w-full max-w-md">
             <Search
               aria-hidden
               className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-40"
@@ -120,6 +138,10 @@ export function AppShell({
               id="global-search"
               name="q"
               type="search"
+              /* 문구를 「AI에게 물어보세요」로 바꾸지 않는다. 이 검색은 제목·설명에
+                 낱말이 들어 있는지를 보는 것이고 어떤 모델도 부르지 않는다.
+                 하지 않는 일을 칸에 적어 두면, 심사에서 한 번 눌러 보는 것으로
+                 무너진다. 「인계서를 AI가 썼다」고 적지 않기로 한 것과 같은 규칙이다. */
               placeholder="업무 제목으로 찾기"
               autoComplete="off"
               className="h-9 w-full rounded-sm border border-gray-20 bg-gray-5 pr-3 pl-9 text-body-sm text-gray-90 placeholder:text-gray-60 hover:border-gray-30 focus:bg-surface"
@@ -127,6 +149,7 @@ export function AppShell({
           </div>
         </form>
 
+        {/* ── 오른쪽: 사람 ──────────────────────────────────────────────── */}
         <div className="flex shrink-0 items-center gap-2">
           <span className="hidden text-right sm:block">
             <span className="block text-body-sm font-bold text-gray-90">
@@ -137,14 +160,16 @@ export function AppShell({
           <Avatar profile={viewer} />
           {/* /login으로 가는 링크로 두면 안 된다. proxy가 로그인한 사람을
               /login에서 곧바로 홈으로 되돌려보내 눌러도 제자리가 된다.
-              계정을 바꾸려면 세션을 실제로 끊어야 하므로 서버 액션을 태운다. */}
+              계정을 바꾸려면 세션을 실제로 끊어야 하므로 서버 액션을 태운다.
+              크기를 아바타(32px)에 맞춘다 — 옆에 선 것들보다 크면 「계정 전환」이
+              머리에서 가장 눈에 띄는 단추가 되는데, 그건 여기서 가장 덜 쓰는 것이다. */}
           <form action={leaveDemo}>
             <button
               type="submit"
               title="세션을 끊고 다른 데모 계정으로 들어갑니다"
-              className="flex min-h-9 min-w-9 cursor-pointer items-center justify-center gap-1.5 rounded-sm border border-gray-20 px-2 text-body-xs font-bold text-gray-60 hover:bg-gray-5 sm:px-2.5"
+              className="flex h-8 min-w-8 cursor-pointer items-center justify-center gap-1.5 rounded-sm border border-gray-20 px-1.5 text-body-xs font-bold text-gray-60 hover:bg-gray-5 sm:px-2"
             >
-              <Repeat aria-hidden className="size-4 sm:size-3.5" />
+              <Repeat aria-hidden className="size-3.5" />
               {/* 좁은 화면에서는 아이콘만. 글자까지 두면 검색칸이 눌려 버린다. */}
               <span className="hidden sm:inline">계정 전환</span>
               <span className="sr-only sm:hidden">계정 전환</span>
@@ -193,29 +218,36 @@ export function AppShell({
           {/* 메뉴 안 어디를 누르든 서랍은 닫힌다. 이동한 화면이 서랍에 가려지면 안 된다.
               (효과로 pathname 변화를 감시하는 대신 클릭에서 처리한다.
                서랍이 열려 있는 것은 파생 상태가 아니라 사용자가 만든 상태다) */}
-          <nav className="px-3 py-4" onClick={() => setDrawerOpen(false)}>
+          {/* 묶음 이름과 항목 사이를 벌리고(mb-2), 묶음끼리는 더 벌린다(mb-7).
+              둘이 비슷하면 「업무」가 첫 항목의 제목처럼 읽힌다. */}
+          <nav className="px-3 py-5" onClick={() => setDrawerOpen(false)}>
             {NAV.map((group) => (
-              <div key={group.heading} className="mb-5 last:mb-0">
-                <p className="mb-1.5 px-3 text-body-xs font-bold tracking-wide text-gray-60">
+              <div key={group.heading} className="mb-7 last:mb-0">
+                <p className="mb-2 px-3 text-body-xs font-bold tracking-wide text-gray-50">
                   {group.heading}
                 </p>
-                <ul>
+                <ul className="flex flex-col gap-0.5">
                   {group.items.map(({ href, label, icon: Icon }) => {
                     const active = isActive(pathname, href);
                     return (
                       <li key={href}>
+                        {/* 지금 있는 자리를 한 단계 더 세게 말한다 —
+                            옅은 판만으로는 옆의 본문에 눌려 「어디에 있는지」가
+                            흐려진다. 왼쪽 굵은 막대 + 판 + 진한 글자 셋이
+                            함께 붙고, 막대는 자리를 늘 차지해(투명) 활성 항목만
+                            2px 밀려 보이는 일이 없다. */}
                         <Link
                           href={href}
                           data-variant="plain"
                           aria-current={active ? "page" : undefined}
                           className={cn(
-                            "flex min-h-11 items-center gap-2.5 rounded-sm px-3 text-body-sm font-bold transition-colors duration-150",
+                            "flex min-h-11 items-center gap-3 rounded-sm border-l-3 pr-3 pl-2.5 text-body-sm font-bold transition-colors duration-150",
                             active
-                              ? "bg-primary-5 text-primary"
-                              : "text-gray-70 hover:bg-gray-5 hover:text-gray-90",
+                              ? "border-l-primary bg-primary-5 text-primary"
+                              : "border-l-transparent text-gray-70 hover:bg-gray-5 hover:text-gray-90",
                           )}
                         >
-                          <Icon aria-hidden className="size-4.5 shrink-0" />
+                          <Icon aria-hidden className="size-5 shrink-0" />
                           {label}
                         </Link>
                       </li>

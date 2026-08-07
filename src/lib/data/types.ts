@@ -1,4 +1,9 @@
-import type { Handover, Profile, WorkListItem } from "@/lib/types";
+import type {
+  ApprovalState,
+  Handover,
+  Profile,
+  WorkListItem,
+} from "@/lib/types";
 
 /**
  * 두 구현(목업·Supabase)이 공유하는 계약.
@@ -28,4 +33,32 @@ export type HandoverView = {
   from: Profile;
   to: Profile;
   items: Array<{ work: WorkListItem; transferred: boolean }>;
+};
+
+/**
+ * 업무 카드에 붙는 결재 진행률.
+ *
+ * ── 왜 WorkListItem 안에 넣지 않는가 ───────────────────────────────────────
+ *
+ * 목록 질의(listWorks)에 결재를 임베드하면 **업무를 세는 모든 화면**이 결재까지
+ * 읽는다. 홈·보드·인계 대상 선정·작년 판 미리보기가 전부 그렇다. 배지는 보드와
+ * 홈에만 필요하므로, 필요한 화면이 **한 번 더 묻는** 쪽으로 뒀다.
+ * 업무마다 한 번씩 묻는 것이 아니라, 화면에 뜬 업무 전부를 한 질의로 가져온다.
+ *
+ * ── 기안 중인 문서는 세지 않는다 ──────────────────────────────────────────
+ *
+ * 기안 중인 문서는 기안자만 본다. 카드에 「기안 중」이 뜨면 같은 카드가 사람마다
+ * 다른 말을 하게 된다 — RLS 가 막아 주므로 새는 것은 아니지만, 보드는 여럿이
+ * 같이 보는 화면이라 그 자리에는 **모두가 같이 보는 사실**만 적는 편이 맞다.
+ */
+export type ApprovalSummary = {
+  /** 이 업무에 달린, 내가 볼 수 있는 상신된 결재 문서 수 */
+  count: number;
+  /** 가장 최근에 움직인 것 하나. 배지는 이 문서를 가리킨다. */
+  latest: {
+    id: string;
+    state: ApprovalState;
+    signed: number;
+    total: number;
+  };
 };
