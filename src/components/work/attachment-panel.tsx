@@ -54,7 +54,7 @@ const ACCEPT =
 
 /** 파일 선택 버튼도 손가락으로 누르는 크기(44px)를 지킨다. */
 const FILE_INPUT =
-  "min-h-11 w-full cursor-pointer rounded-sm border border-gray-40 bg-surface text-body-sm text-gray-80 file:mr-3 file:h-11 file:cursor-pointer file:border-0 file:bg-gray-5 file:px-3 file:text-body-sm file:font-bold file:text-gray-80";
+  "min-h-11 w-full cursor-pointer rounded-sm border border-gray-50 bg-surface text-body-sm text-gray-80 file:mr-3 file:h-11 file:cursor-pointer file:border-0 file:bg-gray-5 file:px-3 file:text-body-sm file:font-bold file:text-gray-80";
 
 type Version = AttachmentWithUploader;
 
@@ -120,7 +120,7 @@ export function AttachmentPanel({
             const older = versions.slice(1);
 
             return (
-              <li key={fileName} className="px-4 py-2">
+              <li key={fileName} className="px-5 py-2">
                 {/* 줄 전체가 최신 판을 받는 링크다. 이름만 보고 누르는 것이 가장 흔한 동작이다. */}
                 <a
                   href={`/works/${workId}/files/${latest.id}`}
@@ -290,7 +290,7 @@ export function AttachmentPanel({
         <form
           action={uploadAttachment}
           encType="multipart/form-data"
-          className="border-t border-gray-10 px-4 py-4"
+          className="border-t border-gray-10 px-5 py-4"
         >
           <input type="hidden" name="workId" value={workId} />
           <Field
@@ -325,7 +325,7 @@ export function AttachmentPanel({
       {/* 파일이 한 건도 없을 때는 보관 방식을 말할 것이 없다. 예전에는 0건인
           패널에도 이 3줄이 늘 붙어, 빈 화면에서 가장 긴 글이 정책 설명이었다. */}
       {attachments.length > 0 ? (
-        <div className="border-t border-gray-10 bg-gray-5 px-4 py-2.5">
+        <div className="border-t border-gray-10 bg-gray-5 px-5 py-2.5">
           <p className="text-body-xs leading-relaxed text-gray-60">
             공개 URL 이 없는 비공개 저장소에 있습니다. 내려받을 때마다 권한을
             확인합니다.

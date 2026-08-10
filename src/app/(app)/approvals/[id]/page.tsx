@@ -314,7 +314,8 @@ export default async function ApprovalDetailPage({
             </div>
 
             <details className="rounded-md border border-gray-10 bg-surface">
-              <summary className="min-h-11 cursor-pointer list-none px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+                <Trash2 aria-hidden className="size-4 shrink-0 text-gray-40" />
                 이 초안을 지우려면
               </summary>
               <div className="border-t border-gray-10 px-4 py-3.5">

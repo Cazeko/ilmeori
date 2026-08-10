@@ -72,10 +72,17 @@ export function DocSections({
 }) {
   if (!doc) {
     return (
+      // 열람 권한만 있는 사람에게 「문서로 만들면 여럿이 나눠 쓸 수 있습니다」를
+      // 보여 주면, 할 수 없는 일을 설명하고 끝나는 화면이 된다. 만들 수 있는
+      // 사람에게는 그 말이 필요 없다 — 바로 아래 칸이 이미 그 일을 한다.
       <EmptyState
         icon={FileText}
         title="아직 문서가 없습니다"
-        description="업무 계획이나 진행 상황을 문서로 만들면, 여기서 여럿이 항목을 나눠 쓸 수 있습니다."
+        description={
+          canWrite
+            ? undefined
+            : "편집 권한이 있는 참여자가 문서를 만들면 여기에 나타납니다."
+        }
         action={
           canWrite ? (
             <form action={createDocument} className="w-full max-w-sm text-left">

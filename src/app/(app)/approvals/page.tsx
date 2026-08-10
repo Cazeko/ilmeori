@@ -18,6 +18,7 @@ import {
   type ApprovalBox,
 } from "@/lib/approval";
 import { cn } from "@/lib/cn";
+import { LinkPending } from "@/components/ui/link-pending";
 import { listApprovals } from "@/lib/data";
 import { canMutate } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
@@ -108,12 +109,18 @@ export default async function ApprovalsPage({
                     aria-current={on ? "page" : undefined}
                     className={cn(
                       "flex min-h-11 items-center gap-2 rounded-sm px-3 text-body-sm font-bold transition-colors duration-150",
+                      // 누르는 즉시 칠해진다(브라우저가 한다 — 자바스크립트 대기 없음)
+                      "active:bg-primary-10 active:text-primary",
                       on
                         ? "bg-primary-5 text-primary"
                         : "text-gray-70 hover:bg-gray-5 hover:text-gray-90",
                     )}
                   >
                     {APPROVAL_BOX_LABEL[b]}
+                    {/* 분류를 바꾸는 것도 물음표 뒤만 바뀌는 같은 화면 이동이라
+                        본문 자리를 갈지 않는다. 눌렸다는 표시가 여기 있어야
+                        한다(업무 보드 조건 칩과 같은 이유). */}
+                    <LinkPending />
                     {b === "todo" && todoCount > 0 ? (
                       <span
                         className={cn(

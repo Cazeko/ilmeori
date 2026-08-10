@@ -9,6 +9,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
+import { LinkPending } from "@/components/ui/link-pending";
 import { getApprovalSummaries, getDepartmentTree, listWorks } from "@/lib/data";
 import { canMutate } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
@@ -141,7 +142,9 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
               <ButtonLink
                 href={linkWith({ overdue: "1", mine: null })}
                 variant="secondary"
-                className="border-status-overdue/40 bg-status-overdue-bg text-status-overdue-text hover:bg-status-overdue-bg"
+                /* secondary 의 active:bg-gray-10 을 덮는다 — 안 덮으면 붉은 판이
+                   눌린 순간 회색으로 튄다 */
+                className="border-status-overdue/40 bg-status-overdue-bg text-status-overdue-text hover:bg-status-overdue-bg active:bg-status-overdue/20"
               >
                 <AlertTriangle aria-hidden className="size-4" />
                 기한이 지난 업무 {overdueCount}건
@@ -252,25 +255,38 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
         </form>
       </details>
 
-      {/* ── 빠른 조건 ─────────────────────────────────────────────────────── */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {chips.map((c) => (
-          <Link
-            key={c.label}
-            href={c.href}
-            data-variant="plain"
-            aria-current={c.on ? "true" : undefined}
-            className={cn(
-              "inline-flex min-h-9 items-center rounded-sm border px-3 text-body-sm font-bold transition-colors duration-150",
-              c.on
-                ? "border-primary bg-primary-5 text-primary"
-                : "border-gray-20 bg-surface text-gray-60 hover:bg-gray-5",
-            )}
-          >
-            {c.label}
-          </Link>
-        ))}
-      </div>
+      {/* ── 빠른 조건 ───────────────────────────────────────────────────────
+          이름 없는 링크 네 개가 떠 있었다. 스크린리더로 들으면 「전체 / 내 업무
+          / 지연만 / 보관함」이 무엇의 목록인지 알 수 없다. nav 로 묶어 이름을
+          준다. 높이도 38px → 44px 로 올린다(손가락 목표). */}
+      <nav aria-label="업무 걸러 보기" className="mb-4">
+        <ul className="flex flex-wrap items-center gap-2">
+          {chips.map((c) => (
+            <li key={c.label}>
+              <Link
+                href={c.href}
+                data-variant="plain"
+                aria-current={c.on ? "true" : undefined}
+                className={cn(
+                  "inline-flex min-h-11 items-center gap-1.5 rounded-sm border px-3 text-body-sm font-bold transition-colors duration-150",
+                  // 누르는 즉시 칠해진다(브라우저가 한다 — 자바스크립트 대기 없음)
+                  "active:bg-primary-10 active:text-primary",
+                  c.on
+                    ? "border-primary bg-primary-5 text-primary"
+                    : "border-gray-50 bg-surface text-gray-60 hover:bg-gray-5",
+                )}
+              >
+                {c.label}
+                {/* 조건 칩은 물음표 뒤만 바뀌는 같은 화면 이동이라 본문 자리를
+                    갈지 않는다(use-nav-pending 의 sameScreen). 눌렸다는 표시가
+                    이 자리에 있어야 한다 — 없으면 새 목록이 올 때까지
+                    383~448ms 동안 화면이 완전히 정지한다. */}
+                <LinkPending />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
       {/* 결과 수가 바뀐 것을 스크린리더에도 알린다 */}
       <p aria-live="polite" className="sr-only">

@@ -117,7 +117,7 @@ export default function GlobalError({
                 alignItems: "center",
                 padding: "0 24px",
                 borderRadius: "4px",
-                border: "1px solid #8a949e",
+                border: "1px solid #6d7882",
                 background: "#fafafa",
                 color: "#33363d",
                 fontSize: "15px",

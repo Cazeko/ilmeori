@@ -70,7 +70,14 @@ export function ApprovalRow({
       <h3 className="mt-1.5 text-body font-bold break-keep text-gray-90">
         {/* 줄 전체를 누를 수 있게 늘린다. 링크는 제목 하나뿐이라 스크린리더가
             읽는 순서도 흐트러지지 않는다. */}
-        <Link href={`/approvals/${approval.id}`} className="after:absolute after:inset-0">
+        {/* work-card 와 같은 규약 — 줄 전체가 판이라 밑줄이 없어도 눌리는
+            것이 판으로 구분된다. 여기만 밑줄이 있으면 같은 성격의 목록인
+            업무 카드·열람기록과 제목 모양이 갈린다. */}
+        <Link
+          href={`/approvals/${approval.id}`}
+          data-variant="plain"
+          className="after:absolute after:inset-0 hover:underline"
+        >
           {approval.title}
           <LinkPendingMark />
         </Link>

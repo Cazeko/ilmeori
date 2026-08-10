@@ -85,7 +85,7 @@ export default async function NewApprovalPage({
 
       <PageHeader
         title="결재 올리기"
-        description="내부결재문서(별지 제2호서식)를 기안합니다. 만들면 먼저 기안 중 상태가 되고, 결재선을 확인한 뒤 상신합니다."
+        description="만들면 기안 중 상태가 되고, 결재선을 확인한 뒤 상신합니다."
       />
 
       <ActionFeedback msg={sp.msg} className="mb-4" />
@@ -101,7 +101,7 @@ export default async function NewApprovalPage({
             <EmptyState
               icon={FilePlus2}
               title="결재를 올릴 업무가 없습니다"
-              description="결재 문서는 업무에 매달립니다. 내가 소유하거나 편집할 수 있는 업무가 있어야 그 업무의 결재를 올릴 수 있습니다."
+              description="결재 문서는 업무에 매달립니다. 소유하거나 편집할 수 있는 업무가 있어야 합니다."
               action={
                 <ButtonLink href="/works/new" variant="secondary" size="sm">
                   새 업무 만들기
@@ -115,14 +115,14 @@ export default async function NewApprovalPage({
           <Card>
             <CardHeader
               title="문서"
-              description="제목만 필수입니다. 본문은 만든 뒤에 이어서 적어도 됩니다."
+              description="제목만 필수입니다."
             />
             <CardBody className="flex flex-col gap-4">
               <Field
                 id="approval-work"
                 label="결재를 올릴 업무"
                 required
-                hint="내가 소유하거나 편집할 수 있는 업무만 나옵니다. 결재 기록은 그 업무의 이력에 함께 남습니다."
+                hint="내가 소유하거나 편집할 수 있는 업무만 나옵니다."
               >
                 {(p) => (
                   <Select {...p} name="workId" defaultValue={preselected}>
@@ -143,7 +143,7 @@ export default async function NewApprovalPage({
           <Card>
             <CardHeader
               title="결재선"
-              description="같은 부서에서 나보다 위인 사람을 급마다 한 명씩 훑어 미리 채웁니다. 만든 뒤 문서 화면에서 고칠 수 있습니다."
+              description="같은 부서에서 나보다 위인 사람을 급마다 한 명씩 미리 채웁니다."
             />
             <CardBody className="flex flex-col gap-4">
               {approvers.length > 0 ? (

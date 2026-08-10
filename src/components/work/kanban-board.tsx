@@ -62,7 +62,7 @@ export function KanbanBoard({
           <section
             key={status}
             aria-labelledby={`col-${status}`}
-            className={`rounded-md border border-t-3 border-gray-10 bg-gray-5/60 ${HEAD[status]}`}
+            className={`rounded-md border border-t-3 border-gray-10 bg-gray-10 ${HEAD[status]}`}
           >
             {/* 높이를 못박는다(min-h-12 = 48px).
                 「지연 N」 배지는 지연이 있는 열에만 붙는데, 배지에 위아래 여백이

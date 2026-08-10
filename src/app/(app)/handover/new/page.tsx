@@ -69,7 +69,7 @@ export default async function StartHandoverPage({
     <PageContainer width="form">
       <PageHeader
         title="인계 시작"
-        description="넘길 사람과 업무만 고르면 「업무인계·인수서」 초안이 만들어집니다. 담당 업무·진행사항·관련 문서는 이 시스템에 쌓인 기록에서 뽑아 채웁니다."
+        description="넘길 사람과 업무만 고르면 나머지는 쌓인 기록에서 뽑아 채웁니다."
       />
 
       <ActionFeedback msg={sp.msg} className="mb-4" />
@@ -79,7 +79,7 @@ export default async function StartHandoverPage({
           <EmptyState
             icon={Inbox}
             title="데모 모드에서는 인계를 시작할 수 없습니다"
-            description="데이터베이스에 연결하면 이 화면에서 인수자와 업무를 골라 초안을 만들 수 있습니다. 지금은 미리 넣어 둔 인계 건으로 진행 과정을 보실 수 있습니다."
+            description="지금은 미리 넣어 둔 인계 건으로 진행 과정을 보실 수 있습니다."
             action={
               <ButtonLink href="/handover" variant="secondary">
                 진행 중인 인계 보기
@@ -92,7 +92,7 @@ export default async function StartHandoverPage({
           <EmptyState
             icon={FileSignature}
             title="넘길 수 있는 업무가 없습니다"
-            description="인계 대상이 되는 것은 내가 주담당인 업무뿐입니다. 편집자나 열람자로 참여한 업무는 주담당이 따로 있고, 그 사람이 넘깁니다."
+            description="넘길 수 있는 것은 내가 주담당인 업무뿐입니다."
             action={
               <ButtonLink href="/works" variant="secondary">
                 업무 보드로 가기
@@ -107,14 +107,13 @@ export default async function StartHandoverPage({
             <CardHeader
               title="인수자"
               as="h2"
-              description="넘겨받을 사람입니다. 재직 중인 직원만 목록에 나타납니다."
             />
             <CardBody>
               <Field
                 id="handover-to"
                 label="인수자"
                 required
-                hint="인계를 실행하면 이 사람이 주담당이 되고, 나는 열람 권한만 남습니다."
+                hint="재직 중인 직원만 나옵니다. 실행하면 이 사람이 주담당이 되고, 나는 열람 권한만 남습니다."
                 className="max-w-md"
               >
                 {(p) => (
@@ -141,7 +140,7 @@ export default async function StartHandoverPage({
             <CardHeader
               title={`넘길 업무 ${owned.length}건`}
               as="h2"
-              description="내가 주담당인 업무입니다. 처음에는 모두 선택되어 있으니, 넘기지 않을 업무만 체크를 해제해 주세요."
+              description="모두 선택되어 있습니다. 넘기지 않을 업무만 체크를 해제해 주세요."
             />
             <fieldset>
               <legend className="sr-only">넘길 업무 고르기</legend>

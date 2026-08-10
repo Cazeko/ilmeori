@@ -71,14 +71,26 @@ export default async function AuditPage() {
                       <Avatar profile={l.actor} className="mt-0.5" />
                     ) : null}
                     <div className="min-w-0 flex-1">
-                      <p className="text-body-sm text-gray-80">
+                      {/* 시각을 이 줄 안으로 들였다. 예전에는 <li> 의 flex
+                          자식으로 따로 서서 shrink-0 로 95px 를 붙박이로
+                          가져갔고, 390px 에서 본문 칸이 159px 만 남아 업무
+                          제목이 거의 전부 잘렸다 — 「누가 무엇을 열어 봤는가」를
+                          읽는 화면인데 그 「무엇」이 안 읽혔다. */}
+                      <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-body-sm text-gray-80">
                         <span className="font-bold text-gray-90">
                           {l.actor?.name ?? "알 수 없음"}
                         </span>
-                        <span className="ml-1.5 inline-flex items-center gap-1 rounded-xs bg-gray-5 px-1.5 py-0.5 text-body-xs font-bold text-gray-60">
+                        <span className="inline-flex items-center gap-1 rounded-xs bg-gray-5 px-1.5 py-0.5 text-body-xs font-bold text-gray-60">
                           <Icon aria-hidden className="size-3" />
                           {ACCESS_KIND_LABEL[l.kind]}
                         </span>
+                        <time
+                          dateTime={l.created_at}
+                          title={formatFullDateTime(l.created_at)}
+                          className="text-body-xs tabular-nums text-gray-60"
+                        >
+                          {formatDateTime(l.created_at)}
+                        </time>
                       </p>
                       {l.work ? (
                         <p className="mt-1 min-w-0">
@@ -91,13 +103,6 @@ export default async function AuditPage() {
                         </p>
                       ) : null}
                     </div>
-                    <time
-                      dateTime={l.created_at}
-                      title={formatFullDateTime(l.created_at)}
-                      className="shrink-0 text-body-xs tabular-nums text-gray-60"
-                    >
-                      {formatDateTime(l.created_at)}
-                    </time>
                   </li>
                 );
               })}

@@ -12,11 +12,7 @@ import { createWork } from "@/lib/actions/works";
 
 import { canMutate } from "@/lib/env";
 import { getViewerDepartmentName, requireViewer } from "@/lib/session";
-import {
-  VISIBILITY_HINT,
-  VISIBILITY_LABEL,
-  type WorkVisibility,
-} from "@/lib/types";
+import { VISIBILITY_LABEL, type WorkVisibility } from "@/lib/types";
 
 export const metadata: Metadata = { title: "새 업무" };
 
@@ -83,7 +79,7 @@ export default async function NewWorkPage({
               viewer={viewer}
               action={createWork}
               departmentName={departmentName}
-              departmentNote={`업무는 만든 사람의 소속 부서에 속합니다. ${departmentName} 외의 부서로는 만들 수 없으며, 다른 부서 사람과 함께 일하려면 만든 뒤 참여자로 추가합니다.`}
+              departmentNote={`${departmentName} 외의 부서로는 만들 수 없습니다. 다른 부서 사람과 함께 일하려면 만든 뒤 참여자로 추가합니다.`}
               submitLabel="업무 만들기"
               cancelHref="/works"
             >
@@ -98,8 +94,10 @@ export default async function NewWorkPage({
                 {(p) => (
                   <Select {...p} name="visibility" defaultValue="department">
                     {VISIBILITIES.map((v) => (
+                      // 설명을 항목 글자에 붙이면 390px 에서 「부서 공개 — 같은
+                      // 부…」처럼 잘려 정작 고르는 이름이 안 읽힌다. 이름만 둔다.
                       <option key={v} value={v}>
-                        {VISIBILITY_LABEL[v]} — {VISIBILITY_HINT[v]}
+                        {VISIBILITY_LABEL[v]}
                       </option>
                     ))}
                   </Select>

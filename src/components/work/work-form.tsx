@@ -131,6 +131,11 @@ export async function WorkForm({
           <Input
             {...p}
             name="title"
+            /* required 는 공백 한 칸을 「채워진 값」으로 본다. 그러면 서버의
+               title.trim().min(1) 에 걸려 되돌아오는데, 그 왕복에서 함께 적던
+               내용이 통째로 사라진다. 같은 규칙을 브라우저에서 먼저 건다. */
+            pattern=".*\S.*"
+            title="공백만으로는 제목을 만들 수 없습니다"
             type="text"
             maxLength={200}
             defaultValue={defaultValues?.title ?? ""}

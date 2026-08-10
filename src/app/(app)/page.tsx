@@ -82,7 +82,7 @@ export default async function HomePage() {
         <Link
           href="/handover"
           data-variant="plain"
-          className="mb-5 flex items-center gap-4 rounded-md border border-accent/40 bg-accent-bg px-5 py-4 transition-colors duration-150 hover:border-accent"
+          className="mb-5 flex items-center gap-4 rounded-md border border-accent/40 bg-accent-bg px-5 py-4 transition-colors duration-150 hover:border-accent active:border-accent active:bg-accent/15"
         >
           <ArrowLeftRight aria-hidden className="size-5 shrink-0 text-accent-text" />
           <span className="min-w-0 flex-1">
@@ -201,7 +201,12 @@ export default async function HomePage() {
       </div>
 
       <div className="grid items-start gap-5 xl:grid-cols-[1.3fr_1fr]">
-        <div className="flex flex-col gap-5">
+        {/* min-w-0 — grid 자식의 min-width 는 기본이 auto(=min-content)라
+            안쪽에서 truncate 를 걸어도 트랙이 내용만큼 부푼다. 소식 목록의
+            업무 제목이 nowrap 이라, 제목이 긴 계정(박준호)의 홈이 390px 에서
+            문서 폭 416px 로 넘쳤다. 여기서 0 으로 눌러야 안쪽 truncate 가
+            제 일을 한다. */}
+        <div className="flex min-w-0 flex-col gap-5">
           {/* ── 최근 소식 ──────────────────────────────────────────────── */}
           <Card>
             <CardHeader
@@ -222,7 +227,7 @@ export default async function HomePage() {
         </div>
 
         {/* ── 다가오는 마감 ────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-5">
+        <div className="flex min-w-0 flex-col gap-5">
           <Card>
             <CardHeader title="다가오는 마감" />
             {mine.filter((w) => w.due_date && w.derived !== "done").length > 0 ? (
@@ -235,7 +240,7 @@ export default async function HomePage() {
                       <Link
                         href={`/works/${w.id}`}
                         data-variant="plain"
-                        className="flex items-center gap-3 px-5 py-3 hover:bg-gray-5"
+                        className="flex items-center gap-3 px-5 py-3 hover:bg-gray-5 active:bg-primary-5"
                       >
                         <CalendarClock
                           aria-hidden

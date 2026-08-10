@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LinkPending } from "@/components/ui/link-pending";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { NavPlaceholder } from "@/components/shell/nav-placeholder";
 import { useNavPending } from "@/components/shell/use-nav-pending";
 import { usePathname } from "next/navigation";
@@ -300,9 +301,13 @@ export function AppShell({
                  낱말이 들어 있는지를 보는 것이고 어떤 모델도 부르지 않는다.
                  하지 않는 일을 칸에 적어 두면, 심사에서 한 번 눌러 보는 것으로
                  무너진다. 「인계서를 AI가 썼다」고 적지 않기로 한 것과 같은 규칙이다. */
-              placeholder="업무 제목으로 찾기"
+              /* 좁은 화면에서는 짧게. 131px 칸에 「업무 제목으로 찾기」를 넣으면
+                 「업무 제목으」에서 잘려 무엇을 넣는 칸인지 못 읽는다. */
+              placeholder="업무 찾기"
               autoComplete="off"
-              className="h-9 w-full rounded-sm border border-gray-40 bg-gray-5 pr-3 pl-9 text-body-sm text-gray-90 placeholder:text-gray-60 hover:border-gray-50 focus:bg-surface"
+              /* text-body(17px) — iOS 는 16px 미만 입력칸을 탭하면 화면을 확대하고
+                 되돌려 주지 않는다. 높이도 그에 맞춰 h-11(44px)로 올린다. */
+              className="h-11 w-full rounded-sm border border-gray-50 bg-gray-5 pr-3 pl-9 text-body text-gray-90 placeholder:text-gray-60 hover:border-gray-60 focus:bg-surface sm:text-body-sm"
             />
           </div>
         </form>
@@ -324,16 +329,18 @@ export function AppShell({
               크기를 아바타(32px)에 맞춘다 — 옆에 선 것들보다 크면 「계정 전환」이
               머리에서 가장 눈에 띄는 단추가 되는데, 그건 여기서 가장 덜 쓰는 것이다. */}
           <form action={leaveDemo}>
-            <button
-              type="submit"
+            {/* 서버 액션 폼 중 여기만 눌린 표시가 없었다. 세션을 끊고 다시
+                들어오는 왕복이라 오히려 제일 오래 걸리는 폼이다. */}
+            <SubmitButton
+              variant="ghost"
               title="세션을 끊고 다른 데모 계정으로 들어갑니다"
-              className="flex h-8 min-w-8 cursor-pointer items-center justify-center gap-1.5 rounded-sm border border-gray-20 px-1.5 text-body-xs font-bold text-gray-60 hover:bg-gray-5 sm:px-2"
+              className="h-8 min-h-8 min-w-8 gap-1.5 border border-gray-50 px-1.5 text-body-xs font-bold text-gray-60 sm:px-2"
             >
               <Repeat aria-hidden className="size-3.5" />
               {/* 좁은 화면에서는 아이콘만. 글자까지 두면 검색칸이 눌려 버린다. */}
               <span className="hidden sm:inline">계정 전환</span>
               <span className="sr-only sm:hidden">계정 전환</span>
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </header>

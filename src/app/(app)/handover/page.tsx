@@ -512,7 +512,7 @@ export default async function HandoverPage({
                       인계서에 보탠 내용도 그때부터 더하거나 지울 수 없습니다.
                     </p>
                     {/* 확인 절차를 <details> 로 둔다.
-                      예전에는 ConfirmDialog(<dialog>+showModal())였는데, 그것은
+                      예전에는 <dialog>+showModal() 로 물었는데, 그 컴포넌트는
                       "use client" 이고 여는 일이 onClick 에 걸려 있어 **스크립트가
                       없으면 이 단추가 아무 일도 하지 않았다.** 이 제품에서 가장
                       되돌릴 수 없는 동작이 무JS 에서 실행 불가였다는 뜻이다.
@@ -570,11 +570,12 @@ export default async function HandoverPage({
             {/* ── 취소 ──────────────────────────────────────────────────────
               실행 전에만 열어 둔다. 인수자를 잘못 골랐을 때 되돌릴 길이 없으면
               한 번에 한 건이라는 규칙 때문에 새 인계를 영영 시작할 수 없다.
-              펼치는 손짓 한 번이 확인 절차를 대신한다 — ConfirmDialog는
+              펼치는 손짓 한 번이 확인 절차를 대신한다 — <dialog>로 묻는 방식은
               "use client"라 스크립트가 없으면 버튼이 아무 일도 하지 않는다. */}
             {isSender && !done && canMutate ? (
               <details className="rounded-md border border-gray-10 bg-surface">
-                <summary className="min-h-11 cursor-pointer list-none px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+                  <RotateCcw aria-hidden className="size-4 shrink-0 text-gray-40" />
                   인계를 잘못 시작했다면
                 </summary>
                 <div className="border-t border-gray-10 px-4 py-3.5">

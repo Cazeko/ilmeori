@@ -17,7 +17,10 @@ import type { Profile } from "@/lib/types";
  * 아래 여섯 색은 모두 흰색 대비 4.9:1 이상이다(측정값 괄호 안).
  */
 const PALETTE = [
-  "bg-primary text-white", //   #004696 (9.07)
+  // 브랜드 파랑(--color-primary)은 쓰지 않는다. 그 색은 이 제품에서 「지금
+  // 여기」와 「누르면 되는 것」을 가리키는 색이라, 사람 얼굴 자리에 같이 쓰면
+  // 둘 중 하나가 흐려진다. 명도만 맞춘 다른 남색을 쓴다(흰 글자 대비 8.28).
+  "bg-[#1f4e79] text-white", //  (8.66)
   "bg-[#0a63a8] text-white", // (6.24)
   "bg-[#1c7030] text-white", // (6.16)
   "bg-[#b3541f] text-white", // (4.99)

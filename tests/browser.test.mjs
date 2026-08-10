@@ -698,7 +698,13 @@ console.log("\n[8] 결재 — 결재함 · 결재란 · 업무 상세 탭");
       { waitUntil: "domcontentloaded" },
     );
     const tab = await allText(park);
-    ok("업무 상세에 결재 탭이 있다", tab.includes("이 업무에서 올린 내부결재문서"));
+    // 탭이 그려졌는지는 그 안의 «문구»가 아니라 «자리»로 본다. 예전에는
+    // 소개 문단의 한 구절을 표시로 삼았는데, 그 문단은 화면에서 지워질 수
+    // 있는 글이고 실제로 지워졌다 — 그때 이 시험이 「결재 탭이 없다」고 말했다.
+    ok(
+      "업무 상세에 결재 탭이 있다",
+      (await park.locator("#approval-heading").count()) === 1,
+    );
     ok(
       "그 업무의 결재가 탭에 실린다",
       tab.includes("2026년 음식물류폐기물 대행 원가산정 용역 결과 협조 요청"),

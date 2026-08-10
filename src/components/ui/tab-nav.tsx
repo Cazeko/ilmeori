@@ -35,34 +35,34 @@ export function TabNav({
 }) {
   return (
     <nav aria-label={label} className="border-b border-gray-10">
-      {/* 좁은 화면에서는 탭 다섯 개가 390px 에 들어가지 않아 옆으로 밀린다.
-          거기까지는 어쩔 수 없지만, **지금 보고 있는 탭이 화면 밖에 있는 것**은
-          다른 문제다. 이력 탭에 들어와 놓고 「내가 어디에 있는지」 표시를 아예
-          못 보게 된다. 활성 탭만 왼쪽에 붙여 둔다(sticky) — 옆으로 아무리
-          밀어도 현재 자리는 늘 보인다. z-10 은 「고정 영역 안쪽 요소」 층이다. */}
-      <ul className="-mb-px flex gap-1 overflow-x-auto">
+      {/* 좁은 화면에서는 탭 다섯 개가 390px 에 들어가지 않는다.
+          예전에는 옆으로 미는 줄(overflow-x-auto)이었는데, 그러면 이력이나
+          참여자 탭에 들어와도 스크롤이 0 이라 **활성 탭이 화면 밖에 있다** —
+          「내가 어디에 있는지」 표시를 아예 못 본다. sticky 로도 안 된다.
+          오른쪽에 있는 것은 그 자리까지 밀기 전에는 붙지 않기 때문이다.
+
+          그래서 좁은 화면에서는 밀지 않고 **두 줄로 접는다.** 다섯 개가 전부
+          보이므로 현재 자리를 놓칠 일이 없다. 다만 줄이 접히면 밑줄 표시가
+          첫 줄 한가운데에 뜨게 되므로, 좁은 화면에서만 「칠한 알약」으로
+          바꾸고 밑줄은 sm 이상에서만 쓴다. */}
+      <ul className="flex flex-wrap gap-1 sm:-mb-px sm:flex-nowrap sm:overflow-x-auto">
         {items.map((t) => {
           const current = t.key === active;
           const Icon = t.icon;
           return (
-            <li
-              key={t.key}
-              className={cn(
-                "shrink-0",
-                current && "sticky left-0 z-10 bg-surface sm:static",
-              )}
-            >
+            <li key={t.key} className="shrink-0">
               <Link
                 href={t.href}
                 data-variant="plain"
                 aria-current={current ? "page" : undefined}
                 className={cn(
-                  "flex min-h-11 items-center gap-2 border-b-2 px-3 text-body-sm font-bold transition-colors duration-150 sm:px-4",
+                  "flex min-h-11 items-center gap-2 rounded-sm px-3 text-body-sm font-bold transition-colors duration-150",
+                  "sm:rounded-none sm:border-b-2 sm:px-4",
                   // 누르는 즉시 칠해진다(브라우저가 한다 — 자바스크립트 대기 없음)
                   "active:bg-primary-10 active:text-primary",
                   current
-                    ? "border-primary text-primary"
-                    : "border-transparent text-gray-60 hover:border-gray-20 hover:text-gray-80",
+                    ? "bg-primary-5 text-primary sm:border-primary sm:bg-transparent"
+                    : "text-gray-60 hover:bg-gray-5 hover:text-gray-80 sm:border-transparent sm:bg-transparent sm:hover:border-gray-20",
                 )}
               >
                 {Icon ? <Icon aria-hidden className="size-4" /> : null}
