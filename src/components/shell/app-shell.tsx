@@ -220,7 +220,7 @@ export function AppShell({
       <header className="sticky top-0 z-20 flex h-header shrink-0 items-center gap-3 border-b border-gray-10 bg-surface px-3 sm:px-4 print:hidden">
         {/* ── 좁은 화면의 서랍 ──────────────────────────────────────────
             <details> 라서 스크립트 없이 열린다. summary 가 곧 햄버거다. */}
-        <details ref={drawerRef} className="lg:hidden">
+        <details ref={drawerRef} data-drawer className="lg:hidden">
           <summary
             aria-label="메뉴"
             className="flex size-11 shrink-0 cursor-pointer list-none items-center justify-center rounded-sm text-gray-60 hover:bg-gray-5 [&::-webkit-details-marker]:hidden"
@@ -230,16 +230,24 @@ export function AppShell({
 
           {/* 덮개는 서랍보다 **아래** 층이어야 한다. 예전에는 덮개가 z-40,
               서랍이 z-30 이라 덮개가 서랍 위를 덮었고, 메뉴를 눌러도 클릭이
-              전부 덮개로 들어가 좁은 화면에서 이동이 아예 되지 않았다. */}
+              전부 덮개로 들어가 좁은 화면에서 이동이 아예 되지 않았다.
+
+              data-drawer-* 는 globals.css 가 잡는다 — 서랍이 왼쪽 밖에서
+              들어오고 덮개가 함께 짙어진다. 여는 일 자체는 <details> 가
+              하므로, 스크립트가 없으면 움직임만 없고 서랍은 똑같이 나온다. */}
           <span
             aria-hidden
+            data-drawer-scrim
             className="fixed inset-0 z-30 block bg-gray-100/40"
             onClick={() => {
               if (drawerRef.current) drawerRef.current.open = false;
             }}
           />
 
-          <div className="fixed top-0 bottom-0 left-0 z-40 flex w-sidebar flex-col overflow-y-auto border-r border-gray-10 bg-surface">
+          <div
+            data-drawer-panel
+            className="fixed top-0 bottom-0 left-0 z-40 flex w-sidebar flex-col overflow-y-auto border-r border-gray-10 bg-surface"
+          >
             <div className="flex h-header shrink-0 items-center justify-between px-4">
               <span className="text-body font-bold text-gray-90">메뉴</span>
               <button

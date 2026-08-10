@@ -312,8 +312,35 @@ export function WorkLive({
   // 「연결됐고 나 혼자 보고 있다」는 이 화면의 기본값이다. 그것을 테두리 친
   // 판으로 상시 알리면, 업무 상세를 열 때마다 제목 아래 한 줄이 늘 새 정보인
   // 척 자리를 차지한다. 할 말이 있을 때만 판을 그린다 — 같이 보는 사람이
-  // 있거나, 밀린 변경이 있거나, 연결이 정상이 아닐 때.
-  const quiet = link === "live" && others.length === 0 && waiting === 0;
+  // 있거나, 밀린 변경이 있거나, 연결이 끊겼을 때.
+  //
+  // 「붙는 중」도 판을 그릴 일이 아니다. 예전에는 그렸다 — 붙는 데 걸리는
+  // 몇백 ms 동안 테두리 친 판이 떴다가, 붙는 순간 한 줄로 접혔다. 업무를 열
+  // 때마다 제목 아래가 한 번 출렁인 것이고, 그동안 새로 알려 준 것은 없다.
+  // 아래 판에 「밀려 올라오는」 움직임을 준 이상 이건 더 두면 안 된다:
+  // 소식이 왔다는 신호가 소식 없이도 매번 도는 꼴이 된다.
+  const quiet = link !== "lost" && others.length === 0 && waiting === 0;
+
+  /**
+   * 화면이 저절로 갈리는 중이라는 표시.
+   *
+   * 예전에는 이 사실이 아래 sr-only 라이브 리전에만 있었다. 화면을 못 보는
+   * 사람은 「새로 불러오는 중입니다」를 듣는데, **보는 사람에게는 아무 표시가
+   * 없었다** — 읽던 글이 소리 없이 다른 글로 바뀌기만 했다. 편집 중일 때만
+   * 「지금 반영」 단추에 이 상태가 보였고, 편집 중이 아닐 때가 오히려 더 잦다.
+   *
+   * 도는 것에는 motion-safe 를 붙인다. 위 전역 규칙이 reduce 에서 길이를
+   * 0.01ms 로 만드는데, 무한 반복인 spin 은 그러면 멎는 게 아니라 뭉개진다.
+   */
+  const applyingMark = applying ? (
+    <>
+      <span aria-hidden>·</span>
+      <span className="inline-flex items-center gap-1 font-bold text-primary">
+        <RefreshCw aria-hidden className="size-3.5 motion-safe:animate-spin" />
+        새 내용 불러오는 중
+      </span>
+    </>
+  ) : null;
 
   if (quiet) {
     // 테두리 친 판만 걷어낸다. 「연결됨」이라고 적었으면 누가 보고 있는지도
@@ -321,11 +348,28 @@ export function WorkLive({
     // 말하는 것이 된다(tests/browser.test.mjs [6] 가 이 규칙을 지킨다).
     return (
       <div className="mt-4 print:hidden">
-        <p className="inline-flex items-center gap-1.5 text-body-xs text-gray-60">
-          <Wifi aria-hidden className="size-3.5 text-status-done" />
-          <span className="font-bold text-status-done-text">실시간 연결됨</span>
-          <span aria-hidden>·</span>
-          지금은 나만 보고 있습니다
+        <p className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 text-body-xs text-gray-60">
+          <Wifi
+            aria-hidden
+            className={cn(
+              "size-3.5",
+              link === "live" ? "text-status-done" : "text-gray-40",
+            )}
+          />
+          {/* 붙는 중에는 「나만 보고 있습니다」라고 적지 않는다. 아직 접속자를
+              물어보지도 않은 시점이라, 맞을 수는 있어도 근거가 없는 말이다. */}
+          {link === "live" ? (
+            <>
+              <span className="font-bold text-status-done-text">
+                실시간 연결됨
+              </span>
+              <span aria-hidden>·</span>
+              지금은 나만 보고 있습니다
+            </>
+          ) : (
+            <span className="font-bold text-gray-60">실시간 연결 중</span>
+          )}
+          {applyingMark}
         </p>
       </div>
     );
@@ -333,7 +377,10 @@ export function WorkLive({
 
   return (
     <div className="mt-4 print:hidden">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-gray-10 bg-surface px-4 py-2.5">
+      {/* 이 판은 **소식이 있을 때만** 나타난다(quiet 이면 위에서 돌아갔다).
+          나타나는 것 자체가 정보이므로 밀려 올라오게 한다 — 조용히 끼어들면
+          읽던 자리가 밀리기만 하고 무엇이 늘었는지는 안 보인다. */}
+      <div className="animate-rise-in flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-gray-10 bg-surface px-4 py-2.5">
         <p
           className={cn(
             "inline-flex items-center gap-1.5 text-body-xs font-bold",
@@ -373,6 +420,7 @@ export function WorkLive({
                 <span>{`${who}${josa(who, "이", "가")} 함께 보고 있습니다`}</span>
               </>
             )}
+            {applyingMark}
           </p>
         ) : link === "lost" ? (
           <p className="text-body-xs text-gray-60">
@@ -383,7 +431,7 @@ export function WorkLive({
 
       {/* 편집 중에 쌓인 변경. 반영할지는 쓰고 있는 사람이 정한다. */}
       {waiting > 0 ? (
-        <div className="mt-2 flex flex-wrap items-center gap-3 rounded-md border border-status-doing/40 bg-status-doing-bg px-4 py-2.5">
+        <div className="animate-rise-in mt-2 flex flex-wrap items-center gap-3 rounded-md border border-status-doing/40 bg-status-doing-bg px-4 py-2.5">
           <p className="min-w-0 flex-1 text-body-sm text-gray-80">
             <span className="font-bold">
               다른 사람이 {waitingLabel}

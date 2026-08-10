@@ -184,12 +184,56 @@
    *
    *   z-10  고정 헤더 안쪽 요소 — 표 머리글, 칸반 열 제목
    *   z-20  상단 바
-   *   z-30  모바일 사이드바
-   *   z-40  배경 덮개
+   *   z-30  배경 덮개
+   *   z-40  모바일 서랍
    *   z-50  대화상자
+   *
+   * 덮개가 서랍보다 **아래**다. 반대로 두었던 때가 있었는데, 그러면 덮개가
+   * 서랍 위를 덮어 메뉴를 눌러도 클릭이 전부 덮개로 들어간다 —
+   * 좁은 화면에서 이동이 통째로 죽었다(shell/app-shell.tsx 에 같은 주석).
    *
    * (Tailwind v4에 --z-* 네임스페이스가 없어 토큰이 아니라 규약으로 둔다)
    */
+
+  /* --- 움직임 ---------------------------------------------------------------
+     이 제품에서 움직임은 **장식이 아니라 대답**이다. 하루 여덟 시간 띄워 두는
+     창이라, 물어보지 않은 것에 답하는 움직임은 셋째 날부터 거슬린다.
+     그래서 아래 셋만 둔다. 각각이 답하는 질문을 함께 적는다.
+
+       rise-in    "방금 뭔가 도착했나?"   — 실시간으로 온 알림이 밀려 올라온다
+       drawer-in  "메뉴가 어디서 나왔나?" — 서랍이 왼쪽 밖에서 들어온다
+       scrim-in   위 서랍에 딸린 덮개
+
+     길이는 거리에 비례시킨다. 6px 움직이는 것과 260px 움직이는 것에 같은
+     시간을 주면, 짧은 쪽은 느리고 긴 쪽은 급해 보인다.
+     (되돌아가는 길은 애니메이션하지 않는다 — 닫을 때 기다리게 하지 않는다)
+
+     ※ prefers-reduced-motion: reduce 에서는 아래 @layer base 의 전역 규칙이
+       길이를 0.01ms 로 만든다. 아래 셋은 한 번만 돌고 마는 것이라 그것으로
+       충분하다 — 즉시 제자리에 놓인다.
+       **무한 반복인 것에는 통하지 않는다.** animate-spin 은 길이가 0 이 되면
+       멎는 게 아니라 뭉개진다. 그래서 도는 표시에는 motion-safe: 를 따로
+       붙인다(ui/link-pending.tsx, work/work-live.tsx, shell/nav-placeholder.tsx). */
+  --animate-rise-in: ilm-rise-in 180ms ease-out;
+  --animate-drawer-in: ilm-drawer-in 220ms cubic-bezier(0.2, 0, 0, 1);
+  --animate-scrim-in: ilm-scrim-in 220ms ease-out;
+
+  @keyframes ilm-rise-in {
+    from {
+      opacity: 0;
+      translate: 0 -0.375rem;
+    }
+  }
+  @keyframes ilm-drawer-in {
+    from {
+      translate: -100% 0;
+    }
+  }
+  @keyframes ilm-scrim-in {
+    from {
+      opacity: 0;
+    }
+  }
 }
 
 @layer base {
@@ -237,6 +281,68 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+    /* ::details-content 는 위 * 에 걸리지 않는다 — 전체 선택자는 요소를
+       고르는 것이지 가상요소를 고르는 것이 아니다. 실제로 아래 접힘 전이가
+       reduce 를 무시하고 그대로 돌았다(재생 프레임으로 확인).
+
+       규칙을 **따로** 둔다. 위 목록에 끼워 넣으면 ::details-content 를 모르는
+       브라우저가 선택자 목록 전체를 버려, 움직임을 줄여 달라는 설정이
+       이 앱 전체에서 통째로 죽는다. */
+    *::details-content {
+      transition-duration: 0.01ms !important;
+      /* 지연도 함께 지운다. 아래 접힘 규칙이 자르기를 180ms 뒤에 푸는데,
+         길이만 0 으로 만들면 열리자마자 그 180ms 동안 포커스 테두리가 잘린다. */
+      transition-delay: 0s !important;
+    }
+  }
+
+  /* ── 접히는 글은 밀려 내려온다 ──────────────────────────────────────────
+     이 앱에는 <details> 가 27곳 있다. 주절주절 늘어놓던 설명을 걷어내면서
+     대부분 이 모양이 됐고, 전부 **툭** 하고 나타난다. 글이 어디서 왔는지가
+     안 보이니 화면이 뛴 것처럼 읽힌다 — 특히 아래에 다른 내용이 있을 때
+     그 내용이 순간이동한다.
+
+     높이를 보간한다(opacity 만 흐리면 자리는 여전히 한 번에 벌어진다).
+     auto 로의 보간은 interpolate-size 가 있어야 되는데, :root 에 걸면
+     이 앱의 모든 키워드 크기 전이가 영향을 받으므로 **이 가상요소에만** 건다.
+     (::details-content 를 모르는 브라우저에서는 규칙이 통째로 무시되고,
+      지금까지처럼 즉시 열린다 — 잃는 것이 없다)
+
+     서랍은 뺀다. 서랍의 내용은 position:fixed 라 높이가 늘 0 이고,
+     content-visibility 를 붙들고 있으면 **닫을 때 180ms 동안 남아 있다.**
+     서랍은 아래에서 따로 움직인다. */
+  details:not([data-drawer])::details-content {
+    block-size: 0;
+    /* 여는 **동안만** 자른다. 열린 뒤에도 자르고 있으면 맨 아래 조작기의
+       포커스 테두리(2px + 바깥 여백 2px)가 잘린다. */
+    overflow: clip;
+    interpolate-size: allow-keywords;
+    transition-property: block-size, content-visibility, overflow;
+    transition-duration: 180ms, 180ms, 0s;
+    transition-timing-function: ease;
+    transition-behavior: allow-discrete;
+  }
+  details:not([data-drawer])[open]::details-content {
+    block-size: auto;
+    overflow: visible;
+    /* 자르기는 **다 열린 뒤에** 푼다. overflow 는 중간값이 없는 성질이라
+       그냥 두면 절반쯤에서 툭 풀리고, 그 순간 아직 다 자라지 않은 판 밖으로
+       글 아랫부분이 튀어나와 아래 내용과 겹친다.
+       (transition 단축 속성으로 다시 적으면 위 allow-discrete 가 지워진다 —
+        그래서 지연만 따로 준다) */
+    transition-delay: 0s, 0s, 180ms;
+  }
+
+  /* ── 서랍은 왼쪽 밖에서 들어온다 ────────────────────────────────────────
+     여는 일은 <details> 가 하므로(스크립트 없이 열린다) 여기서는 나타나는
+     방식만 정한다. transition 이 아니라 animation 인 이유: 열릴 때 요소가
+     비로소 그려지기 시작하므로 전이의 「시작값」을 브라우저가 못 잡는다.
+     애니메이션은 그려지기 시작하는 그 순간 돈다. */
+  details[data-drawer][open] > [data-drawer-scrim] {
+    animation: var(--animate-scrim-in);
+  }
+  details[data-drawer][open] > [data-drawer-panel] {
+    animation: var(--animate-drawer-in);
   }
 }
 
