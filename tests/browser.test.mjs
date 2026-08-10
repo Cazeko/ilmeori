@@ -75,6 +75,13 @@ async function pick(page, name) {
 }
 
 async function login(ctx, name) {
+  // 세션을 먼저 비운다. 같은 컨텍스트에서 계정을 바꿔 가며 볼 때, 앞의 세션이
+  // 남아 있으면 /login 이 홈으로 튕겨(proxy 의 「로그인한 사람은 로그인 화면에
+  // 머물지 않는다」) 계정 카드가 아예 없다. 그러면 다음 줄이 30초를 기다리다
+  // 시험 블록이 통째로 죽는다 — 실제로 [8] 결재가 그렇게 멈춰 있었고,
+  // 그 뒤 [9]·[10]은 한 번도 돌지 않았다.
+  await ctx.clearCookies();
+
   const page = await ctx.newPage();
   await page.goto(`${BASE}/login`, { waitUntil: "load" });
   await pick(page, name);
@@ -944,6 +951,42 @@ console.log("\n[10] PWA — 설명서 · 서비스워커 · 오프라인 안내"
     const page = await login(ctx, "박준호");
     await page.goto(`${BASE}/works`, { waitUntil: "domcontentloaded" });
     ok("보드는 그대로 돈다", (await allText(page)).includes("업무 보드"));
+  } finally {
+    await ctx.close();
+  }
+}
+
+// ── 11. 무JS 전제를 지키는 구조인가 ─────────────────────────────────────────
+//
+// 위 시험들은 「화면이 도는가」를 본다. 그런데 그것만으로는 이 회귀를 못 잡는다 —
+// loading.tsx 나 <Suspense> 를 하나 넣으면 본문이 <div hidden id="S:n"> 조각으로
+// 흘러오고 인라인 스크립트가 제자리로 옮기는데, 시험이 textContent 를 읽으면
+// display:none 인 글자까지 세어 **초록불이 그대로 남는다**(174건 중 103건).
+//
+// 그래서 화면이 아니라 **서버가 보낸 HTML 자체**를 본다. 조각이 하나라도 있으면
+// 자바스크립트를 끈 브라우저에서 그만큼이 안 보인다는 뜻이다.
+
+console.log("\n[11] 무JS — 본문이 HTML 에 통째로 실려 오는가");
+{
+  const ctx = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    const page = await login(ctx, "박준호");
+    for (const path of ["/", "/works", "/approvals", "/handover", "/audit"]) {
+      await page.goto(`${BASE}${path}`, { waitUntil: "domcontentloaded" });
+      const html = await page.content();
+      const fragments = (html.match(/<div hidden id="S:/g) ?? []).length;
+      ok(
+        `${path} 는 스트리밍 조각 없이 온다`,
+        fragments === 0,
+        fragments > 0 ? `조각 ${fragments}개 — 무JS 에서 이만큼이 안 보인다` : "",
+      );
+    }
+
+    // 본문이 실제로 보이는지도 함께 본다. 조각이 0개인데 <main> 이 비어 있으면
+    // 다른 이유로 깨진 것이다.
+    await page.goto(`${BASE}/works`, { waitUntil: "domcontentloaded" });
+    const mainText = await page.locator("main").innerText();
+    ok("무JS 에서 <main> 에 본문이 있다", mainText.length > 200, `${mainText.length}자`);
   } finally {
     await ctx.close();
   }

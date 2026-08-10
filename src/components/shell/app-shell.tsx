@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LinkPending } from "@/components/ui/link-pending";
+import { NavPlaceholder } from "@/components/shell/nav-placeholder";
+import { useNavPending } from "@/components/shell/use-nav-pending";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
@@ -68,6 +70,27 @@ export function AppShell({
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
+
+  /**
+   * 화면 이동이 진행 중인가 — 누른 그 순간부터.
+   *
+   * 본문 자리에 자리표시를 그리는 데 쓴다. 서버가 보내는 HTML 은 그대로 두고
+   * 브라우저에서만 옛 화면을 가리므로, 스크립트가 없으면 아무 일도 안 일어난다.
+   */
+  const { pending: navPending, target: navTarget } = useNavPending();
+
+  /**
+   * 80ms 안에 끝나는 이동에서는 자리표시를 아예 그리지 않는다.
+   * 그보다 빠른 전환에서 뼈대가 번쩍이면 기다림보다 더 산만하다.
+   */
+  const [placeholderFor, setPlaceholderFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!navPending || !navTarget) return;
+    const timer = setTimeout(() => setPlaceholderFor(navTarget), 80);
+    return () => clearTimeout(timer);
+  }, [navPending, navTarget]);
+
+  const showPlaceholder = navPending && placeholderFor === navTarget;
 
   // 서랍을 열면 포커스를 안으로 옮기고, Esc로 닫을 수 있게 한다.
   // 이걸 빠뜨리면 키보드 사용자는 서랍을 열고도 그 안으로 못 들어간다.
@@ -279,7 +302,11 @@ export function AppShell({
 
         {/* ── 본문 ────────────────────────────────────────────────────────── */}
         <main id="main" tabIndex={-1} className="min-w-0 flex-1 bg-gray-5 print:bg-white">
-          {children}
+          {/* display:contents — 감싸도 배치가 달라지지 않는다.
+              자리표시를 그리는 동안에만 이 층을 통째로 감춘다(지우지 않는다 —
+              지우면 되돌아왔을 때 스크롤과 입력칸이 날아간다). */}
+          <div className={showPlaceholder ? "hidden" : "contents"}>{children}</div>
+          {showPlaceholder ? <NavPlaceholder /> : null}
         </main>
       </div>
     </div>

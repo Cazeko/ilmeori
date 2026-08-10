@@ -15,6 +15,9 @@ import { requireViewer } from "@/lib/session";
 
 export const metadata: Metadata = { title: "업무 보드" };
 
+/** 주소에서 온 부서 id 가 uuid 모양인가. 아니면 DB 에 넘기지 않는다(22P02 방지). */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * 업무 보드.
  *
@@ -32,19 +35,37 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
   const overdueOnly = sp.overdue === "1";
   const archived = sp.archived === "1";
 
-  const tree = await getDepartmentTree();
+  // 부서 목록과 업무 목록은 서로를 기다릴 이유가 없다. 예전에는 트리를 받아
+  // 「아는 부서인가」를 판정한 **뒤에** 업무를 물었는데, 그 검사는 값이 조직도에
+  // 있는지 보는 것뿐이라 뒤로 미룰 수 있다. 그래서 우선 그대로 걸어 두 질의를
+  // 한꺼번에 던지고, 모르는 부서였던 것으로 밝혀지면 그때만 다시 묻는다.
+  // (사람은 <select> 에서 고르므로 다시 묻는 경우는 주소를 손으로 고쳤을 때뿐이다)
+  //
+  // 다만 모양이 uuid 인지는 **여기서 먼저** 본다. 아무 문자열이나 그대로 넘기면
+  // Postgres 가 22P02 로 질의를 거절해 화면이 500 이 된다(/works?dept=notauuid).
+  // 예전에는 트리 대조가 그 역할까지 겸했다 — 순서를 바꾸면서 빠진 검사다.
+  const guessDept = UUID.test(deptParam) ? deptParam : undefined;
+
+  const [tree, worksForGuess] = await Promise.all([
+    getDepartmentTree(),
+    listWorks(viewer, {
+      q,
+      departmentId: guessDept,
+      mine,
+      overdueOnly,
+      archived,
+    }),
+  ]);
+
   const knownDept = tree.some(
     (b) => b.id === deptParam || b.children.some((c) => c.id === deptParam),
   );
   const departmentId = knownDept ? deptParam : undefined;
 
-  const works = await listWorks(viewer, {
-    q,
-    departmentId,
-    mine,
-    overdueOnly,
-    archived,
-  });
+  const works =
+    guessDept && !knownDept
+      ? await listWorks(viewer, { q, mine, overdueOnly, archived })
+      : worksForGuess;
 
   // 「지연 n건」 알림에 쓸 수. 예전에는 같은 표를 조건만 바꿔 한 번 더 불렀는데,
   // 그 질의가 임베드 6종을 달고 나가는 제일 무거운 것이었다.
