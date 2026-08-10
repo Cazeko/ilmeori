@@ -72,5 +72,16 @@ export function useNavPending() {
 
   const reset = useCallback(() => setGoingTo(null), []);
 
-  return { pending: !arrived, target: goingTo, reset };
+  /**
+   * 같은 화면 안에서 옮겨 다니는가 — 경로는 그대로이고 물음표 뒤만 바뀐다.
+   *
+   * 업무 상세의 탭(?tab=talk), 문서 항목 편집(?edit=…), 보드의 조건 칩이 그렇다.
+   * 이때는 제목도 탭줄도 그대로 있어야 한다. 화면 전체를 자리표시로 갈면
+   * 「창이 통째로 바뀌었다」로 읽혀서, 실제로는 안쪽만 바뀌는데도 더 크게
+   * 움직인 것처럼 느껴진다.
+   */
+  const sameScreen =
+    goingTo !== null && goingTo.split("?")[0] === pathname;
+
+  return { pending: !arrived, target: goingTo, sameScreen, reset };
 }

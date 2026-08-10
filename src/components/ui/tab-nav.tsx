@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LinkPending } from "@/components/ui/link-pending";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -55,6 +56,10 @@ export function TabNav({
               >
                 {Icon ? <Icon aria-hidden className="size-4" /> : null}
                 {t.label}
+                {/* 탭은 같은 화면 안의 이동이라 본문 자리를 갈지 않는다.
+                    그래서 눌렸다는 표시가 이 자리에 있어야 한다 — 없으면
+                    누르고 나서 새 내용이 올 때까지 아무 일도 안 일어난다. */}
+                <LinkPending />
                 {typeof t.count === "number" ? (
                   <span
                     className={cn(

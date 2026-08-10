@@ -77,7 +77,7 @@ export function AppShell({
    * 본문 자리에 자리표시를 그리는 데 쓴다. 서버가 보내는 HTML 은 그대로 두고
    * 브라우저에서만 옛 화면을 가리므로, 스크립트가 없으면 아무 일도 안 일어난다.
    */
-  const { pending: navPending, target: navTarget } = useNavPending();
+  const { pending: navPending, target: navTarget, sameScreen } = useNavPending();
 
   /**
    * 80ms 안에 끝나는 이동에서는 자리표시를 아예 그리지 않는다.
@@ -85,12 +85,16 @@ export function AppShell({
    */
   const [placeholderFor, setPlaceholderFor] = useState<string | null>(null);
   useEffect(() => {
-    if (!navPending || !navTarget) return;
+    if (!navPending || !navTarget || sameScreen) return;
     const timer = setTimeout(() => setPlaceholderFor(navTarget), 80);
     return () => clearTimeout(timer);
-  }, [navPending, navTarget]);
+  }, [navPending, navTarget, sameScreen]);
 
-  const showPlaceholder = navPending && placeholderFor === navTarget;
+  // 화면이 바뀔 때만 자리표시로 간다. 같은 화면 안의 이동(탭·편집칸·조건)은
+  // 눌린 표시를 그 링크 자리에서 보여 주고, 본문은 새 내용으로 갈릴 때까지
+  // 그대로 둔다 — 안쪽만 바뀌는 이동에 바깥까지 흔들면 더 느려 보인다.
+  const showPlaceholder =
+    navPending && !sameScreen && placeholderFor === navTarget;
 
   // 서랍을 열면 포커스를 안으로 옮기고, Esc로 닫을 수 있게 한다.
   // 이걸 빠뜨리면 키보드 사용자는 서랍을 열고도 그 안으로 못 들어간다.
