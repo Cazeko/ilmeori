@@ -37,6 +37,17 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko" className="h-full antialiased">
+      <head>
+        {/* 글꼴은 HTML을 읽는 즉시 나가야 한다. globals.css 안에 @import 로 두면
+            앱 CSS 를 다 받아 파싱한 뒤에야 찾아 나서는 직렬 체인이 되고,
+            번들에 인라인하면 타입 한 줄만 고쳐도 폰트 선언까지 다시 내려간다.
+            같은 출처라 DNS·TLS 도 새로 물지 않는다(globals.css 머리 주석 참조).
+
+            eslint 의 no-css-tags 는 「번들러가 관리하게 하라」는 규칙인데,
+            여기서는 캐시 단위를 분리하려고 일부러 밖에 둔 것이라 끈다. */}
+        {/* eslint-disable-next-line @next/next/no-css-tags */}
+        <link rel="stylesheet" href="/fonts/pretendard-gov.css" />
+      </head>
       <body className="flex min-h-full flex-col">
         {/* 건너뛰기 링크 — 키보드 사용자가 반복 영역을 지나 본문으로 바로 이동한다.
             체크리스트(컴포넌트-건너뛰기 링크): 모든 화면 제공, 3개 이내, 첫 항목은 핵심 영역 */}

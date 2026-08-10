@@ -88,6 +88,25 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
         ],
       },
+      {
+        /**
+         * 글꼴은 한 번 받으면 끝이어야 한다.
+         *
+         * public/ 자산은 기본값이 매번 재검증(max-age=0)이다. 걷어낸 CDN 은
+         * 1년 immutable 이었으므로, 그대로 두면 「자체 호스팅으로 빨라졌다」의
+         * 절반(재방문)을 잃는다.
+         *
+         * 파일명이 내용 해시가 아니라 고정(PretendardGOV-Regular.subset.0.woff2)
+         * 이라 immutable 을 붙여도 되는지 물어야 한다 — 된다. 이 파일들은
+         * Pretendard v1.3.9 의 특정 조각이고, 판이 바뀌면 scripts/build-font-css.mjs
+         * 의 VERSION 이 바뀌면서 **파일 내용이 아니라 파일 목록**이 바뀐다.
+         * 같은 이름이 다른 내용을 갖는 일이 생기면 그때는 경로에 판을 넣어야 한다.
+         */
+        source: "/fonts/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
     ];
   },
 };

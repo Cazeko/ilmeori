@@ -1,0 +1,7 @@
+# 생성물 — diff 에서 접어 둔다. 손으로 고치지 않는다.
+# (scripts/build-font-css.mjs 가 만든다. 240줄이지만 한 줄이 1,500자를 넘어
+#  펼쳐 두면 다른 변경이 그 아래 묻힌다)
+public/fonts/pretendard-gov.css linguist-generated=true -diff
+
+# 글꼴 바이너리
+public/fonts/pretendard-gov/*.woff2 binary

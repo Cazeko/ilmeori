@@ -305,7 +305,8 @@ ilmeori/
 │   ├── rls.test.mjs           RLS 행동 테스트 166개
 │   └── seed.test.mjs          시드 검증
 ├── scripts/
-│   └── gen-icons.mjs          PWA 아이콘 굽기 (의존성 없이 PNG를 직접 쓴다)
+│   ├── gen-icons.mjs          PWA 아이콘 굽기 (의존성 없이 PNG를 직접 쓴다)
+│   └── build-font-css.mjs     Pretendard GOV 자체 호스팅 자산 만들기 (굵기 400·700만)
 ├── tests/
 │   ├── hwpx.test.mjs          HWPX 규격 시험 57건
 │   ├── cues.test.mjs          「무엇이 근거로 실리는가」 규칙 시험 32건
@@ -318,6 +319,7 @@ ilmeori/
 │   │   ├── offline/           연결이 끊겼을 때 (서비스워커가 미리 담는 유일한 화면)
 │   │   ├── manifest.ts        웹 앱 설명서
 │   │   ├── globals.css        KRDS 기반 디자인 토큰 + 인쇄 서식
+│   │   ├── (app)/loading.tsx   화면이 오는 동안 (프리페치가 붙을 경계이기도 하다)
 │   │   └── layout.tsx
 │   ├── components/
 │   │   ├── ui/                버튼·판·입력·탭·대화상자 등 기본 요소
@@ -341,14 +343,39 @@ ilmeori/
 │   │   ├── env.ts             환경변수 검증
 │   │   └── supabase/          server / client
 │   ├── styles/
-│   │   └── krds-tokens.css    KRDS 원본 토큰
+│   │   ├── krds-tokens.css    KRDS 원본 토큰
+│   │   └── pretendard-gov.css 글꼴 (생성물 — build-font-css.mjs 가 만든다)
+│   ├── instrumentation.ts     Supabase 연결 유지 (유휴 후 첫 클릭의 TLS 재수립을 없앤다)
 │   └── proxy.ts               세션 갱신 · 인증 게이트 · CSP
 ├── public/
 │   ├── sw.js                  서비스워커 — **화면은 한 줄도 캐시하지 않는다**
+│   ├── fonts/                 글꼴 — 자체 호스팅 (OFL.txt · README.md 함께)
+│   │   └── pretendard-gov/    조각 240개 · 4.5MB. 외부 CDN을 부르지 않는다
 │   └── icon-*.png             표식 (gen-icons.mjs 가 굽는다)
 ├── design/krds/               KRDS 공식 컴포넌트 킷 (참조용, 미커밋)
+├── vercel.json                함수 리전 — DB 옆(icn1)에 둔다 (아래 「리전」 참조)
 └── next.config.ts             보안 헤더
 ```
+
+### 리전 — 함수를 DB 옆에 둔다
+
+`vercel.json` 의 `regions: ["icn1"]` 하나가 이 앱에서 가장 큰 성능 결정이다.
+
+Supabase 프로젝트는 서울(ap-northeast-2)에 있는데 Vercel 함수는 기본값대로
+미국 동부(iad1)에서 돌고 있었다. 화면 하나가 DB에 십수 번 묻는 구조라
+그 거리가 요청마다 곱해졌다.
+
+| 화면 | iad1 | icn1(현재) |
+|---|---|---|
+| 홈 | 3.6초 | 0.1초 안팎 |
+| 업무 상세 | 2.2초 | 0.1초 안팎 |
+| 결재함 | 1.2초 | 0.1초 안팎 |
+
+같은 코드·같은 DB다. 실행 위치만 옮겼다.
+
+**맞바꾼 것**: 단일 리전이라 icn1 장애가 곧 전면 장애다. 그리고 이 설정이
+묶는 것은 **함수 실행 위치뿐**이다 — CDN 엣지, 빌드 머신, 런타임 로그는
+따로 논다. 「개인정보가 국내에만 머문다」는 이 파일 하나로는 주장할 수 없다.
 
 ### PWA — 덧붙이는 층
 
