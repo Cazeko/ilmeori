@@ -4,7 +4,8 @@ import { startHandover } from "@/lib/actions/handover";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Field, Select } from "@/components/ui/field";
@@ -193,10 +194,10 @@ export default async function StartHandoverPage({
               지금은 초안을 만드는 단계입니다. 권한은 아직 옮겨 가지 않으며,
               내용을 확인한 뒤 다음 화면에서 인계를 실행합니다.
             </p>
-            <Button type="submit" size="lg" className="shrink-0">
+            <SubmitButton size="lg" className="shrink-0">
               <FileSignature aria-hidden className="size-4" />
               인계서 초안 만들기
-            </Button>
+            </SubmitButton>
           </div>
         </form>
       )}

@@ -4,7 +4,7 @@ import {
   copyApprovalLine,
   removeApprovalStep,
 } from "@/lib/actions/approvals";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Field, Select } from "@/components/ui/field";
 import { PeoplePicker } from "@/components/approval/people-picker";
 import { APPROVAL_KIND_LABEL, type ApprovalStepWithApprover } from "@/lib/types";
@@ -64,14 +64,13 @@ export function ApprovalLineEditor({
               <form action={removeApprovalStep} className="shrink-0">
                 <input type="hidden" name="approvalId" value={approval.id} />
                 <input type="hidden" name="stepId" value={s.id} />
-                <Button
-                  type="submit"
+                <SubmitButton
                   variant="ghost"
                   size="sm"
                   aria-label={`${s.approver.name} ${s.position} 결재란 빼기`}
                 >
                   <Trash2 aria-hidden className="size-4" />
-                </Button>
+                </SubmitButton>
               </form>
             )}
           </li>
@@ -105,10 +104,10 @@ export function ApprovalLineEditor({
             </Select>
           )}
         </Field>
-        <Button type="submit" variant="secondary">
+        <SubmitButton variant="secondary">
           <Plus aria-hidden className="size-4" />
           칸 추가
-        </Button>
+        </SubmitButton>
       </form>
 
       {/* ── 결재선 가져오기 ────────────────────────────────────────────── */}
@@ -139,10 +138,10 @@ export function ApprovalLineEditor({
                 </Select>
               )}
             </Field>
-            <Button type="submit" variant="secondary">
+            <SubmitButton variant="secondary">
               <Copy aria-hidden className="size-4" />
               결재선 가져오기
-            </Button>
+            </SubmitButton>
           </form>
         </details>
       ) : null}

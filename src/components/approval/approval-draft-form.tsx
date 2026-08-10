@@ -1,6 +1,6 @@
 import { Save } from "lucide-react";
 import { ApprovalFields } from "@/components/approval/approval-fields";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { updateApprovalDraft } from "@/lib/actions/approvals";
 import type { ApprovalWithSteps } from "@/lib/types";
 
@@ -17,10 +17,10 @@ export function ApprovalDraftForm({ approval }: { approval: ApprovalWithSteps })
       <input type="hidden" name="approvalId" value={approval.id} />
       <ApprovalFields approval={approval} />
       <div>
-        <Button type="submit" variant="secondary">
+        <SubmitButton variant="secondary">
           <Save aria-hidden className="size-4" />
           문서 저장
-        </Button>
+        </SubmitButton>
       </div>
     </form>
   );

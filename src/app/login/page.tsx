@@ -7,6 +7,7 @@ import { Notice } from "@/components/ui/notice";
 import { demoAccounts } from "@/lib/mock/org";
 import { safeNext } from "@/lib/safe-next";
 import { getViewer } from "@/lib/session";
+import { PendingCardButton } from "@/components/ui/pending-card-button";
 
 export const metadata: Metadata = { title: "들어가기" };
 
@@ -140,10 +141,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
                   <form action={enterAsDemo}>
                     <input type="hidden" name="profileId" value={profile.id} />
                     <input type="hidden" name="next" value={next} />
-                    <button
-                      type="submit"
-                      className="group flex w-full cursor-pointer items-start gap-3.5 rounded-md border border-gray-20 bg-surface p-4 text-left transition-colors duration-150 hover:border-primary hover:bg-primary-5"
-                    >
+                    <PendingCardButton className="group flex w-full cursor-pointer items-start gap-3.5 rounded-md border border-gray-20 bg-surface p-4 text-left transition-colors duration-150 hover:border-primary hover:bg-primary-5">
                       <Avatar profile={profile} size="lg" />
                       <span className="min-w-0 flex-1">
                         <span className="block text-body font-bold text-gray-90">
@@ -160,7 +158,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
                         aria-hidden
                         className="mt-1 size-5 shrink-0 text-gray-30 transition-colors duration-150 group-hover:text-primary"
                       />
-                    </button>
+                    </PendingCardButton>
                   </form>
                 </li>
               ))}

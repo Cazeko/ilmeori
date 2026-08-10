@@ -1,6 +1,6 @@
 import { PenLine, Trash2 } from "lucide-react";
 import { addHandoverNote, deleteHandoverNote } from "@/lib/actions/handover";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Field, Textarea } from "@/components/ui/field";
 import { formatDate, formatFullDateTime } from "@/lib/format";
 import {
@@ -84,8 +84,7 @@ export function BlockNotes({
                   <form action={deleteHandoverNote} className="-my-2 ml-auto">
                     <input type="hidden" name="blockKey" value={blockKey} />
                     <input type="hidden" name="noteId" value={n.id} />
-                    <Button
-                      type="submit"
+                    <SubmitButton
                       variant="ghost"
                       size="sm"
                       className="min-h-11 px-2"
@@ -97,7 +96,7 @@ export function BlockNotes({
                     >
                       <Trash2 aria-hidden className="size-4" />
                       삭제
-                    </Button>
+                    </SubmitButton>
                   </form>
                 ) : null}
               </div>
@@ -148,9 +147,9 @@ export function BlockNotes({
               )}
             </Field>
             <div className="mt-2 flex justify-end">
-              <Button type="submit" size="sm">
+              <SubmitButton size="sm">
                 보충 적기
-              </Button>
+              </SubmitButton>
             </div>
           </form>
         </details>

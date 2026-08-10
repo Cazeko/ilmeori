@@ -1,6 +1,7 @@
 import { FileQuestion, Repeat } from "lucide-react";
 import { leaveDemo } from "@/app/login/actions";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Card, CardBody } from "@/components/ui/card";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
@@ -114,10 +115,10 @@ export function WorkNotFound({
                 막히는 것과 열리는 것을 한 번씩 보면 설명이 끝난다. */}
             <form action={leaveDemo}>
               <input type="hidden" name="next" value={path} />
-              <Button type="submit" variant="secondary" size="sm">
+              <SubmitButton variant="secondary" size="sm">
                 <Repeat aria-hidden className="size-4" />
                 다른 계정으로 이 주소 다시 열기
-              </Button>
+              </SubmitButton>
             </form>
           </div>
         </CardBody>

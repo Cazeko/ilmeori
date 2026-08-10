@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Building2 } from "lucide-react";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { listWorks } from "@/lib/data";
 import type { Profile } from "@/lib/types";
@@ -198,9 +199,9 @@ export async function WorkForm({
       </Field>
 
       <div className="flex flex-wrap gap-2 border-t border-gray-10 pt-5">
-        <Button type="submit" size="lg">
+        <SubmitButton size="lg">
           {submitLabel}
-        </Button>
+        </SubmitButton>
         <ButtonLink href={cancelHref} variant="secondary" size="lg">
           취소
         </ButtonLink>

@@ -10,7 +10,7 @@ import {
   unlockSection,
 } from "@/lib/actions/documents";
 import { Avatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
@@ -88,10 +88,10 @@ export function DocSections({
               >
                 {(p) => <Input {...p} name="title" maxLength={120} />}
               </Field>
-              <Button type="submit" block className="mt-3">
+              <SubmitButton block className="mt-3">
                 <Plus aria-hidden className="size-4" />
                 문서 만들기
-              </Button>
+              </SubmitButton>
             </form>
           ) : undefined
         }
@@ -132,10 +132,10 @@ export function DocSections({
                 )}
               </Field>
               <div className="mt-3 flex justify-end">
-                <Button type="submit">
+                <SubmitButton>
                   <Save aria-hidden className="size-4" />
                   이름 저장
-                </Button>
+                </SubmitButton>
               </div>
             </form>
           </details>
@@ -155,10 +155,10 @@ export function DocSections({
                 <form action={deleteDocument} className="mt-3 flex justify-end">
                   <input type="hidden" name="workId" value={workId} />
                   <input type="hidden" name="documentId" value={doc.id} />
-                  <Button type="submit" variant="danger">
+                  <SubmitButton variant="danger">
                     <Trash2 aria-hidden className="size-4" />
                     문서를 삭제합니다
-                  </Button>
+                  </SubmitButton>
                 </form>
               </div>
             </details>
@@ -271,19 +271,18 @@ export function DocSections({
                       </Field>
 
                       <div className="flex flex-wrap gap-2">
-                        <Button type="submit">
+                        <SubmitButton>
                           <Save aria-hidden className="size-4" />
                           저장
-                        </Button>
+                        </SubmitButton>
                         {/* 취소도 서버를 거친다. 잠금을 풀어 주지 않으면 5분간 남는다. */}
-                        <Button
-                          type="submit"
+                        <SubmitButton
                           form={cancelFormId}
                           variant="secondary"
                         >
                           <X aria-hidden className="size-4" />
                           취소
-                        </Button>
+                        </SubmitButton>
                       </div>
                     </form>
 
@@ -298,10 +297,10 @@ export function DocSections({
                         <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
                           이 항목이 문서에서 사라집니다. 되돌릴 수 없습니다.
                         </p>
-                        <Button type="submit" variant="danger">
+                        <SubmitButton variant="danger">
                           <Trash2 aria-hidden className="size-4" />
                           항목을 삭제합니다
-                        </Button>
+                        </SubmitButton>
                       </form>
                     </details>
                   </div>
@@ -323,8 +322,7 @@ export function DocSections({
                         <form action={lockSection}>
                           <input type="hidden" name="workId" value={workId} />
                           <input type="hidden" name="sectionId" value={s.id} />
-                          <Button
-                            type="submit"
+                          <SubmitButton
                             variant="secondary"
                             // 항목 수만큼 같은 글자의 버튼이 늘어선다.
                             // 화면을 보지 않으면 어느 항목을 여는 버튼인지 알 수 없다.
@@ -334,7 +332,7 @@ export function DocSections({
                           >
                             <PenLine aria-hidden className="size-4" />
                             {mine ? "이어서 편집" : "편집"}
-                          </Button>
+                          </SubmitButton>
                         </form>
 
                         {/* 잡아만 두고 떠난 잠금을 스스로 풀 길을 남긴다 */}
@@ -342,14 +340,13 @@ export function DocSections({
                           <form action={unlockSection}>
                             <input type="hidden" name="workId" value={workId} />
                             <input type="hidden" name="sectionId" value={s.id} />
-                            <Button
-                              type="submit"
+                            <SubmitButton
                               variant="ghost"
                               aria-label={`${s.heading ?? "제목 없는 항목"} 잠금 해제`}
                             >
                               <X aria-hidden className="size-4" />
                               잠금 해제
-                            </Button>
+                            </SubmitButton>
                           </form>
                         ) : null}
                       </div>
@@ -389,10 +386,10 @@ export function DocSections({
             </Field>
           </div>
           <div className="mt-3 flex justify-end">
-            <Button type="submit">
+            <SubmitButton>
               <Plus aria-hidden className="size-4" />
               항목 추가
-            </Button>
+            </SubmitButton>
           </div>
         </form>
       ) : null}

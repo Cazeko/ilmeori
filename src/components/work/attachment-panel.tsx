@@ -1,5 +1,5 @@
 import { Download, FileUp, History, Paperclip, Trash2, Upload } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
@@ -218,15 +218,14 @@ export function AttachmentPanel({
                         )}
                       </Field>
                       <div className="mt-3 flex justify-end">
-                        <Button
-                          type="submit"
+                        <SubmitButton
                           className="min-h-11"
                           variant="secondary"
                           aria-label={`${fileName} 새 판 올리기`}
                         >
                           <Upload aria-hidden className="size-4" />
                           새 판 올리기
-                        </Button>
+                        </SubmitButton>
                       </div>
                     </form>
 
@@ -244,15 +243,14 @@ export function AttachmentPanel({
                           name="attachmentId"
                           value={latest.id}
                         />
-                        <Button
-                          type="submit"
+                        <SubmitButton
                           className="min-h-11"
                           variant="danger"
                           aria-label={`${fileName} ${versions.length > 1 ? "최신 판" : "파일"} 삭제`}
                         >
                           <Trash2 aria-hidden className="size-4" />
                           삭제
-                        </Button>
+                        </SubmitButton>
                       </form>
                     </div>
                   </details>
@@ -299,10 +297,10 @@ export function AttachmentPanel({
             쓰세요. 이름이 조금씩 다른 파일이 늘어나지 않습니다.
           </p>
           <div className="mt-3 flex justify-end">
-            <Button type="submit">
+            <SubmitButton>
               <Upload aria-hidden className="size-4" />
               올리기
-            </Button>
+            </SubmitButton>
           </div>
         </form>
       ) : null}

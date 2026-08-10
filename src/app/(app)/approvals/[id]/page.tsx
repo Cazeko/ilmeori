@@ -19,7 +19,8 @@ import {
 import { ApprovalBadge } from "@/components/approval/approval-badge";
 import { ApprovalLineEditor } from "@/components/approval/approval-line-editor";
 import { ApprovalDraftForm } from "@/components/approval/approval-draft-form";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Notice } from "@/components/ui/notice";
@@ -305,10 +306,10 @@ export default async function ApprovalDetailPage({
               </p>
               <form action={submitApproval}>
                 <input type="hidden" name="approvalId" value={approval.id} />
-                <Button type="submit">
+                <SubmitButton>
                   <Send aria-hidden className="size-4" />
                   상신합니다
-                </Button>
+                </SubmitButton>
               </form>
             </div>
 
@@ -324,10 +325,10 @@ export default async function ApprovalDetailPage({
                 </p>
                 <form action={deleteApproval}>
                   <input type="hidden" name="approvalId" value={approval.id} />
-                  <Button type="submit" variant="secondary" size="sm">
+                  <SubmitButton variant="secondary" size="sm">
                     <Trash2 aria-hidden className="size-4" />
                     초안 지우기
-                  </Button>
+                  </SubmitButton>
                 </form>
               </div>
             </details>

@@ -1,7 +1,7 @@
 import { MessageSquare, Send, Trash2 } from "lucide-react";
 import { deleteComment, postComment } from "@/lib/actions/comments";
 import { Avatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Field, Textarea } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/empty-state";
 import { canMutate } from "@/lib/env";
@@ -84,8 +84,7 @@ export function CommentThread({
                       <form action={deleteComment} className="-my-2 ml-auto">
                         <input type="hidden" name="workId" value={workId} />
                         <input type="hidden" name="commentId" value={c.id} />
-                        <Button
-                          type="submit"
+                        <SubmitButton
                           variant="ghost"
                           size="sm"
                           className="min-h-11 px-2"
@@ -95,7 +94,7 @@ export function CommentThread({
                         >
                           <Trash2 aria-hidden className="size-4" />
                           삭제
-                        </Button>
+                        </SubmitButton>
                       </form>
                     ) : null}
                   </div>
@@ -136,10 +135,10 @@ export function CommentThread({
             )}
           </Field>
         <div className="mt-3 flex justify-end">
-          <Button type="submit">
+          <SubmitButton>
             <Send aria-hidden className="size-4" />
             남기기
-          </Button>
+          </SubmitButton>
         </div>
       </form>
     </div>

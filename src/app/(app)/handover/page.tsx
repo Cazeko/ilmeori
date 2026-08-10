@@ -19,7 +19,8 @@ import { cn } from "@/lib/cn";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ActionFeedback } from "@/components/ui/feedback";
@@ -140,10 +141,10 @@ export default async function HandoverPage({
             // 실행되고 그 사실이 이력에 남으므로 되돌리는 버튼이 있으면 안 된다.
             isSupabaseConfigured ? null : (
               <form action={resetDemo}>
-                <Button type="submit" variant="ghost" size="sm">
+                <SubmitButton variant="ghost" size="sm">
                   <RotateCcw aria-hidden className="size-4" />
                   시연 처음으로
-                </Button>
+                </SubmitButton>
               </form>
             )
           }
@@ -475,10 +476,10 @@ export default async function HandoverPage({
                       </p>
                     )}
                     <form action={confirmHandover}>
-                      <Button type="submit" block>
+                      <SubmitButton block>
                         내용을 확인했습니다
                         <ArrowRight aria-hidden className="size-4" />
-                      </Button>
+                      </SubmitButton>
                     </form>
                   </>
                 ) : handover.status === "confirmed" ? (
@@ -575,9 +576,9 @@ export default async function HandoverPage({
                     ) : null}
                   </p>
                   <form action={cancelHandover}>
-                    <Button type="submit" variant="secondary" size="sm">
+                    <SubmitButton variant="secondary" size="sm">
                       <RotateCcw aria-hidden className="size-4" />이 인계 취소
-                    </Button>
+                    </SubmitButton>
                   </form>
                 </div>
               </details>

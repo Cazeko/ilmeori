@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Field, Select } from "@/components/ui/field";
 import {
   addMember,
@@ -198,9 +198,9 @@ export function MemberList({
                 </Select>
               )}
             </Field>
-            <Button type="submit" variant="secondary">
+            <SubmitButton variant="secondary">
               바꾸기
-            </Button>
+            </SubmitButton>
           </form>
         ) : null}
       </section>
@@ -285,13 +285,12 @@ export function MemberList({
                           </Select>
                         )}
                       </Field>
-                      <Button
-                        type="submit"
+                      <SubmitButton
                         variant="secondary"
                         aria-label={`${m.profile.name} 권한 변경`}
                       >
                         변경
-                      </Button>
+                      </SubmitButton>
                     </form>
 
                     {/* 주담당은 빼거나 낮출 수 없다. 넘길 수만 있다.
@@ -305,14 +304,13 @@ export function MemberList({
                           name="profileId"
                           value={m.profile_id}
                         />
-                        <Button
-                          type="submit"
+                        <SubmitButton
                           variant="secondary"
                           aria-label={`${m.profile.name}에게 주담당 넘기기`}
                         >
                           <Crown aria-hidden className="size-4" />
                           주담당 넘기기
-                        </Button>
+                        </SubmitButton>
                       </form>
                     ) : null}
 
@@ -324,14 +322,13 @@ export function MemberList({
                           name="profileId"
                           value={m.profile_id}
                         />
-                        <Button
-                          type="submit"
+                        <SubmitButton
                           variant="secondary"
                           aria-label={`${m.profile.name} 참여 제외`}
                         >
                           <UserMinus aria-hidden className="size-4" />
                           제외
-                        </Button>
+                        </SubmitButton>
                       </form>
                     )}
                   </div>
@@ -402,10 +399,10 @@ export function MemberList({
                   </Select>
                 )}
               </Field>
-              <Button type="submit">
+              <SubmitButton>
                 <UserPlus aria-hidden className="size-4" />
                 추가
-              </Button>
+              </SubmitButton>
             </form>
           ) : (
             <p className="rounded-md border border-gray-10 bg-surface px-4 py-6 text-center text-body-sm break-keep text-gray-60">

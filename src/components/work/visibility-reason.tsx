@@ -1,6 +1,6 @@
 import { Eye, Repeat } from "lucide-react";
 import { leaveDemo } from "@/app/login/actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { isSupabaseConfigured } from "@/lib/env";
 import { whyVisible } from "@/lib/visibility";
 import type { MemberRole, Profile, WorkListItem } from "@/lib/types";
@@ -73,10 +73,10 @@ export function VisibilityReason({
         {/* 직접 확인해 보게 한다. 말로만 하는 접근제어는 확인할 수 없다. */}
         <form action={leaveDemo} className="mt-3.5">
           <input type="hidden" name="next" value={`/works/${work.id}`} />
-          <Button type="submit" variant="secondary" size="sm">
+          <SubmitButton variant="secondary" size="sm">
             <Repeat aria-hidden className="size-4" />이 주소를 다른 계정으로 열어
             보기
-          </Button>
+          </SubmitButton>
         </form>
         <p className="mt-2 text-body-xs leading-relaxed break-keep text-gray-60">
           {reason.deniable ? (

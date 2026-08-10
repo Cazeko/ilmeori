@@ -4,7 +4,7 @@ import {
   signApproval,
   withdrawApproval,
 } from "@/lib/actions/approvals";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Field, Textarea } from "@/components/ui/field";
 import {
   APPROVAL_KIND_LABEL,
@@ -60,10 +60,10 @@ export function ApprovalDecision({
           )}
         </Field>
         <div>
-          <Button type="submit">
+          <SubmitButton>
             <PenLine aria-hidden className="size-4" />
             서명합니다
-          </Button>
+          </SubmitButton>
         </div>
       </form>
 
@@ -91,10 +91,10 @@ export function ApprovalDecision({
             )}
           </Field>
           <div>
-            <Button type="submit" variant="danger">
+            <SubmitButton variant="danger">
               <Undo2 aria-hidden className="size-4" />
               반려합니다
-            </Button>
+            </SubmitButton>
           </div>
         </form>
       </details>
@@ -122,9 +122,9 @@ export function ApprovalWithdraw({ approvalId }: { approvalId: string }) {
         </p>
         <form action={withdrawApproval}>
           <input type="hidden" name="approvalId" value={approvalId} />
-          <Button type="submit" variant="secondary" size="sm">
+          <SubmitButton variant="secondary" size="sm">
             <RotateCcw aria-hidden className="size-4" />이 결재 회수
-          </Button>
+          </SubmitButton>
         </form>
       </div>
     </details>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Archive, ArchiveRestore, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Notice } from "@/components/ui/notice";
@@ -185,14 +185,14 @@ export default async function EditWorkPage({
 
                 <form action={archived ? restoreWork : archiveWork} className="mt-5">
                   <input type="hidden" name="workId" value={work.id} />
-                  <Button type="submit" variant="secondary" size="lg">
+                  <SubmitButton variant="secondary" size="lg">
                     {archived ? (
                       <ArchiveRestore aria-hidden className="size-4" />
                     ) : (
                       <Archive aria-hidden className="size-4" />
                     )}
                     {archived ? "보관 해제하기" : "이 업무를 보관하기"}
-                  </Button>
+                  </SubmitButton>
                 </form>
               </CardBody>
             </Card>
