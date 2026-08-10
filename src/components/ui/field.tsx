@@ -19,6 +19,27 @@ const controlBase = [
   "disabled:cursor-not-allowed disabled:bg-gray-5 disabled:text-gray-50",
 ];
 
+/*
+ * ── 오류를 어디에 적는가 ─────────────────────────────────────────────────
+ * 아래 error 프롭은 「칸 옆에 붙는 오류」를 위한 자리인데, 지금 저장소에서
+ * 이것을 넘기는 곳은 한 군데도 없다. 실제 실패 경로는 서버 액션이 ?msg= 를
+ * 달고 되돌려보내고 화면 맨 위 ActionFeedback 이 한 줄로 말하는 한 갈래뿐이다.
+ * 그래서 「어느 칸이 문제인지」는 지금 화면이 말해 주지 못한다.
+ *
+ * 여기에 배선을 새로 넣는 대신, 서버까지 갔다 오지 않고 브라우저가 먼저 막을
+ * 수 있는 것은 그 자리에서 막는다(work-form·approval-fields 의 pattern).
+ * 이 프롭은 그 배선이 생기는 날을 위해 남겨 둔다.
+ *
+ * ── 테두리 대비 ──────────────────────────────────────────────────────────
+ * 입력칸 테두리는 gray-30 이었다. 판(#fafafa) 위에서 대비가 1.92:1 이라
+ * KWCAG 2.2 / WCAG 1.4.11「비텍스트 대비」의 3:1 에 못 미친다 — 칸의 경계가
+ * 어디까지인지 눈으로 잡히지 않는다는 뜻이다.
+ *
+ * 처음에는 gray-40 으로 올렸는데, 재 보니 2.95:1 로 **아슬하게 모자랐다.**
+ * 눈으로는 통과한 것처럼 보이지만 통과가 아니다. 이 저장소는 「초록불을 본
+ * 적이 없으면 통과로 세지 않는다」를 지켜 왔으므로 gray-50 으로 간다 —
+ * 판 위 4.32:1, 바탕(#f0f1f2) 위 3.99:1 로 둘 다 넘는다.
+ */
 export function Field({
   id,
   label,
@@ -95,7 +116,7 @@ export function Input({
       className={cn(
         controlBase,
         "min-h-11 px-3",
-        invalid ? "border-danger" : "border-gray-30 hover:border-gray-40",
+        invalid ? "border-danger" : "border-gray-50 hover:border-gray-60",
         className,
       )}
       aria-invalid={invalid}
@@ -114,7 +135,7 @@ export function Textarea({
       className={cn(
         controlBase,
         "min-h-28 px-3 py-2 leading-relaxed",
-        invalid ? "border-danger" : "border-gray-30 hover:border-gray-40",
+        invalid ? "border-danger" : "border-gray-50 hover:border-gray-60",
         className,
       )}
       aria-invalid={invalid}
@@ -132,7 +153,7 @@ export function Select({ className, ...props }: ComponentProps<"select">) {
     <select
       className={cn(
         controlBase,
-        "min-h-11 cursor-pointer border-gray-30 px-3 hover:border-gray-40",
+        "min-h-11 cursor-pointer border-gray-50 px-3 hover:border-gray-60",
         className,
       )}
       {...props}

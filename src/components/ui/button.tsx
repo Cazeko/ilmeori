@@ -25,7 +25,8 @@ const button = cva(
         primary:
           "bg-primary text-white hover:bg-primary-hover active:bg-primary-active",
         secondary:
-          "border border-gray-30 bg-surface text-gray-80 hover:bg-gray-5 active:bg-gray-10",
+          // gray-40 은 판 위 2.95:1 로 1.4.11(3:1)에 아슬하게 모자란다. gray-50 은 4.32:1.
+          "border border-gray-50 bg-surface text-gray-80 hover:bg-gray-5 active:bg-gray-10",
         ghost: "text-gray-70 hover:bg-gray-5 active:bg-gray-10",
         danger: "bg-danger text-white hover:brightness-90 active:brightness-75",
       },
@@ -53,7 +54,11 @@ export function Button({
   return (
     <button
       type="button"
-      className={cn(button({ variant, size, block }), "cursor-pointer", className)}
+      className={cn(
+        button({ variant, size, block }),
+        "cursor-pointer",
+        className,
+      )}
       {...props}
     />
   );

@@ -12,11 +12,7 @@ import { createWork } from "@/lib/actions/works";
 
 import { canMutate } from "@/lib/env";
 import { getViewerDepartmentName, requireViewer } from "@/lib/session";
-import {
-  VISIBILITY_HINT,
-  VISIBILITY_LABEL,
-  type WorkVisibility,
-} from "@/lib/types";
+import { VISIBILITY_LABEL, type WorkVisibility } from "@/lib/types";
 
 export const metadata: Metadata = { title: "새 업무" };
 
@@ -57,34 +53,33 @@ export default async function NewWorkPage({
 
       <PageHeader
         title="새 업무 만들기"
-        description="만드는 순간 본인이 주담당이 되고, 업무가 등록되었다는 기록이 이력에 남습니다. 참여자와 문서는 만든 뒤에 업무 화면에서 붙입니다."
+        /* 「만드는 순간 …」 세 문장을 지웠다. 만들기 전에 알아야 하는 말이
+           아니라 만든 뒤에 저절로 보이는 일들이다. */
       />
 
       <ActionFeedback msg={sp.msg} className="mb-4" />
 
       {!canMutate ? (
         <Notice tone="info" title="지금은 읽기 전용입니다">
-          데이터베이스에 연결되지 않은 상태에서는 업무를 만들 수 없습니다. 화면과
-          동선은 그대로 볼 수 있습니다.
+          화면과 동선은 그대로 볼 수 있습니다.
         </Notice>
       ) : !departmentName ? (
         <Notice tone="danger" title="소속 부서가 없어 업무를 만들 수 없습니다">
-          업무는 소관 부서에 속합니다. 계정에 소속 부서가 등록되어 있지 않으면
-          어느 부서의 일인지 정할 수 없어 만들 수 없습니다. 인사 담당자에게 소속
-          등록을 요청해 주세요.
+          계정에 소속 부서가 없으면 어느 부서의 일인지 정할 수 없습니다. 인사
+          담당자에게 소속 등록을 요청해 주세요.
         </Notice>
       ) : (
         <Card>
           <CardHeader
             title="업무 정보"
-            description="제목만 필수입니다. 나머지는 비워 두고 만든 뒤에 채워도 됩니다."
+            description="제목만 필수입니다."
           />
           <CardBody>
             <WorkForm
               viewer={viewer}
               action={createWork}
               departmentName={departmentName}
-              departmentNote={`업무는 만든 사람의 소속 부서에 속합니다. ${departmentName} 외의 부서로는 만들 수 없으며, 다른 부서 사람과 함께 일하려면 만든 뒤 참여자로 추가합니다.`}
+              departmentNote={`${departmentName} 외의 부서로는 만들 수 없습니다. 다른 부서 사람과 함께 일하려면 만든 뒤 참여자로 추가합니다.`}
               submitLabel="업무 만들기"
               cancelHref="/works"
             >
@@ -94,13 +89,15 @@ export default async function NewWorkPage({
                 id="work-visibility"
                 label="공개 범위"
                 required
-                hint="참여자로 추가한 사람은 공개 범위와 관계없이 언제나 볼 수 있습니다. 여기서 정하는 것은 참여자가 아닌 직원이 어디까지 볼 수 있는가입니다."
+                hint="참여자가 아닌 직원이 어디까지 볼 수 있는지를 정합니다."
               >
                 {(p) => (
                   <Select {...p} name="visibility" defaultValue="department">
                     {VISIBILITIES.map((v) => (
+                      // 설명을 항목 글자에 붙이면 390px 에서 「부서 공개 — 같은
+                      // 부…」처럼 잘려 정작 고르는 이름이 안 읽힌다. 이름만 둔다.
                       <option key={v} value={v}>
-                        {VISIBILITY_LABEL[v]} — {VISIBILITY_HINT[v]}
+                        {VISIBILITY_LABEL[v]}
                       </option>
                     ))}
                   </Select>

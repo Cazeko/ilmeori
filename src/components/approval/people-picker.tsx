@@ -61,7 +61,9 @@ export function PeoplePicker({
           size={size}
           // 여럿 고르기에는 빈 항목을 두지 않는다. 아무것도 안 고르면 그것이 곧 없음이다.
           defaultValue={multiple ? [] : ""}
-          className={multiple ? "min-h-32 py-1" : undefined}
+          // min-h-32 를 주지 않는다. size(줄 수)가 정한 높이와 어긋나
+          // 마지막 줄이 테두리에 반쯤 걸려 잘려 보였다. 높이는 줄 수가 정한다.
+          className={multiple ? "h-auto py-1" : undefined}
         >
           {multiple ? null : <option value="">직원을 고르세요</option>}
           {groups.map(([department, members]) => (

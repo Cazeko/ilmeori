@@ -133,7 +133,12 @@ export function ApprovalPrintSheet({ ex }: { ex: ApprovalExport }) {
       </p>
 
       <section className="mt-5">
-        <h2 className="font-bold">제목  {a.title}</h2>
+        {/* 두 칸 띄우기는 HTML 에서 한 칸으로 붙는다. 서식의 칸 이름과 값
+            사이는 눈에 보이게 벌어져야 하므로 여백으로 만든다. */}
+        <h2 className="font-bold">
+          제목<span className="inline-block w-6" />
+          {a.title}
+        </h2>
       </section>
 
       {ex.blocks.map((block) => (

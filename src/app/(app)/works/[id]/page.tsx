@@ -139,8 +139,7 @@ export default async function WorkDetailPage({
 
   // 부를 수 있는 사람 목록은 참여자 탭에서 소유자에게만 필요하다.
   // 다른 탭을 볼 때마다 전 직원을 읽어 올 이유가 없다.
-  const candidates =
-    tab === "people" && canOwn ? await listProfiles() : [];
+  const candidates = tab === "people" && canOwn ? await listProfiles() : [];
 
   // 누가 열어 봤는지 남긴다. 사용자에게는 이 표에 쓰기 권한이 없고,
   // 서버의 지정된 함수만 기록할 수 있다.
@@ -212,8 +211,8 @@ export default async function WorkDetailPage({
 
       {work.archived_at ? (
         <Notice tone="info" title="보관된 업무입니다" className="mb-4">
-          업무 보드의 기본 목록에는 나타나지 않습니다. 문서·대화·이력·첨부는 그대로
-          있고, 소유자가 보관을 해제하면 다시 목록에 돌아옵니다.
+          업무 보드의 기본 목록에는 나타나지 않습니다. 문서·대화·이력·첨부는
+          그대로 있고, 소유자가 보관을 해제하면 다시 목록에 돌아옵니다.
         </Notice>
       ) : null}
 
@@ -233,7 +232,12 @@ export default async function WorkDetailPage({
         </div>
 
         <div className="mt-2.5 flex flex-wrap items-start justify-between gap-3">
-          <h1 className="text-h2 leading-snug font-bold break-keep text-gray-90">
+          {/* 목록 화면의 h1 은 PageHeader 를 통해 text-h2 sm:text-h1 이다.
+              여기만 24px 고정이라 보드에서 상세로 넘어가면 제목이 작아졌다.
+              같은 「여기가 어디인가」 역할은 같은 무게로 선다.
+              min-w-0 — 이 h1 은 flex-wrap 항목이라 120자짜리 제목이
+              오른쪽 「업무 고치기」를 밀어내면 안 된다. */}
+          <h1 className="min-w-0 text-h2 leading-snug font-bold break-keep text-gray-90 sm:text-h1">
             {work.title}
           </h1>
           {canWrite ? (
@@ -258,7 +262,9 @@ export default async function WorkDetailPage({
           <div className="flex items-center gap-1.5">
             <dt className="sr-only">소관 부서</dt>
             <Building2 aria-hidden className="size-4 text-gray-40" />
-            <dd className="text-body-sm text-gray-70">{work.department.name}</dd>
+            <dd className="text-body-sm text-gray-70">
+              {work.department.name}
+            </dd>
           </div>
 
           <div className="flex items-center gap-2">
@@ -289,7 +295,9 @@ export default async function WorkDetailPage({
                 )}
               >
                 {formatDate(work.due_date)}
-                {work.derived === "done" ? null : ` (${formatDueLabel(work.due_date)})`}
+                {work.derived === "done"
+                  ? null
+                  : ` (${formatDueLabel(work.due_date)})`}
               </dd>
             </div>
           ) : null}
@@ -354,19 +362,17 @@ export default async function WorkDetailPage({
 
             {tab === "approval" ? (
               <section aria-labelledby="approval-heading">
-                <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h2
-                      id="approval-heading"
-                      className="mb-1 text-h3 font-bold text-gray-90"
-                    >
-                      결재
-                    </h2>
-                    <p className="max-w-2xl text-body-sm break-keep text-gray-60">
-                      이 업무에서 올린 내부결재문서(별지 제2호서식)입니다. 결재
-                      사건은 별도 표가 아니라 이 업무의 이력에 함께 쌓입니다.
-                    </p>
-                  </div>
+                {/* 「내부결재문서(별지 제2호서식)입니다 …」 두 줄을 지웠다.
+                    서식 이름은 결재함·기안 화면·인쇄본에 이미 있고, 「이력에
+                    함께 쌓인다」는 옆 탭을 누르면 보인다. 지금 이 화면의
+                    데이터에 대한 설명이 아니라 제품 철학이었다. */}
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <h2
+                    id="approval-heading"
+                    className="text-h3 font-bold text-gray-90"
+                  >
+                    결재
+                  </h2>
                   {canWrite ? (
                     <ButtonLink
                       href={`/approvals/new?work=${work.id}`}
@@ -397,8 +403,30 @@ export default async function WorkDetailPage({
                       title="아직 올린 결재가 없습니다"
                       description={
                         canWrite
-                          ? "이 업무에서 결정된 것을 문서로 남기고 결재선을 태울 수 있습니다. 결재선은 부서 서열을 보고 자동으로 채워집니다."
-                          : "결재를 올리려면 이 업무의 편집 권한이 있어야 합니다."
+                          ? "결재선은 부서 서열을 보고 자동으로 채워집니다."
+                          : "결재를 올리려면 이 업무의 편집 권한이 있어야 합니다. 소유자는 참여자·권한 탭에 있습니다."
+                      }
+                      // 올릴 수 없는 사람에게도 갈 곳은 준다. 「권한이 없습니다」로
+                      // 끝나면 그 화면에서 할 수 있는 일이 하나도 없다.
+                      action={
+                        canWrite ? (
+                          <ButtonLink
+                            href={`/approvals/new?work=${work.id}`}
+                            variant="secondary"
+                            size="sm"
+                          >
+                            <Stamp aria-hidden className="size-4" />
+                            결재 올리기
+                          </ButtonLink>
+                        ) : (
+                          <ButtonLink
+                            href={`/works/${work.id}?tab=people`}
+                            variant="secondary"
+                            size="sm"
+                          >
+                            참여자·권한 보기
+                          </ButtonLink>
+                        )
                       }
                     />
                   </div>
@@ -409,31 +437,28 @@ export default async function WorkDetailPage({
             {tab === "history" ? (
               <div className="flex flex-col gap-8">
                 <section aria-labelledby="history-heading">
+                  {/* 머리 밑에 있던 「사람이 적는 기록이 아닙니다 …」 두 줄을
+                      지웠다. 이력 줄마다 무엇이 무엇으로 바뀌었는지가 적혀
+                      있어 목록 자체가 그 말을 한다. */}
                   <h2
                     id="history-heading"
-                    className="mb-1 text-h3 font-bold text-gray-90"
+                    className="mb-5 text-h3 font-bold text-gray-90"
                   >
                     업무 이력
                   </h2>
-                  <p className="mb-5 max-w-2xl text-body-sm break-keep text-gray-60">
-                    사람이 적는 기록이 아닙니다. 업무를 고치면 DB가 자동으로
-                    남기며, 사용자에게는 이 기록을 지우거나 고칠 권한이 없습니다.
-                  </p>
                   <ActivityTimeline items={activities} />
                 </section>
 
                 <section aria-labelledby="access-heading">
+                  {/* 「공문서를 다루는 이상 본 사람도 기록되어야 합니다」는
+                      제품의 주장이지 이 목록을 읽는 데 필요한 말이 아니다.
+                      열람기록 화면(/audit)에 같은 취지가 한 번 적혀 있다. */}
                   <h2
                     id="access-heading"
-                    className="mb-1 text-h3 font-bold text-gray-90"
+                    className="mb-4 text-h3 font-bold text-gray-90"
                   >
                     열람기록
                   </h2>
-                  <p className="mb-4 max-w-2xl text-body-sm break-keep text-gray-60">
-                    이 업무를 누가 열어 봤는지도 남습니다. 공문서를 다루는 이상
-                    &lsquo;고친 사람&rsquo;만큼 &lsquo;본 사람&rsquo;도 기록되어야
-                    합니다.
-                  </p>
                   {accessLogs.length > 0 ? (
                     <ul className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-surface">
                       {accessLogs.map((l) => (
@@ -441,7 +466,10 @@ export default async function WorkDetailPage({
                           key={l.id}
                           className="flex items-center gap-3 px-4 py-2.5"
                         >
-                          <Eye aria-hidden className="size-4 shrink-0 text-gray-30" />
+                          <Eye
+                            aria-hidden
+                            className="size-4 shrink-0 text-gray-30"
+                          />
                           <span className="min-w-0 flex-1 text-body-sm text-gray-80">
                             <span className="font-bold">{l.actor?.name}</span>{" "}
                             {ACCESS_KIND_LABEL[l.kind]}
@@ -496,36 +524,42 @@ export default async function WorkDetailPage({
             canWrite={canWrite}
           />
 
-          <Card>
-            <CardHeader title="참여자" as="h2" />
-            <ul className="divide-y divide-gray-5">
-              {work.members.slice(0, 6).map((m) => (
-                <li key={m.profile_id} className="px-4 py-2.5">
-                  <PersonChip
-                    profile={m.profile}
-                    size="sm"
-                    sub={
-                      m.profile_id === work.owner_id
-                        ? "주담당"
-                        : m.role === "owner"
-                          ? "소유"
-                          : undefined
-                    }
-                  />
-                </li>
-              ))}
-            </ul>
-            {work.members.length > 6 ? (
-              <div className="border-t border-gray-10 px-4 py-2.5">
-                <Link
-                  href={`/works/${work.id}?tab=people`}
-                  className="text-body-sm font-bold text-primary"
-                >
-                  참여자 {work.members.length}명 전체 보기
-                </Link>
-              </div>
-            ) : null}
-          </Card>
+          {/* 참여자·권한 탭에서는 그리지 않는다. 그 탭의 본문이 이미 같은
+              사람들을 권한까지 붙여 더 자세히 보여 주고 있어서, 옆칸에 요약을
+              한 벌 더 두면 한 화면에 같은 목록이 두 번 선다. 넓은 화면에서는
+              좌우로, 좁은 화면에서는 위아래로 붙어 특히 눈에 띈다. */}
+          {tab !== "people" ? (
+            <Card>
+              <CardHeader title="참여자" as="h2" />
+              <ul className="divide-y divide-gray-5">
+                {work.members.slice(0, 6).map((m) => (
+                  <li key={m.profile_id} className="px-5 py-2.5">
+                    <PersonChip
+                      profile={m.profile}
+                      size="sm"
+                      sub={
+                        m.profile_id === work.owner_id
+                          ? "주담당"
+                          : m.role === "owner"
+                            ? "소유"
+                            : undefined
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+              {work.members.length > 6 ? (
+                <div className="border-t border-gray-10 px-5 py-2.5">
+                  <Link
+                    href={`/works/${work.id}?tab=people`}
+                    className="text-body-sm font-bold text-primary"
+                  >
+                    참여자 {work.members.length}명 전체 보기
+                  </Link>
+                </div>
+              ) : null}
+            </Card>
+          ) : null}
         </div>
       </div>
     </PageContainer>

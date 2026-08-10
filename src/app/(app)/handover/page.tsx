@@ -21,7 +21,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { ButtonLink } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Notice } from "@/components/ui/notice";
@@ -67,7 +66,7 @@ export default async function HandoverPage({
           <EmptyState
             icon={Inbox}
             title="진행 중인 인계·인수가 없습니다"
-            description="인사이동으로 업무를 넘기게 되면 여기에서 「업무인계·인수서」 초안을 만들 수 있습니다. 넘길 업무와 인수자만 고르면, 나머지는 쌓인 기록에서 뽑아 채웁니다."
+            description="넘길 업무와 인수자만 고르면 나머지는 쌓인 기록에서 뽑아 채웁니다."
             action={
               canMutate ? (
                 <ButtonLink href="/handover/new">
@@ -131,7 +130,11 @@ export default async function HandoverPage({
       <div className="print:hidden">
         <PageHeader
           title="업무인계·인수"
-          description="「행정업무의 운영 및 혁신에 관한 규정」 제61조 및 같은 규정 시행규칙 별지 제12호서식 「업무인계·인수서」의 항목 구성을 그대로 따릅니다."
+          /* 법령 조문을 제목 밑에 통째로 인용해 두었었다. 근거를 밝히는 것은
+             맞지만 제목 바로 아래는 「이 화면이 무엇인가」를 말하는 자리이지
+             출처를 대는 자리가 아니다. 서식 이름만 남기고 조문은 종이(인쇄본)에
+             이미 적혀 있으므로 화면에서는 뺀다. */
+          description="시행규칙 별지 제12호서식을 그대로 따릅니다."
           action={
             // 인쇄 버튼은 여기 두지 않는다. 무엇이 어떻게 인쇄되는지 적어 둔
             // 안내 옆(초안 바로 위)에 하나만 둔다. 같은 버튼이 화면에 둘 있으면
@@ -185,43 +188,19 @@ export default async function HandoverPage({
               title="이 초안은 사람이 쓰지 않았습니다"
               className="mb-4"
             >
-              아래 항목은 이 시스템에 쌓인 기록(업무 {draft.evidence.works}건 ·
-              문서 {draft.evidence.documents}건 · 대화 {draft.evidence.comments}
-              건 · 이력 {draft.evidence.activities}건 · 첨부{" "}
-              {draft.evidence.attachments}건)에서 서식 순서대로 뽑아 정리한
-              것입니다.{" "}
+              {/* 겉에 남는 것은 두 문장뿐이다. 예전에는 여기가 472자였고,
+                  초안 카드가 250px 아래로 밀렸다. 두 번째로 이 화면을 여는
+                  사람에게 그 문단은 비용만 남는다. 다만 「대화에서도 가져온다」는
+                  이 제품의 핵심 주장이라 접지 않고 겉에 둔다. */}
+              쌓인 기록(업무 {draft.evidence.works}건 · 문서{" "}
+              {draft.evidence.documents}건 · 대화 {draft.evidence.comments}건 ·
+              이력 {draft.evidence.activities}건 · 첨부{" "}
+              {draft.evidence.attachments}건)에서 서식 순서대로 뽑았습니다.{" "}
               <strong className="font-bold text-gray-90">
-                「현안사항」은 문서만이 아니라 대화에서도 가져옵니다.
+                「현안사항」은 문서만이 아니라 대화에서도 가져오며,
               </strong>{" "}
-              아직 답이 없는 질문이나 서로 어긋난 일정은 문서에 정리되기 전이라
-              대화에만 남아 있고, 인계 때 가장 먼저 사라지는 것이 그것이기
-              때문입니다. 없는 내용을 지어내지 않으며, 근거를 붙일 수 없는
-              항목은 채우지 않고 비워 둔 채로 표시합니다. 그대로 제출하는 문서가
-              아니라{" "}
-              <strong className="font-bold text-gray-90">
-                인계자가 확인하고 보태야 하는 초안
-              </strong>
-              입니다. 항목마다 어느 기록에서 나왔는지 아래에 적었습니다.{" "}
-              {/* 「칸을 뒀습니다」는 그 칸이 실제로 보이는 사람에게만 하는 말이다.
-                  인수자가 볼 때·실행이 끝난 뒤·데모 모드에서는 BlockNotes가
-                  입력칸을 그리지 않으므로, 없는 칸을 있다고 적으면 안 된다. */}
-              {canWriteNotes ? (
-                <>
-                  <strong className="font-bold text-gray-90">
-                    항목마다 「보충 적기」 칸을 뒀습니다.
-                  </strong>{" "}
-                  규칙이 뽑은 문단은 고쳐 쓰지 못하게 두었습니다 — 덮어쓰면 그
-                  문장이 근거를 잃고, 옆에 붙은 근거 표시가 거짓이 되기
-                  때문입니다. 보탠 글은 누가 언제 적었는지와 함께 「인계자
-                  보충」으로 따로 표시하며, 인쇄본에도 그렇게 나옵니다.
-                </>
-              ) : (
-                <>
-                  인계자가 보탠 글이 있으면 규칙이 뽑은 문단과 섞지 않고
-                  「인계자 보충」으로 따로 표시합니다. 누가 언제 적었는지가 함께
-                  남고, 인쇄본에도 그렇게 나옵니다.
-                </>
-              )}
+              근거를 붙일 수 없는 항목은 채우지 않고 비워 둡니다.
+              {/* 생성 시각·생성 방식은 감사 기록이다. 접으면 안 된다. */}
               {handover.generated_at ? (
                 <>
                   <br />
@@ -229,6 +208,42 @@ export default async function HandoverPage({
                   {handover.ai_model ?? "rule-based/v1"}
                 </>
               ) : null}
+              <details className="mt-2">
+                <summary className="cursor-pointer text-body-xs font-bold text-gray-70">
+                  어떻게 뽑았는지 더 보기
+                </summary>
+                <div className="mt-1.5 flex flex-col gap-1.5 text-body-sm leading-relaxed break-keep text-gray-70">
+                  <p>
+                    아직 답이 없는 질문이나 서로 어긋난 일정은 문서에 정리되기
+                    전이라 대화에만 남아 있고, 인계 때 가장 먼저 사라지는 것이
+                    그것이기 때문입니다. 없는 내용을 지어내지 않습니다.
+                  </p>
+                  <p>
+                    그대로 제출하는 문서가 아니라{" "}
+                    <strong className="font-bold text-gray-90">
+                      인계자가 확인하고 보태야 하는 초안
+                    </strong>
+                    입니다. 항목마다 어느 기록에서 나왔는지 아래에 적었습니다.
+                  </p>
+                  {/* 「칸을 뒀습니다」는 그 칸이 실제로 보이는 사람에게만 하는 말이다.
+                      인수자가 볼 때·실행이 끝난 뒤·데모 모드에서는 BlockNotes가
+                      입력칸을 그리지 않으므로, 없는 칸을 있다고 적으면 안 된다. */}
+                  {canWriteNotes ? (
+                    <p>
+                      규칙이 뽑은 문단은 고쳐 쓰지 못하게 두었습니다 — 덮어쓰면
+                      그 문장이 근거를 잃고, 옆에 붙은 근거 표시가 거짓이 되기
+                      때문입니다. 보탠 글은 누가 언제 적었는지와 함께 「인계자
+                      보충」으로 따로 표시하며, 인쇄본에도 그렇게 나옵니다.
+                    </p>
+                  ) : (
+                    <p>
+                      인계자가 보탠 글이 있으면 규칙이 뽑은 문단과 섞지 않고
+                      「인계자 보충」으로 따로 표시합니다. 누가 언제 적었는지가
+                      함께 남고, 인쇄본에도 그렇게 나옵니다.
+                    </p>
+                  )}
+                </div>
+              </details>
             </Notice>
 
             {/* ── 인쇄 ────────────────────────────────────────────────────────
@@ -237,15 +252,14 @@ export default async function HandoverPage({
               (버튼은 스크립트가 있을 때만 나타난다. 안내 문장은 늘 남는다) */}
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-gray-10 bg-surface px-4 py-3">
               <p className="min-w-0 flex-1 text-body-sm break-keep text-gray-60">
-                브라우저 인쇄(<kbd className="font-sans font-bold">Ctrl</kbd>+
-                <kbd className="font-sans font-bold">P</kbd>, macOS는{" "}
-                <kbd className="font-sans font-bold">⌘</kbd>+
-                <kbd className="font-sans font-bold">P</kbd>)로{" "}
+                {/* 「Ctrl+P」를 빼면 안 된다. 스크립트가 없는 브라우저에서는
+                    옆의 인쇄 버튼이 아예 안 그려지고, 이 문장이 인쇄하는 법을
+                    알려 주는 유일한 자리가 된다(tests/browser.test.mjs [2]). */}
+                <kbd className="font-sans font-bold">Ctrl+P</kbd>로{" "}
                 <strong className="font-bold text-gray-80">
                   별지 제12호서식 모양의 A4
                 </strong>
-                가 나옵니다. 화면의 근거 꼬리표는 종이에 싣지 않고, 어느
-                기록에서 뽑았는지를 맨 아래에 한 번 적습니다.
+                가 나옵니다. 근거 꼬리표는 종이 맨 아래에 한 번만 모아 적습니다.
               </p>
               <PrintButton />
             </div>
@@ -497,37 +511,44 @@ export default async function HandoverPage({
                       </strong>{" "}
                       인계서에 보탠 내용도 그때부터 더하거나 지울 수 없습니다.
                     </p>
-                    <ConfirmDialog
-                      trigger="인계 실행"
-                      tone="danger"
-                      title="인계를 실행할까요?"
-                      confirmLabel="실행합니다"
-                      description={
-                        <>
+                    {/* 확인 절차를 <details> 로 둔다.
+                      예전에는 <dialog>+showModal() 로 물었는데, 그 컴포넌트는
+                      "use client" 이고 여는 일이 onClick 에 걸려 있어 **스크립트가
+                      없으면 이 단추가 아무 일도 하지 않았다.** 이 제품에서 가장
+                      되돌릴 수 없는 동작이 무JS 에서 실행 불가였다는 뜻이다.
+                      바로 아래 「인계를 잘못 시작했다면」이 이미 같은 이유로
+                      <details> 를 쓰고 있었다 — 규약이 한 화면 안에서 갈려 있었다.
+                      펼치는 손짓 한 번이 확인 절차를 대신한다. */}
+                    <details className="rounded-md border border-danger/30 bg-danger-bg">
+                      <summary className="flex min-h-11 cursor-pointer list-none items-center px-4 text-body-sm font-bold text-danger">
+                        인계 실행
+                      </summary>
+                      <div className="border-t border-danger/20 px-4 py-3.5">
+                        <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
                           아래 업무의 주담당이 {to.name} {to.position}
-                          {josa(
-                            to.position ?? to.name,
-                            "으로",
-                            "로",
-                          )} 바뀌고, {from.name} {from.position}
+                          {josa(to.position ?? to.name, "으로", "로")} 바뀌고,{" "}
+                          {from.name} {from.position}
                           {josa(from.position ?? from.name, "은", "는")} 열람
                           권한만 남습니다. 실행한 기록은 각 업무의 이력에 남으며
                           지울 수 없습니다.
-                        </>
-                      }
-                      onConfirm={executeHandover}
-                    >
-                      <ul className="space-y-1.5 rounded-md border border-gray-10 bg-gray-5 px-4 py-3">
-                        {items.map(({ work }) => (
-                          <li
-                            key={work.id}
-                            className="text-body-sm break-keep text-gray-80"
-                          >
-                            · {work.title}
-                          </li>
-                        ))}
-                      </ul>
-                    </ConfirmDialog>
+                        </p>
+                        <ul className="mb-3 space-y-1.5 rounded-md border border-gray-10 bg-surface px-4 py-3">
+                          {items.map(({ work }) => (
+                            <li
+                              key={work.id}
+                              className="text-body-sm break-keep text-gray-80"
+                            >
+                              · {work.title}
+                            </li>
+                          ))}
+                        </ul>
+                        <form action={executeHandover}>
+                          <SubmitButton variant="danger">
+                            실행합니다
+                          </SubmitButton>
+                        </form>
+                      </div>
+                    </details>
                   </>
                 ) : (
                   <p
@@ -549,11 +570,12 @@ export default async function HandoverPage({
             {/* ── 취소 ──────────────────────────────────────────────────────
               실행 전에만 열어 둔다. 인수자를 잘못 골랐을 때 되돌릴 길이 없으면
               한 번에 한 건이라는 규칙 때문에 새 인계를 영영 시작할 수 없다.
-              펼치는 손짓 한 번이 확인 절차를 대신한다 — ConfirmDialog는
+              펼치는 손짓 한 번이 확인 절차를 대신한다 — <dialog>로 묻는 방식은
               "use client"라 스크립트가 없으면 버튼이 아무 일도 하지 않는다. */}
             {isSender && !done && canMutate ? (
               <details className="rounded-md border border-gray-10 bg-surface">
-                <summary className="min-h-11 cursor-pointer list-none px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+                  <RotateCcw aria-hidden className="size-4 shrink-0 text-gray-40" />
                   인계를 잘못 시작했다면
                 </summary>
                 <div className="border-t border-gray-10 px-4 py-3.5">

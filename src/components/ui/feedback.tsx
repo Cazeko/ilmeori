@@ -24,8 +24,15 @@ export function ActionFeedback({
 
   const quiet = feedback.tone === "success" || feedback.tone === "info";
 
+  // 실패도 여기서 읽어 준다. 예전에는 Notice 가 role="alert" 를 붙여 준다고
+  // 보고 성공에만 role 을 두었는데, Notice 는 tone 이 danger 일 때만 그렇게
+  // 하므로 warning 으로 돌아온 결과는 아무 데서도 읽히지 않았다.
   return (
-    <div role={quiet ? "status" : undefined} className={className}>
+    <div
+      role={quiet ? "status" : "alert"}
+      aria-live={quiet ? "polite" : "assertive"}
+      className={className}
+    >
       <Notice tone={feedback.tone}>{feedback.text}</Notice>
     </div>
   );

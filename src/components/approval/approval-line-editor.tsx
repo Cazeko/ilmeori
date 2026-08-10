@@ -7,7 +7,10 @@ import {
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Field, Select } from "@/components/ui/field";
 import { PeoplePicker } from "@/components/approval/people-picker";
-import { APPROVAL_KIND_LABEL, type ApprovalStepWithApprover } from "@/lib/types";
+import {
+  APPROVAL_KIND_LABEL,
+  type ApprovalStepWithApprover,
+} from "@/lib/types";
 import type { ApprovalWithSteps, ProfileWithDepartment } from "@/lib/types";
 
 /**
@@ -64,9 +67,11 @@ export function ApprovalLineEditor({
               <form action={removeApprovalStep} className="shrink-0">
                 <input type="hidden" name="approvalId" value={approval.id} />
                 <input type="hidden" name="stepId" value={s.id} />
+                {/* size="sm" 은 min-h-9(36px)이라 손가락 목표 44px 에 못 미친다.
+                    결재란을 빼는 것은 되돌리기 번거로운 동작이라 더 그렇다. */}
                 <SubmitButton
                   variant="ghost"
-                  size="sm"
+                  className="size-11 px-0"
                   aria-label={`${s.approver.name} ${s.position} 결재란 빼기`}
                 >
                   <Trash2 aria-hidden className="size-4" />
@@ -105,15 +110,15 @@ export function ApprovalLineEditor({
           )}
         </Field>
         <SubmitButton variant="secondary">
-          <Plus aria-hidden className="size-4" />
-          칸 추가
+          <Plus aria-hidden className="size-4" />칸 추가
         </SubmitButton>
       </form>
 
       {/* ── 결재선 가져오기 ────────────────────────────────────────────── */}
       {sources.length > 0 ? (
         <details className="rounded-md border border-gray-10 bg-surface">
-          <summary className="min-h-11 cursor-pointer list-none px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+            <Copy aria-hidden className="size-4 shrink-0 text-gray-40" />
             다른 결재의 결재선 그대로 쓰기
           </summary>
           <form

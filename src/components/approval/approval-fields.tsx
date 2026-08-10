@@ -36,7 +36,7 @@ export function ApprovalFields({
         id="approval-form"
         label="서식"
         required
-        hint="네 가지 모두 별지 제2호서식(내부결재문서)입니다. 고른 서식이 문서번호에 들어갑니다."
+        hint="네 가지 모두 별지 제2호서식이며, 고른 서식이 문서번호에 들어갑니다."
       >
         {(p) => (
           <Select {...p} name="form" defaultValue={form}>
@@ -54,6 +54,11 @@ export function ApprovalFields({
           <Input
             {...p}
             name="title"
+            /* required 는 공백 한 칸을 「채워진 값」으로 본다. 그러면 서버의
+               title.trim().min(1) 에 걸려 되돌아오는데, 그 왕복에서 함께 적던
+               내용이 통째로 사라진다. 같은 규칙을 브라우저에서 먼저 건다. */
+            pattern=".*\S.*"
+            title="공백만으로는 제목을 만들 수 없습니다"
             defaultValue={approval?.title ?? ""}
             maxLength={APPROVAL_TITLE_MAX}
             placeholder="예: 2026년 음식물류폐기물 대행 원가산정 용역 결과 협조 요청"
@@ -62,11 +67,7 @@ export function ApprovalFields({
         )}
       </Field>
 
-      <Field
-        id="approval-body"
-        label="본문"
-        hint="번호를 매겨 적는 공문 관례를 그대로 쓰셔도 됩니다. 줄바꿈은 그대로 보입니다."
-      >
+      <Field id="approval-body" label="본문">
         {(p) => (
           <Textarea
             {...p}
@@ -79,7 +80,9 @@ export function ApprovalFields({
         )}
       </Field>
 
-      <div className="flex flex-col gap-4 sm:flex-row">
+      {/* items-start — 두 칸의 hint 길이가 달라 한쪽이 두 줄이 되면, 기본값
+          (stretch)에서는 짧은 쪽 <select> 가 늘어나 밑선이 어긋난다. */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         <Field
           id="approval-retention"
           label="보존연한"

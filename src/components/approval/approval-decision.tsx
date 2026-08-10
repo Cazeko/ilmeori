@@ -21,7 +21,7 @@ import {
  *
  * 반려는 펼쳐야 나온다. 되돌릴 수 없는 동작이고(반려된 문서는 다시 올릴 수 없다 —
  * 새로 기안해야 한다), 펼치는 손짓 한 번이 확인 절차를 대신한다.
- * ConfirmDialog 를 쓰지 않는 이유는 인계 취소에 적어 둔 것과 같다 — "use client"라
+ * <dialog>+showModal() 로 묻지 않는 이유는 인계 취소에 적어 둔 것과 같다 — "use client"라
  * 스크립트가 없으면 아무 일도 하지 않는다.
  */
 export function ApprovalDecision({
@@ -68,7 +68,8 @@ export function ApprovalDecision({
       </form>
 
       <details className="mt-4 border-t border-primary/20 pt-3">
-        <summary className="min-h-11 cursor-pointer list-none py-2 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 py-2 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+          <Undo2 aria-hidden className="size-4 shrink-0 text-gray-40" />
           이 문서를 반려해야 한다면
         </summary>
         <form action={rejectApproval} className="flex flex-col gap-3 pt-1">
@@ -78,7 +79,7 @@ export function ApprovalDecision({
             id="approval-reject-reason"
             label="반려 사유"
             required
-            hint="사유 없는 반려는 받지 않습니다. 「왜 반려됐는지 물어보러 자리로 가야 하는」 상황을 없애는 것이 이 화면의 목적입니다."
+            hint="사유 없는 반려는 받지 않습니다. 기안자가 무엇을 고쳐야 하는지 알아야 합니다."
           >
             {(p) => (
               <Textarea
@@ -111,7 +112,8 @@ export function ApprovalDecision({
 export function ApprovalWithdraw({ approvalId }: { approvalId: string }) {
   return (
     <details className="rounded-md border border-gray-10 bg-surface">
-      <summary className="min-h-11 cursor-pointer list-none px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+        <RotateCcw aria-hidden className="size-4 shrink-0 text-gray-40" />
         잘못 올렸다면
       </summary>
       <div className="border-t border-gray-10 px-4 py-3.5">

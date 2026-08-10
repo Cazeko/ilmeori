@@ -93,7 +93,7 @@ export default async function EditWorkPage({
 
       <PageHeader
         title="업무 수정"
-        description="바꾼 내용은 이력에 남습니다. 무엇이 무엇으로 바뀌었는지까지 DB가 자동으로 기록하며, 지우거나 고칠 수 없습니다."
+        description="바꾼 내용은 이력에 남습니다."
       />
 
       <ActionFeedback msg={sp.msg} className="mb-4" />
@@ -174,8 +174,8 @@ export default async function EditWorkPage({
               <CardBody>
                 <p className="max-w-2xl text-body-sm leading-relaxed break-keep text-gray-70">
                   {archived
-                    ? "보관을 해제하면 이 업무가 다시 업무 보드 목록에 나타납니다. 보관하는 동안에도 문서·대화·이력·첨부는 하나도 사라지지 않았습니다."
-                    : "보관하면 업무 보드 목록에서 빠집니다. 문서·대화·이력·첨부는 그대로 남고, 이 주소로 언제든 다시 열 수 있으며 언제든 보관을 해제할 수 있습니다."}
+                    ? "해제하면 업무 보드 목록에 다시 나타납니다."
+                    : "업무 보드 목록에서만 빠집니다. 지워지는 것은 없고 언제든 해제할 수 있습니다."}
                 </p>
                 <p className="mt-3 max-w-2xl text-body-sm leading-relaxed break-keep text-gray-60">
                   이 제품에는 업무를 지우는 기능이 없습니다. 지울 수 있는 감사

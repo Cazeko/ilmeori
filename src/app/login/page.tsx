@@ -130,7 +130,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             {error ? (
               <Notice tone="danger" className="mt-4">
                 {error === "sign-in-failed"
-                  ? "로그인에 실패했습니다. 시드에 넣은 비밀번호와 DEMO_ACCOUNT_PASSWORD 환경변수가 같은지 확인해 주세요."
+                  ? "로그인에 실패했습니다. 잠시 뒤 다시 시도해 주세요."
                   : "알 수 없는 계정입니다. 아래에서 다시 골라 주세요."}
               </Notice>
             ) : null}

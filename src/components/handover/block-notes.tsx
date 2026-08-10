@@ -52,7 +52,16 @@ export function BlockNotes({
   const inputId = `note-${blockKey}`;
 
   return (
-    <div className="mt-3 border-t border-dashed border-gray-20 pt-3">
+    // 점선은 「규칙이 뽑은 문단」과 「사람이 따로 쌓은 글」을 가를 때만 긋는다.
+    // 보충이 0건이면 가를 것이 없고, 토글 하나를 괄호치는 가로줄이 항목마다
+    // 일곱 번 반복되면 결재 서식이 아니라 설문지로 읽힌다.
+    <div
+      className={
+        notes.length > 0
+          ? "mt-3 border-t border-dashed border-gray-20 pt-3"
+          : "mt-1"
+      }
+    >
       {notes.length > 0 ? (
         <ul className="flex flex-col gap-2.5">
           {notes.map((n) => (
@@ -117,20 +126,35 @@ export function BlockNotes({
           open={needsHuman && notes.length === 0}
           className={notes.length > 0 ? "mt-2.5" : undefined}
         >
+          {/* 「이 항목에」는 그 항목 안에 있으니 자명한 말이다. 일곱 번
+              반복되면 문서가 아니라 설문지가 된다. 아래 Field 라벨이 어느
+              항목인지를 이미 말하므로 여기서는 동작만 적는다. */}
           <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-body-sm font-bold text-gray-60 hover:text-gray-80">
-            <PenLine aria-hidden className="size-4" />이 항목에 보충 적기
+            <PenLine aria-hidden className="size-4" />
+            보충 적기
           </summary>
-          <form action={addHandoverNote} className="mt-1">
+          <form
+            action={addHandoverNote}
+            // 같은 폼이 항목마다 하나씩, 최대 일곱 개다. 라벨을 짧게 줄인 대신
+            // 어느 항목의 칸인지는 이 이름이 진다.
+            aria-label={`「${heading}」에 보충 적기`}
+            className="mt-1"
+          >
             <input type="hidden" name="handoverId" value={handoverId} />
             <input type="hidden" name="blockKey" value={blockKey} />
             <Field
               id={inputId}
-              label={`「${heading}」에 보충 적기`}
+              // 항목명은 바로 위 h3 에 이미 있다. 라벨에 통째로 되풀이하면
+              // 같은 말이 55px 안에 두 번 선다. 어느 항목의 칸인지는 위
+              // form 의 이름(랜드마크)이 진다.
+              label="보충 내용"
               // 빈 채로 눌러도 브라우저가 막는다. 이 검사는 스크립트가 아니라
               // 브라우저 기본 기능이라 자바스크립트를 꺼도 동작한다.
               // 없으면 서버까지 갔다가 일곱 칸짜리 문서의 맨 위로 튕긴다.
               required
-              hint="규칙이 뽑은 위 문단은 그대로 두고, 적은 글이 아래에 따로 붙습니다. 누가 언제 적었는지가 함께 남고 인쇄본에도 그렇게 나옵니다. 인계를 실행한 뒤에는 더하거나 지울 수 없습니다."
+              // 위 Notice 가 이미 「규칙이 뽑은 문단과 섞지 않는다」를 말한다.
+              // 여기서는 이 칸에서만 알 수 있는 것 하나만 적는다.
+              hint="인계를 실행한 뒤에는 더하거나 지울 수 없습니다."
             >
               {(p) => (
                 <Textarea

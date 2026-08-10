@@ -357,9 +357,20 @@ export async function buildApprovalExport(
           : "미처리"
     }`,
   }));
-  if (opinionLines.length > 0) {
-    blocks.push({ key: "opinions", heading: "4. 결재 의견", lines: opinionLines });
-  }
+  // 의견이 0건이어도 칸은 남긴다. 칸째로 빼면 종이에서 「3」 다음이 「5」가 되어
+  // 「4번을 누가 지웠다」 또는 「한 장이 빠졌다」로 읽힌다. 결재에 올라가는
+  // 서식에서 항목 번호는 그 문서를 가리키는 이름이다 — 문서마다 다른 번호를
+  // 달아 주는 후처리(있는 것만 세어 다시 매기기)도 같은 이유로 쓰지 않는다.
+  // 아무도 의견을 적지 않았다는 것 자체가 이 문서의 사실이므로 그대로 적는다.
+  // (2·3번 칸이 비었을 때와 같은 처리다)
+  blocks.push({
+    key: "opinions",
+    heading: "4. 결재 의견",
+    lines:
+      opinionLines.length > 0
+        ? opinionLines
+        : [{ text: "적힌 의견이 없습니다." }],
+  });
 
   // --- 5. 결재 경과 --------------------------------------------------------
   //

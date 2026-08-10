@@ -18,6 +18,7 @@ import {
   type ApprovalBox,
 } from "@/lib/approval";
 import { cn } from "@/lib/cn";
+import { LinkPending } from "@/components/ui/link-pending";
 import { listApprovals } from "@/lib/data";
 import { canMutate } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
@@ -71,7 +72,10 @@ export default async function ApprovalsPage({
     <PageContainer>
       <PageHeader
         title="결재함"
-        description="내부결재문서(시행규칙 별지 제2호서식)를 올리고 처리하는 곳입니다. 대외로 나가는 발신문서는 여기서 만들지 않습니다 — 그건 온나라의 자리입니다."
+        /* 「내부결재문서를 올리고 처리하는 곳입니다」는 제목이 이미 한 말이고,
+           「발신문서는 온나라의 자리」는 이 화면에서 하려던 일을 막는 말이
+           아니라 제품 경계 설명이다. 아래 「결재 올리기」 화면에서 서식을 고를
+           때 같은 말이 그 자리에서 다시 나온다. */
         action={
           canMutate ? (
             <ButtonLink href="/approvals/new">
@@ -105,12 +109,18 @@ export default async function ApprovalsPage({
                     aria-current={on ? "page" : undefined}
                     className={cn(
                       "flex min-h-11 items-center gap-2 rounded-sm px-3 text-body-sm font-bold transition-colors duration-150",
+                      // 누르는 즉시 칠해진다(브라우저가 한다 — 자바스크립트 대기 없음)
+                      "active:bg-primary-10 active:text-primary",
                       on
                         ? "bg-primary-5 text-primary"
                         : "text-gray-70 hover:bg-gray-5 hover:text-gray-90",
                     )}
                   >
                     {APPROVAL_BOX_LABEL[b]}
+                    {/* 분류를 바꾸는 것도 물음표 뒤만 바뀌는 같은 화면 이동이라
+                        본문 자리를 갈지 않는다. 눌렸다는 표시가 여기 있어야
+                        한다(업무 보드 조건 칩과 같은 이유). */}
+                    <LinkPending />
                     {b === "todo" && todoCount > 0 ? (
                       <span
                         className={cn(
@@ -158,6 +168,9 @@ export default async function ApprovalsPage({
             </>
           ) : (
             <div className="rounded-md border border-gray-10 bg-surface">
+              {/* description 을 뺐다 — 바로 위 h2 밑에 같은 문장(APPROVAL_BOX_HINT)이
+                  이미 있어서, 문서가 0건인 화면에서 글 세 줄 중 둘이 같은 말이었다.
+                  그 자리에는 대신 다음에 할 수 있는 일을 둔다. */}
               <EmptyState
                 icon={box === "todo" ? Inbox : FileCheck2}
                 title={
@@ -165,7 +178,14 @@ export default async function ApprovalsPage({
                     ? "지금 처리할 결재가 없습니다"
                     : "여기에 해당하는 문서가 없습니다"
                 }
-                description={APPROVAL_BOX_HINT[box]}
+                action={
+                  canMutate ? (
+                    <ButtonLink href="/approvals/new" variant="secondary">
+                      <FilePlus2 aria-hidden className="size-4" />
+                      결재 올리기
+                    </ButtonLink>
+                  ) : undefined
+                }
               />
             </div>
           )}

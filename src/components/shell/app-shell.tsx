@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LinkPending } from "@/components/ui/link-pending";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { NavPlaceholder } from "@/components/shell/nav-placeholder";
 import { useNavPending } from "@/components/shell/use-nav-pending";
 import { usePathname } from "next/navigation";
@@ -58,6 +59,87 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/**
+ * 메뉴 목록 — 넓은 화면의 옆줄과 좁은 화면의 서랍이 같은 것을 쓴다.
+ * 두 벌로 적어 두면 한쪽만 고치는 날이 반드시 온다.
+ */
+function NavList({ pathname }: { pathname: string }) {
+  return (
+    // 묶음 이름과 항목 사이를 벌리고(mb-2), 묶음끼리는 더 벌린다(mb-7).
+    // 둘이 비슷하면 「업무」가 첫 항목의 제목처럼 읽힌다.
+    <nav aria-label="주요 메뉴" className="px-3 py-5">
+      {NAV.map((group) => (
+        <div key={group.heading} className="mb-7 last:mb-0">
+          {/* gray-50 은 판(#fafafa) 위에서 4.32:1 로 4.5:1 에 못 미친다.
+              묶음 이름도 읽히라고 둔 글자이므로 gray-60(6.04:1)으로 올린다. */}
+          <p className="mb-2 px-3 text-body-xs font-bold tracking-wide text-gray-60">
+            {group.heading}
+          </p>
+          <ul className="flex flex-col gap-0.5">
+            {group.items.map(({ href, label, icon: Icon }) => {
+              const active = isActive(pathname, href);
+              return (
+                <li key={href}>
+                  {/* 지금 있는 자리를 한 단계 더 세게 말한다 —
+                      옅은 판만으로는 옆의 본문에 눌려 「어디에 있는지」가
+                      흐려진다. 왼쪽 굵은 막대 + 판 + 진한 글자 셋이
+                      함께 붙고, 막대는 자리를 늘 차지해(투명) 활성 항목만
+                      2px 밀려 보이는 일이 없다. */}
+                  <Link
+                    href={href}
+                    data-variant="plain"
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "flex min-h-11 items-center gap-3 rounded-sm border-l-3 pr-3 pl-2.5 text-body-sm font-bold transition-colors duration-150",
+                      // 누르는 즉시 칠해진다. :active 는 브라우저가 칠하므로
+                      // 자바스크립트를 기다리지 않는다(0ms). 그 뒤를
+                      // LinkPending 의 표시가 이어받는다.
+                      "active:bg-primary-10 active:text-primary",
+                      active
+                        ? "border-l-primary bg-primary-5 text-primary"
+                        : "border-l-transparent text-gray-70 hover:bg-gray-5 hover:text-gray-90",
+                    )}
+                  >
+                    <Icon aria-hidden className="size-5 shrink-0" />
+                    <span className="min-w-0 flex-1">{label}</span>
+                    {/* 눌렀다는 표시. 목적지가 동적이라 화면이 갈리기까지
+                        150~230ms 걸리는데, 그동안 아무 일도 없으면
+                        사람은 한 번 더 누른다. */}
+                    <LinkPending />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+/**
+ * 시제품임을 알리는 쪽지.
+ *
+ * 예전에는 두 문장짜리 문단을 사이드바 아래에 상시 펼쳐 두었다. 260px 옆줄에서
+ * 세로 128px 를 영구히 먹었고, 모든 화면에 늘 같은 글이 떠 있었다. 알아야 할
+ * 것은 「가상 데이터다」 한마디뿐이고, 어디까지 가상인지는 궁금할 때만 읽으면 된다.
+ * <details> 라서 스크립트 없이도 열린다.
+ */
+function DemoNotice() {
+  return (
+    <details className="mx-3 mb-4 rounded-md border border-warning/30 bg-warning-bg px-3 py-2">
+      <summary className="cursor-pointer list-none text-body-xs font-bold text-gray-90 [&::-webkit-details-marker]:hidden">
+        시연용 가상 데이터
+        <span className="ml-1 font-normal text-gray-60">자세히</span>
+      </summary>
+      <p className="mt-1.5 text-body-xs leading-relaxed text-gray-60">
+        부서명만 화성특례시 실제 조직도를 따랐습니다. 인물·업무·문서는 전부
+        지어낸 것이며 실제 공문서는 한 건도 들어 있지 않습니다.
+      </p>
+    </details>
+  );
+}
+
 export function AppShell({
   viewer,
   departmentName,
@@ -68,8 +150,16 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const closeRef = useRef<HTMLButtonElement>(null);
+  /**
+   * 좁은 화면의 서랍은 <details> 다 — 여는 일을 브라우저가 한다.
+   *
+   * 예전에는 useState 로 열었다. 그러면 스크립트가 없는 브라우저에서 햄버거를
+   * 눌러도 아무 일이 없고, 옆줄은 lg 미만에서 늘 invisible 이라 **메뉴에 아예
+   * 닿을 길이 없었다.** 「스크립트 없이 전부 동작한다」는 이 제품의 전제를
+   * 정면으로 깨는 자리였다. 아래 ref 는 여는 데 쓰지 않고, 이동했을 때와
+   * Esc 를 눌렀을 때 닫는 데만 쓴다 — 없어도 서랍은 열리고 닫힌다.
+   */
+  const drawerRef = useRef<HTMLDetailsElement>(null);
 
   /**
    * 화면 이동이 진행 중인가 — 누른 그 순간부터.
@@ -77,7 +167,11 @@ export function AppShell({
    * 본문 자리에 자리표시를 그리는 데 쓴다. 서버가 보내는 HTML 은 그대로 두고
    * 브라우저에서만 옛 화면을 가리므로, 스크립트가 없으면 아무 일도 안 일어난다.
    */
-  const { pending: navPending, target: navTarget, sameScreen } = useNavPending();
+  const {
+    pending: navPending,
+    target: navTarget,
+    sameScreen,
+  } = useNavPending();
 
   /**
    * 80ms 안에 끝나는 이동에서는 자리표시를 아예 그리지 않는다.
@@ -96,17 +190,23 @@ export function AppShell({
   const showPlaceholder =
     navPending && !sameScreen && placeholderFor === navTarget;
 
-  // 서랍을 열면 포커스를 안으로 옮기고, Esc로 닫을 수 있게 한다.
-  // 이걸 빠뜨리면 키보드 사용자는 서랍을 열고도 그 안으로 못 들어간다.
+  // 화면이 바뀌면 서랍을 접는다. 이동한 화면이 서랍에 가려지면 안 된다.
   useEffect(() => {
-    if (!drawerOpen) return;
-    closeRef.current?.focus();
+    if (drawerRef.current) drawerRef.current.open = false;
+  }, [pathname]);
+
+  // Esc 로 닫는다. 브라우저가 <details> 에 대해 해 주지 않는 유일한 것이라
+  // 여기서만 보탠다. 이게 없어도 서랍은 여닫힌다 — 닫는 단추가 안에 있다.
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDrawerOpen(false);
+      const el = drawerRef.current;
+      if (e.key !== "Escape" || !el?.open) return;
+      el.open = false;
+      el.querySelector("summary")?.focus();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [drawerOpen]);
+  }, []);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -118,16 +218,47 @@ export function AppShell({
       {/* 상단 바와 왼쪽 메뉴는 종이에 나올 이유가 없다. 인쇄물은 결재에 올라가는
           문서 한 벌이지 화면의 사진이 아니다. */}
       <header className="sticky top-0 z-20 flex h-header shrink-0 items-center gap-3 border-b border-gray-10 bg-surface px-3 sm:px-4 print:hidden">
-        <button
-          type="button"
-          aria-label="메뉴 열기"
-          aria-expanded={drawerOpen}
-          aria-controls="app-sidebar"
-          onClick={() => setDrawerOpen(true)}
-          className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-sm text-gray-60 hover:bg-gray-5 lg:hidden"
-        >
-          <Menu aria-hidden className="size-5" />
-        </button>
+        {/* ── 좁은 화면의 서랍 ──────────────────────────────────────────
+            <details> 라서 스크립트 없이 열린다. summary 가 곧 햄버거다. */}
+        <details ref={drawerRef} className="lg:hidden">
+          <summary
+            aria-label="메뉴"
+            className="flex size-11 shrink-0 cursor-pointer list-none items-center justify-center rounded-sm text-gray-60 hover:bg-gray-5 [&::-webkit-details-marker]:hidden"
+          >
+            <Menu aria-hidden className="size-5" />
+          </summary>
+
+          {/* 덮개는 서랍보다 **아래** 층이어야 한다. 예전에는 덮개가 z-40,
+              서랍이 z-30 이라 덮개가 서랍 위를 덮었고, 메뉴를 눌러도 클릭이
+              전부 덮개로 들어가 좁은 화면에서 이동이 아예 되지 않았다. */}
+          <span
+            aria-hidden
+            className="fixed inset-0 z-30 block bg-gray-100/40"
+            onClick={() => {
+              if (drawerRef.current) drawerRef.current.open = false;
+            }}
+          />
+
+          <div className="fixed top-0 bottom-0 left-0 z-40 flex w-sidebar flex-col overflow-y-auto border-r border-gray-10 bg-surface">
+            <div className="flex h-header shrink-0 items-center justify-between px-4">
+              <span className="text-body font-bold text-gray-90">메뉴</span>
+              <button
+                type="button"
+                aria-label="메뉴 닫기"
+                onClick={() => {
+                  if (drawerRef.current) drawerRef.current.open = false;
+                }}
+                className="flex size-11 cursor-pointer items-center justify-center rounded-sm text-gray-60 hover:bg-gray-5"
+              >
+                <X aria-hidden className="size-5" />
+              </button>
+            </div>
+            <div className="flex-1">
+              <NavList pathname={pathname} />
+            </div>
+            <DemoNotice />
+          </div>
+        </details>
 
         {/* ── 왼쪽: 표식 ────────────────────────────────────────────────
             사이드바와 같은 폭을 차지한다. 그래야 로고 아래 첫 메뉴 항목이
@@ -170,9 +301,13 @@ export function AppShell({
                  낱말이 들어 있는지를 보는 것이고 어떤 모델도 부르지 않는다.
                  하지 않는 일을 칸에 적어 두면, 심사에서 한 번 눌러 보는 것으로
                  무너진다. 「인계서를 AI가 썼다」고 적지 않기로 한 것과 같은 규칙이다. */
-              placeholder="업무 제목으로 찾기"
+              /* 좁은 화면에서는 짧게. 131px 칸에 「업무 제목으로 찾기」를 넣으면
+                 「업무 제목으」에서 잘려 무엇을 넣는 칸인지 못 읽는다. */
+              placeholder="업무 찾기"
               autoComplete="off"
-              className="h-9 w-full rounded-sm border border-gray-20 bg-gray-5 pr-3 pl-9 text-body-sm text-gray-90 placeholder:text-gray-60 hover:border-gray-30 focus:bg-surface"
+              /* text-body(17px) — iOS 는 16px 미만 입력칸을 탭하면 화면을 확대하고
+                 되돌려 주지 않는다. 높이도 그에 맞춰 h-11(44px)로 올린다. */
+              className="h-11 w-full rounded-sm border border-gray-50 bg-gray-5 pr-3 pl-9 text-body text-gray-90 placeholder:text-gray-60 hover:border-gray-60 focus:bg-surface sm:text-body-sm"
             />
           </div>
         </form>
@@ -183,7 +318,9 @@ export function AppShell({
             <span className="block text-body-sm font-bold text-gray-90">
               {viewer.name} {viewer.position}
             </span>
-            <span className="block text-body-xs text-gray-60">{departmentName}</span>
+            <span className="block text-body-xs text-gray-60">
+              {departmentName}
+            </span>
           </span>
           <Avatar profile={viewer} />
           {/* /login으로 가는 링크로 두면 안 된다. proxy가 로그인한 사람을
@@ -192,124 +329,44 @@ export function AppShell({
               크기를 아바타(32px)에 맞춘다 — 옆에 선 것들보다 크면 「계정 전환」이
               머리에서 가장 눈에 띄는 단추가 되는데, 그건 여기서 가장 덜 쓰는 것이다. */}
           <form action={leaveDemo}>
-            <button
-              type="submit"
+            {/* 서버 액션 폼 중 여기만 눌린 표시가 없었다. 세션을 끊고 다시
+                들어오는 왕복이라 오히려 제일 오래 걸리는 폼이다. */}
+            <SubmitButton
+              variant="ghost"
               title="세션을 끊고 다른 데모 계정으로 들어갑니다"
-              className="flex h-8 min-w-8 cursor-pointer items-center justify-center gap-1.5 rounded-sm border border-gray-20 px-1.5 text-body-xs font-bold text-gray-60 hover:bg-gray-5 sm:px-2"
+              className="h-8 min-h-8 min-w-8 gap-1.5 border border-gray-50 px-1.5 text-body-xs font-bold text-gray-60 sm:px-2"
             >
               <Repeat aria-hidden className="size-3.5" />
               {/* 좁은 화면에서는 아이콘만. 글자까지 두면 검색칸이 눌려 버린다. */}
               <span className="hidden sm:inline">계정 전환</span>
               <span className="sr-only sm:hidden">계정 전환</span>
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
-        {/* ── 왼쪽 ────────────────────────────────────────────────────────── */}
-        {drawerOpen ? (
-          <div
-            className="fixed inset-0 z-40 bg-gray-100/40 lg:hidden"
-            onClick={() => setDrawerOpen(false)}
-            aria-hidden
-          />
-        ) : null}
-
-        <aside
-          id="app-sidebar"
-          aria-label="주요 메뉴"
-          className={cn(
-            "fixed top-0 bottom-0 left-0 z-30 w-sidebar shrink-0 overflow-y-auto border-r border-gray-10 bg-surface transition-transform duration-200",
-            "lg:sticky lg:visible lg:top-header lg:bottom-auto lg:z-10 lg:h-[calc(100dvh-var(--spacing-header))] lg:translate-x-0 lg:self-start",
-            // 닫힌 서랍은 화면 밖에 있을 뿐 여전히 문서에 있다. 그대로 두면
-            // 탭 키가 보이지 않는 링크들을 훑고 지나간다.
-            // inert 속성 대신 visibility를 쓰는 이유: CSS만으로 결정되므로
-            // 자바스크립트가 늦게 뜨거나 실패해도 넓은 화면에서 메뉴가 잠기지 않는다.
-            drawerOpen ? "visible translate-x-0" : "invisible -translate-x-full",
-            "print:hidden",
-          )}
-        >
-          <div className="flex h-header items-center justify-between px-4 lg:hidden">
-            <span className="text-body font-bold text-gray-90">메뉴</span>
-            <button
-              ref={closeRef}
-              type="button"
-              aria-label="메뉴 닫기"
-              onClick={() => setDrawerOpen(false)}
-              className="flex size-11 cursor-pointer items-center justify-center rounded-sm text-gray-60 hover:bg-gray-5"
-            >
-              <X aria-hidden className="size-5" />
-            </button>
+        {/* ── 왼쪽 ──────────────────────────────────────────────────────────
+            넓은 화면 전용. 좁은 화면의 같은 메뉴는 위 <details> 서랍 안에 있다. */}
+        <aside className="sticky top-header hidden h-[calc(100dvh-var(--spacing-header))] w-sidebar shrink-0 flex-col self-start overflow-y-auto border-r border-gray-10 bg-surface lg:flex print:hidden">
+          <div className="flex-1">
+            <NavList pathname={pathname} />
           </div>
-
-          {/* 메뉴 안 어디를 누르든 서랍은 닫힌다. 이동한 화면이 서랍에 가려지면 안 된다.
-              (효과로 pathname 변화를 감시하는 대신 클릭에서 처리한다.
-               서랍이 열려 있는 것은 파생 상태가 아니라 사용자가 만든 상태다) */}
-          {/* 묶음 이름과 항목 사이를 벌리고(mb-2), 묶음끼리는 더 벌린다(mb-7).
-              둘이 비슷하면 「업무」가 첫 항목의 제목처럼 읽힌다. */}
-          <nav className="px-3 py-5" onClick={() => setDrawerOpen(false)}>
-            {NAV.map((group) => (
-              <div key={group.heading} className="mb-7 last:mb-0">
-                <p className="mb-2 px-3 text-body-xs font-bold tracking-wide text-gray-50">
-                  {group.heading}
-                </p>
-                <ul className="flex flex-col gap-0.5">
-                  {group.items.map(({ href, label, icon: Icon }) => {
-                    const active = isActive(pathname, href);
-                    return (
-                      <li key={href}>
-                        {/* 지금 있는 자리를 한 단계 더 세게 말한다 —
-                            옅은 판만으로는 옆의 본문에 눌려 「어디에 있는지」가
-                            흐려진다. 왼쪽 굵은 막대 + 판 + 진한 글자 셋이
-                            함께 붙고, 막대는 자리를 늘 차지해(투명) 활성 항목만
-                            2px 밀려 보이는 일이 없다. */}
-                        <Link
-                          href={href}
-                          data-variant="plain"
-                          aria-current={active ? "page" : undefined}
-                          className={cn(
-                            "flex min-h-11 items-center gap-3 rounded-sm border-l-3 pr-3 pl-2.5 text-body-sm font-bold transition-colors duration-150",
-                            // 누르는 즉시 칠해진다. :active 는 브라우저가 칠하므로
-                            // 자바스크립트를 기다리지 않는다(0ms). 그 뒤를
-                            // LinkPending 의 표시가 이어받는다.
-                            "active:bg-primary-10 active:text-primary",
-                            active
-                              ? "border-l-primary bg-primary-5 text-primary"
-                              : "border-l-transparent text-gray-70 hover:bg-gray-5 hover:text-gray-90",
-                          )}
-                        >
-                          <Icon aria-hidden className="size-5 shrink-0" />
-                          <span className="min-w-0 flex-1">{label}</span>
-                          {/* 눌렀다는 표시. 목적지가 동적이라 화면이 갈리기까지
-                              150~230ms 걸리는데, 그동안 아무 일도 없으면
-                              사람은 한 번 더 누른다. */}
-                          <LinkPending />
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
-          </nav>
-
-          {/* 시제품임을 화면 어디에서든 알 수 있게 둔다. 데이터를 착각할 여지를 없앤다. */}
-          <div className="mx-3 mb-4 rounded-md border border-warning/30 bg-warning-bg px-3 py-2.5">
-            <p className="text-body-xs font-bold text-gray-90">시연용 가상 데이터</p>
-            <p className="mt-0.5 text-body-xs leading-relaxed text-gray-60">
-              부서명만 화성특례시 실제 조직도를 따랐습니다. 인물·업무·문서는 전부
-              지어낸 것이며 실제 공문서는 한 건도 들어 있지 않습니다.
-            </p>
-          </div>
+          <DemoNotice />
         </aside>
 
         {/* ── 본문 ────────────────────────────────────────────────────────── */}
-        <main id="main" tabIndex={-1} className="min-w-0 flex-1 bg-gray-5 print:bg-white">
+        <main
+          id="main"
+          tabIndex={-1}
+          className="min-w-0 flex-1 bg-gray-5 print:bg-white"
+        >
           {/* display:contents — 감싸도 배치가 달라지지 않는다.
               자리표시를 그리는 동안에만 이 층을 통째로 감춘다(지우지 않는다 —
               지우면 되돌아왔을 때 스크롤과 입력칸이 날아간다). */}
-          <div className={showPlaceholder ? "hidden" : "contents"}>{children}</div>
+          <div className={showPlaceholder ? "hidden" : "contents"}>
+            {children}
+          </div>
           {showPlaceholder ? <NavPlaceholder /> : null}
         </main>
       </div>

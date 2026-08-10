@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw, Users, Wifi, WifiOff } from "lucide-react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -110,7 +116,21 @@ export function WorkLive({
   const [pending, setPending] = useState<TouchKind[]>([]);
   // 화면을 저절로 갈아 끼웠을 때 읽어 줄 말. 같은 갈래가 연달아 오면 문자열이
   // 그대로라 보조기술이 다시 읽지 않으므로, 순번을 함께 들고 다닌다.
-  const [notice, setNotice] = useState<{ text: string; seq: number } | null>(null);
+  const [notice, setNotice] = useState<{ text: string; seq: number } | null>(
+    null,
+  );
+  /**
+   * 「지금 반영」을 누른 그 순간의 serverAt.
+   *
+   * 예전에는 누르는 즉시 배너만 사라지고 화면은 그대로였다. 새 내용이 오기까지
+   * 아무 표시가 없어 「눌렀는데 아무 일도 안 났다」로 읽힌다. 보이지 않는
+   * 사람에게는 아래 sr-only 가 「불러오는 중」을 말해 주고 있었는데, 정작
+   * 보는 사람에게는 그 말이 없었다.
+   *
+   * 상태를 따로 끄지 않는다 — serverAt 이 바뀌면 저절로 어긋나 풀린다.
+   * (효과 안에서 setState 하지 않는 것이 이 저장소의 규약이다)
+   */
+  const [applyingAt, setApplyingAt] = useState<string | null>(null);
   const seq = useRef(0);
 
   // 구독은 업무가 바뀔 때만 다시 맺는다. 그 안에서 읽어야 하는 값들은 ref 로 넘긴다.
@@ -119,6 +139,13 @@ export function WorkLive({
   useEffect(() => {
     editingRef.current = editing;
   }, [editing]);
+
+  // apply 는 구독 효과가 붙들고 있는 콜백이라 serverAt 을 의존성에 넣을 수 없다
+  // (넣으면 화면이 갈릴 때마다 채널을 다시 맺어 접속자 표시가 깜빡인다).
+  const serverAtRef = useRef(serverAt);
+  useEffect(() => {
+    serverAtRef.current = serverAt;
+  }, [serverAt]);
 
   // 화면이 새 데이터로 갈렸으면 쌓아 둔 변경은 이미 반영된 것이다.
   // (내가 저장해서 화면이 최신이 된 뒤에도 배너가 남아 있으면, 화면이 사실과
@@ -139,6 +166,7 @@ export function WorkLive({
       const what = touchLabel(kind);
       seq.current += 1;
       setPending([]);
+      setApplyingAt(serverAtRef.current);
       // 「불러왔습니다」라고 적지 않는다. router.refresh() 는 비동기라
       // 이 시점에는 아직 안 끝났다.
       setNotice({
@@ -208,12 +236,17 @@ export function WorkLive({
           // 적힌 채 옛 화면을 보여 주게 된다. 그게 끊긴 것보다 나쁘다.
           if (wasLost) {
             wasLost = false;
-            if (editingRef.current) setPending((q) => (q.length ? q : ["work"]));
+            if (editingRef.current)
+              setPending((q) => (q.length ? q : ["work"]));
             else apply(null);
           }
           return;
         }
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
           wasLost = true;
           setLink("lost");
           setPresent([]);
@@ -249,6 +282,10 @@ export function WorkLive({
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [pending, editing, apply]);
 
+  // serverAt 이 바뀌었다는 것은 화면이 새 데이터로 갈렸다는 뜻이다 —
+  // refresh 가 끝났다는 유일하게 정직한 신호다.
+  const applying = applyingAt !== null && applyingAt === serverAt;
+
   if (!hydrated) return null;
 
   const byId = new Map(people.map((p) => [p.id, p]));
@@ -269,7 +306,30 @@ export function WorkLive({
     .join(", ");
 
   const waiting = pending.length;
-  const waitingLabel = waiting > 0 ? touchLabel(pending[pending.length - 1] ?? null) : "";
+  const waitingLabel =
+    waiting > 0 ? touchLabel(pending[pending.length - 1] ?? null) : "";
+
+  // 「연결됐고 나 혼자 보고 있다」는 이 화면의 기본값이다. 그것을 테두리 친
+  // 판으로 상시 알리면, 업무 상세를 열 때마다 제목 아래 한 줄이 늘 새 정보인
+  // 척 자리를 차지한다. 할 말이 있을 때만 판을 그린다 — 같이 보는 사람이
+  // 있거나, 밀린 변경이 있거나, 연결이 정상이 아닐 때.
+  const quiet = link === "live" && others.length === 0 && waiting === 0;
+
+  if (quiet) {
+    // 테두리 친 판만 걷어낸다. 「연결됨」이라고 적었으면 누가 보고 있는지도
+    // 반드시 같은 자리에 있어야 한다 — 상태만 적고 사람을 빼면 화면이 절반만
+    // 말하는 것이 된다(tests/browser.test.mjs [6] 가 이 규칙을 지킨다).
+    return (
+      <div className="mt-4 print:hidden">
+        <p className="inline-flex items-center gap-1.5 text-body-xs text-gray-60">
+          <Wifi aria-hidden className="size-3.5 text-status-done" />
+          <span className="font-bold text-status-done-text">실시간 연결됨</span>
+          <span aria-hidden>·</span>
+          지금은 나만 보고 있습니다
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-4 print:hidden">
@@ -337,9 +397,14 @@ export function WorkLive({
             variant="secondary"
             size="sm"
             onClick={() => apply(pending[pending.length - 1] ?? null)}
+            disabled={applying}
+            aria-busy={applying}
           >
-            <RefreshCw aria-hidden className="size-4" />
-            지금 반영
+            <RefreshCw
+              aria-hidden
+              className={cn("size-4", applying && "motion-safe:animate-spin")}
+            />
+            {applying ? "불러오는 중…" : "지금 반영"}
           </Button>
         </div>
       ) : null}

@@ -28,11 +28,15 @@ export default function NotFound() {
           이 주소에는 아무것도 없습니다
         </h1>
         <p className="mt-3 text-body-sm leading-relaxed break-keep text-gray-60">
-          주소가 잘못되었거나, 사라진 화면입니다. 업무가 보이지 않는 경우라면
-          업무 보드에서 다시 찾아 주십시오.
+          주소가 잘못되었거나 사라진 화면입니다.
         </p>
-        <p className="mt-5">
-          <Link href="/" className="text-body-sm font-bold text-primary">
+        {/* 「업무 보드에서 찾으라」고 적어 두고 업무 보드로 가는 길은 주지
+            않았었다. 여기까지 온 사람이 실제로 하려던 일은 대개 그쪽이다. */}
+        <p className="mt-5 flex flex-wrap gap-4">
+          <Link href="/works" className="text-body-sm font-bold text-primary">
+            업무 보드에서 찾기
+          </Link>
+          <Link href="/" className="text-body-sm font-bold text-gray-70">
             홈으로 돌아가기
           </Link>
         </p>

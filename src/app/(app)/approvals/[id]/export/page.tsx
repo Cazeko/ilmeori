@@ -129,7 +129,6 @@ export default async function ApprovalExportPage({
 
         <PageHeader
           title="온나라로 넘기기"
-          description="결재 문서를 한/글 파일(.hwpx)로 내려받습니다. 문장마다 어느 기록에서 나왔는지가 함께 실립니다."
           meta={
             <div className="flex flex-wrap items-center gap-2">
               <ApprovalBadge state={approval.state} steps={approval.steps} />
@@ -146,64 +145,65 @@ export default async function ApprovalExportPage({
           }
         />
 
-        {/* ── 내려받기 ─────────────────────────────────────────────────── */}
+        {/* ── 내려받기 ───────────────────────────────────────────────────
+            예전에는 이 단추 하나를 설명 상자 다섯 개가 둘러싸고 있었다.
+            먼저 받게 하고, 단서는 그 아래 한 문단으로 줄인다. */}
         <div className="mb-5 rounded-md border border-primary/30 bg-primary-5 px-5 py-4">
-          <p className="text-body-sm font-bold text-gray-90">
+          <p className="mb-3 text-body-sm font-bold text-gray-90">
             한/글 파일로 내려받기
-          </p>
-          <p className="mt-1 mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
-            별지 제2호서식(내부결재문서) 모양으로 조립합니다.{" "}
-            <strong className="font-bold text-gray-90">
-              최종 결재권자의 서명은 「일머리」에서 받지 않습니다.
-            </strong>{" "}
-            법정 결재는 온나라의 일이고, 이 파일은 거기에 올리는 초안입니다.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {/* 링크다. 자바스크립트 없이 눌러도 내려받아진다. */}
-            <ButtonLink href={`/approvals/${approval.id}/export/hwpx`} prefetch={false}>
+            <ButtonLink
+              href={`/approvals/${approval.id}/export/hwpx`}
+              prefetch={false}
+              /* 화면이 갈리지 않는 주소다 — 자리표시가 켜지면 안 된다. */
+              data-download=""
+            >
               <Download aria-hidden className="size-4" />
               한/글 파일(.hwpx)
             </ButtonLink>
             <PrintButton />
             <span className="inline-flex items-center gap-1.5 text-body-xs text-gray-60">
               <Printer aria-hidden className="size-3.5" />
-              또는 Ctrl+P — A4 한 벌이 같은 내용으로 나옵니다
+              Ctrl+P 로도 같은 내용이 A4 한 벌로 나옵니다
             </span>
           </div>
-        </div>
 
-        {/* 한/글 실물 검증이 끝나지 않았다는 사실을 숨기지 않는다.
-            이 제품은 「초록불을 본 적이 없으면 통과했다고 세지 않는다」를
-            문서마다 지켜 왔고, 화면에서만 예외를 두면 그 규칙이 무너진다. */}
-        <Notice tone="warning" title="한/글에서 열리는지는 아직 확인하지 못했습니다" className="mb-5">
-          파일을 만드는 규격(ZIP·OWPML)은 시험으로 지키고 있지만, 실제 한/글로
-          열어 본 것은 아직입니다. 열리지 않으면{" "}
-          <strong className="font-bold">Ctrl+P 로 나오는 A4</strong>가 같은
-          내용을 담고 있으니 그것을 쓰시면 됩니다.
-        </Notice>
+          {/* 이 두 문장은 접지 않는다. 하나는 「이 제품이 온나라를 대체하지
+              않는다」는 경계이고, 다른 하나는 「한/글에서 열리는지 아직 확인하지
+              못했다」는 고백이다. 접어 두면 궁금한 사람만 읽게 되는데, 이건
+              읽지 않고 파일을 쓰는 사람이 반드시 알아야 하는 것이다.
+              (tests/browser.test.mjs [9] 가 둘 다 화면에 있는지 본다) */}
+          <p className="mt-3 border-t border-primary/20 pt-3 text-body-xs leading-relaxed break-keep text-gray-70">
+            <strong className="font-bold text-gray-90">
+              최종 결재권자의 서명은 「일머리」에서 받지 않습니다.
+            </strong>{" "}
+            법정 결재는 온나라의 일이고 이 파일은 거기에 올리는 초안입니다. 또
+            한/글에서 열리는지는 아직 확인하지 못했습니다 — 열리지 않으면{" "}
+            <kbd className="font-sans font-bold">Ctrl+P</kbd>로 나오는 A4 가 같은
+            내용을 담고 있습니다.
+          </p>
+        </div>
 
         {running ? (
           <Notice tone="info" title="아직 결재가 진행 중입니다" className="mb-5">
-            지금 내려받으면 서명이 덜 찍힌 결재란이 그대로 실립니다. 결재란의
-            빈칸은 「아직 처리하지 않음」으로 적히므로 문서가 거짓말을 하지는
-            않지만, 온나라에 올릴 문서라면 완결된 뒤에 받는 편이 맞습니다.
+            지금 받으면 서명이 덜 찍힌 결재란이 그대로 실립니다. 빈칸은 「아직
+            처리하지 않음」으로 적히므로 문서가 거짓말을 하지는 않습니다.
           </Notice>
         ) : null}
 
         {!ex.workVisible ? (
           <Notice tone="info" title="이 계정에서는 업무 기록을 볼 수 없습니다" className="mb-5">
-            결재선에 이름이 있어 문서 한 장은 보이지만, 연결된 업무의 대화·문서·첨부는
-            열람 권한이 없습니다. 그래서 근거 자료 항목이 비어 있습니다 —{" "}
+            결재선에 이름이 있어 문서 한 장은 보이지만 연결된 업무의 기록은 열람
+            권한이 없습니다. 근거 자료 항목이 비어 있는 것은{" "}
             <strong className="font-bold">없는 것이 아니라 못 보는 것</strong>
             이고, 파일에도 그렇게 적힙니다.
           </Notice>
         ) : null}
 
         <Card>
-          <CardHeader
-            title="파일에 실릴 내용"
-            description="아래 그대로 한/글 파일과 종이에 들어갑니다. 화면·파일·종이가 같은 모델에서 나옵니다."
-          />
+          <CardHeader title="파일에 실릴 내용" />
           <CardBody>
             <ExportBlocks blocks={ex.blocks} />
           </CardBody>
