@@ -8,8 +8,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
 import { Avatar } from "@/components/ui/avatar";
 import { formatDateTime, formatFullDateTime } from "@/lib/format";
-import { getDepartment, listAccessLogs } from "@/lib/data";
-import { requireViewer } from "@/lib/session";
+import { listAccessLogs } from "@/lib/data";
+import { getViewerDepartmentName, requireViewer } from "@/lib/session";
 import { ACCESS_KIND_LABEL, type AccessKind } from "@/lib/types";
 
 export const metadata: Metadata = { title: "열람기록" };
@@ -32,16 +32,16 @@ const KIND_ICON: Record<AccessKind, typeof Eye> = {
  */
 export default async function AuditPage() {
   const viewer = await requireViewer();
-  const logs = await listAccessLogs(viewer);
-  const department = viewer.department_id
-    ? await getDepartment(viewer.department_id)
-    : null;
+  const [logs, departmentName] = await Promise.all([
+    listAccessLogs(viewer),
+    getViewerDepartmentName(),
+  ]);
 
   return (
     <PageContainer>
       <PageHeader
         title="열람기록"
-        description={`${department?.name ?? ""} 소속으로 볼 수 있는 업무에 대한 열람기록입니다. 볼 수 없는 업무의 기록은 이 목록에도 나타나지 않습니다.`}
+        description={`${departmentName ?? ""} 소속으로 볼 수 있는 업무에 대한 열람기록입니다. 볼 수 없는 업무의 기록은 이 목록에도 나타나지 않습니다.`}
       />
 
       <Notice

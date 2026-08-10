@@ -45,8 +45,16 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
     overdueOnly,
     archived,
   });
-  const allVisible = await listWorks(viewer, { q, departmentId });
-  const overdueCount = allVisible.filter((w) => w.derived === "overdue").length;
+
+  // 「지연 n건」 알림에 쓸 수. 예전에는 같은 표를 조건만 바꿔 한 번 더 불렀는데,
+  // 그 질의가 임베드 6종을 달고 나가는 제일 무거운 것이었다.
+  // 지금 걸린 조건이 그 집합과 같을 때는 방금 받은 결과에서 세면 된다.
+  const countedHere = !mine && !overdueOnly && !archived;
+  const overdueCount = countedHere
+    ? works.filter((w) => w.derived === "overdue").length
+    : (await listWorks(viewer, { q, departmentId })).filter(
+        (w) => w.derived === "overdue",
+      ).length;
 
   // 결재 진행률은 업무마다 묻지 않는다. 화면에 뜬 업무 전부를 한 번에 가져온다.
   const approvals = await getApprovalSummaries(

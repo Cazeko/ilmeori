@@ -20,12 +20,11 @@ import { formatDueLabel } from "@/lib/format";
 import {
   getApprovalSummaries,
   getDashboard,
-  getDepartment,
   getHandoverFor,
   listApprovalsAwaitingMe,
 } from "@/lib/data";
 import { myTurn } from "@/lib/approval";
-import { requireViewer } from "@/lib/session";
+import { getViewerDepartmentName, requireViewer } from "@/lib/session";
 import { HANDOVER_STATUS_LABEL, STATUS_LABEL, type DerivedStatus } from "@/lib/types";
 
 /**
@@ -46,15 +45,20 @@ const SUMMARY: Array<{ key: DerivedStatus; tone: string }> = [
 
 export default async function HomePage() {
   const viewer = await requireViewer();
-  const department = viewer.department_id
-    ? await getDepartment(viewer.department_id)
-    : null;
-  const { mine, counts, recent, urgent } = await getDashboard(viewer);
-  const handover = await getHandoverFor(viewer);
 
-  // 내 차례인 결재. 결재함 「대기」와 **같은 판정**을 쓴다 — 홈이 3건이라고
+  // 서로를 기다릴 이유가 없는 것들은 한꺼번에 던진다.
+  // 하나씩 await 하면 왕복이 줄줄이 늘어서고, 그게 이 화면에서 제일 큰 비용이었다.
+  //
+  // 내 차례인 결재는 결재함 「대기」와 **같은 판정**을 쓴다 — 홈이 3건이라고
   // 하는데 결재함을 열면 1건인 화면은 둘 다 못 믿게 만든다.
-  const awaiting = await listApprovalsAwaitingMe(viewer);
+  const [departmentName, dashboard, handover, awaiting] = await Promise.all([
+    getViewerDepartmentName(),
+    getDashboard(viewer),
+    getHandoverFor(viewer),
+    listApprovalsAwaitingMe(viewer),
+  ]);
+
+  const { mine, counts, recent, urgent } = dashboard;
   const myTurnCount = awaiting.filter(
     (a) => myTurn(a, a.steps, viewer.id) !== null,
   ).length;
@@ -70,7 +74,7 @@ export default async function HomePage() {
     <PageContainer>
       <PageHeader
         title={`${viewer.name} ${viewer.position ?? ""} 님, 안녕하세요`}
-        description={`${department?.name ?? "소속 없음"} · 참여 중인 업무 ${mine.length}건`}
+        description={`${departmentName ?? "소속 없음"} · 참여 중인 업무 ${mine.length}건`}
       />
 
       {/* ── 인계가 걸려 있으면 다른 무엇보다 먼저 알린다 ─────────────────── */}

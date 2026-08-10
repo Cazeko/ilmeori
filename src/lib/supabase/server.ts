@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { requireSupabaseEnv } from "@/lib/env";
@@ -8,9 +9,21 @@ import { requireSupabaseEnv } from "@/lib/env";
  * 반드시 사용자 세션 기반이다. service_role로 우회하지 않는다.
  * → 서버 코드에 버그가 있어도 사용자가 볼 수 없는 데이터는 DB가 돌려주지 않는다.
  *
+ * 렌더 한 번에 하나만 만든다(React `cache()`). 데이터 함수마다 새로 만들면
+ * 화면 하나에 클라이언트가 열댓 개씩 생기는데, 그때마다 GoTrue·PostgREST·
+ * Storage·Realtime 클라이언트가 통째로 딸려 온다. 그중 Realtime은 서버에서
+ * 쓸 일이 없다. 게다가 인스턴스가 갈리면 토큰 갱신의 단일 비행(single-flight)
+ * 보호도 갈려서, 만료 직전에는 열댓 개가 **각자** 갱신을 요청하게 된다.
+ *
+ * 「요청당」이 아니라 「렌더 한 번당」이다. React의 cache()는 렌더 패스에
+ * 묶여 있어서, 서버 액션 본문처럼 렌더 밖에서 부르는 곳에는 캐시가 없다
+ * (react-server의 dispatcher가 없으면 그냥 원래 함수를 부른다).
+ * 서버 액션 요청 한 건은 「액션 실행 + 이어지는 재렌더」로 나뉘므로
+ * 클라이언트가 두 번 만들어진다. 그래도 예전(호출마다 하나)보다는 훨씬 적다.
+ *
  * Next.js 16: cookies()는 비동기다.
  */
-export async function createClient() {
+export const createClient = cache(async () => {
   const cookieStore = await cookies();
   const { url, anonKey } = requireSupabaseEnv();
 
@@ -31,18 +44,4 @@ export async function createClient() {
       },
     },
   });
-}
-
-/**
- * 로그인한 사용자를 반환한다. 없으면 null.
- *
- * getSession()이 아니라 getUser()를 쓴다. getSession()은 쿠키에 담긴 값을 그대로 믿지만,
- * getUser()는 Auth 서버에 검증을 요청한다. 위조된 쿠키를 신뢰하지 않기 위함이다.
- */
-export async function getCurrentUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user ?? null;
-}
+});

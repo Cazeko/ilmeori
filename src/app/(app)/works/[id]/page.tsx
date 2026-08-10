@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { after } from "next/server";
 import Link from "next/link";
 import {
   Archive,
@@ -32,7 +33,7 @@ import { MemberList } from "@/components/work/member-list";
 import { PreviousYearCallout } from "@/components/work/previous-year-callout";
 import { StatusChanger } from "@/components/work/status-changer";
 import { VisibilityReason } from "@/components/work/visibility-reason";
-import { WorkLive } from "@/components/work/work-live";
+import { WorkLiveLazy } from "@/components/work/work-live-lazy";
 import { WorkNotFound } from "@/components/work/work-not-found";
 import { formatDate, formatDateTime, formatDueLabel } from "@/lib/format";
 import {
@@ -143,7 +144,12 @@ export default async function WorkDetailPage({
 
   // 누가 열어 봤는지 남긴다. 사용자에게는 이 표에 쓰기 권한이 없고,
   // 서버의 지정된 함수만 기록할 수 있다.
-  await logAccess(work.id, "work.viewed");
+  //
+  // 화면의 어느 것도 이 결과에 기대지 않으므로 응답을 막지 않는다.
+  // 호출은 여기서 시작하고(쿠키를 읽어야 하니 렌더 중이어야 한다),
+  // 끝나기를 기다리는 일만 after()에 넘긴다.
+  const accessLogged = logAccess(work.id, "work.viewed");
+  after(() => accessLogged);
 
   const tabs: TabItem[] = [
     {
@@ -297,7 +303,7 @@ export default async function WorkDetailPage({
             데모 모드에는 붙을 DB 자체가 없다(그리고 아무도 고치지 않는다).
             이 가드를 지우면 데모 모드에서 createClient()가 곧바로 throw 해 화면이 죽는다. */}
         {isSupabaseConfigured ? (
-          <WorkLive
+          <WorkLiveLazy
             workId={work.id}
             viewerId={viewer.id}
             // 화면에 그릴 세 칸만 깎아서 넘긴다. 타입으로 좁히는 것(Pick<…>)은

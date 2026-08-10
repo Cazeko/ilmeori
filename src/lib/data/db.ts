@@ -24,7 +24,12 @@ import {
   type Work,
   type WorkListItem,
 } from "@/lib/types";
-import type { ApprovalSummary, HandoverView, WorkFilter } from "./types";
+import type {
+  ApprovalSummary,
+  HandoverView,
+  WorkFilter,
+  WorkRecords,
+} from "./types";
 
 /**
  * Supabase 구현.
@@ -223,6 +228,30 @@ export async function getWork(
   return data ? toListItem(data as unknown as RawWork) : null;
 }
 
+/**
+ * 여러 건을 한 번에. id → 업무.
+ *
+ * 목록을 돌면서 getWork를 부르면 건수만큼 왕복이 늘어난다. 인계 화면이
+ * 정확히 그랬다 — 인계 대상 10건이면 그것만으로 왕복 10회였다.
+ * 못 보는 업무는 RLS가 빼고 돌려주므로 결과에 그냥 없다.
+ */
+async function getWorksByIds(ids: string[]): Promise<Map<string, WorkListItem>> {
+  const valid = [...new Set(ids)].filter((id) => UUID.test(id));
+  if (valid.length === 0) return new Map();
+
+  const supabase = await createClient();
+  const { data, error } = await withoutDeletedComments(
+    supabase.from("work").select(WORK_SELECT).in("id", valid),
+  );
+  if (error) throw error;
+  return new Map(
+    (data as unknown as RawWork[]).map((raw) => {
+      const item = toListItem(raw);
+      return [item.id, item];
+    }),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // 문서 · 대화 · 첨부 · 이력
 // ---------------------------------------------------------------------------
@@ -301,6 +330,149 @@ export async function getAttachments(
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as unknown as AttachmentWithUploader[];
+}
+
+/**
+ * 잘려서 오지 않았는지 확인한다.
+ *
+ * PostgREST는 응답 행 수에 서버 쪽 상한(db-max-rows)이 걸려 있으면 **오류가
+ * 아니라 짧은 배열**을 돌려준다. 업무 한 건씩 부를 때는 닿을 일이 없던 상한이,
+ * 여러 업무를 한 질의로 묶는 순간 그 업무들이 상한을 나눠 쓰게 되면서 닿는다.
+ *
+ * 잘린 것을 모르고 지나가면 인계서의 「대화 N건」이 사실과 다른 수가 되고,
+ * 근거 꼬리표가 실제로는 있는 기록을 없다고 적는다. 공문서에서 그건
+ * 화면이 안 뜨는 것보다 나쁘다 — 틀린 줄 모르고 결재까지 올라가기 때문이다.
+ * 그래서 여기서는 삼키지 않고 던진다.
+ */
+const emptyRecords = (): WorkRecords => ({
+  document: null,
+  sections: [],
+  activities: [],
+  attachments: [],
+  comments: [],
+});
+
+function assertWhole(
+  label: string,
+  res: { data: unknown[] | null; count: number | null },
+) {
+  const got = res.data?.length ?? 0;
+  if (res.count !== null && got < res.count) {
+    throw new Error(
+      `${label}: ${res.count}건 가운데 ${got}건만 왔습니다(PostgREST 행 상한). ` +
+        `인계 대상을 나눠 부르거나 서버의 db-max-rows 를 올려야 합니다.`,
+    );
+  }
+}
+
+/**
+ * 여러 업무에 딸린 기록을 한 번에 — 인계 초안 전용.
+ *
+ * 업무마다 문서·이력·첨부·대화를 따로 부르면 왕복이 건수 × 4~5로 늘어난다.
+ * 인계 대상이 열 건이면 그것만으로 50회다. 여기서는 표마다 한 번씩,
+ * 건수와 무관하게 **다섯 번**으로 끝낸다.
+ *
+ * 다만 「건수와 무관」한 것은 왕복 수이지 행 수가 아니다. 네 질의가 서버의
+ * 행 상한을 각자 하나씩 쓰므로, 위 assertWhole 로 잘림을 확인한다.
+ *
+ * 못 보는 업무는 RLS가 행을 돌려주지 않으므로 **빈 기록**이 된다.
+ * 키는 요청한 id 전부에 대해 들어간다(mock 구현과 같은 계약이다).
+ * getWorksByIds 는 반대로 못 보는 업무의 키가 아예 없다 — 그쪽은 「업무가
+ * 있는가」를 묻는 함수이고, 이쪽은 「이 업무들의 기록을 모아 달라」이기 때문이다.
+ */
+export async function gatherForWorks(
+  workIds: string[],
+): Promise<Map<string, WorkRecords>> {
+  // uuid 는 대소문자를 가리지 않는다. 키를 소문자로 맞춰 두지 않으면
+  // 호출자가 준 대문자 id 와 DB 가 돌려주는 소문자 work_id 가 어긋난다.
+  const ids = [...new Set(workIds.map((id) => id.toLowerCase()))].filter((id) =>
+    UUID.test(id),
+  );
+  const out = new Map<string, WorkRecords>();
+  for (const id of ids) out.set(id, emptyRecords());
+  if (ids.length === 0) return out;
+
+  const supabase = await createClient();
+  const [documents, activities, attachments, comments] = await Promise.all([
+    supabase
+      .from("document")
+      .select("*", { count: "exact" })
+      .in("work_id", ids)
+      .order("created_at"),
+    supabase
+      .from("activity")
+      .select(`*, actor:actor_id ( ${PROFILE_SELECT} )`, { count: "exact" })
+      .in("work_id", ids)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("attachment")
+      .select(`*, uploader:uploaded_by ( ${PROFILE_SELECT} )`, {
+        count: "exact",
+      })
+      .in("work_id", ids)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("comment")
+      .select(`*, author:author_id ( ${PROFILE_SELECT} )`, { count: "exact" })
+      .in("work_id", ids)
+      .is("deleted_at", null)
+      .order("created_at"),
+  ]);
+
+  for (const r of [documents, activities, attachments, comments]) {
+    if (r.error) throw r.error;
+  }
+  assertWhole("문서", documents);
+  assertWhole("이력", activities);
+  assertWhole("첨부", attachments);
+  assertWhole("대화", comments);
+
+  // 업무당 문서는 첫 한 판만 쓴다(getWorkDocument와 같은 규칙 — created_at 순 첫 행).
+  const firstDoc = new Map<string, Document>();
+  for (const d of (documents.data ?? []) as Document[]) {
+    if (!firstDoc.has(d.work_id)) firstDoc.set(d.work_id, d);
+  }
+
+  const docIds: string[] = [];
+  for (const [workId, d] of firstDoc) {
+    const rec = out.get(workId);
+    if (!rec) continue; // 요청하지 않은 업무. 있을 수 없지만 던지지는 않는다.
+    rec.document = d;
+    docIds.push(d.id);
+  }
+
+  if (docIds.length > 0) {
+    const sections = await supabase
+      .from("doc_section")
+      .select(
+        `*,
+         updated_by_profile:updated_by ( ${PROFILE_SELECT} ),
+         locked_by_profile:locked_by ( ${PROFILE_SELECT} )`,
+        { count: "exact" },
+      )
+      .in("document_id", docIds)
+      .order("sort_order");
+    if (sections.error) throw sections.error;
+    assertWhole("문서 항목", sections);
+
+    const workIdOfDoc = new Map([...firstDoc].map(([w, d]) => [d.id, w]));
+    for (const s of (sections.data ?? []) as unknown as DocSectionWithEditor[]) {
+      const workId = workIdOfDoc.get(s.document_id);
+      if (workId) out.get(workId)?.sections.push(s);
+    }
+  }
+
+  for (const a of (activities.data ?? []) as unknown as ActivityWithActor[]) {
+    out.get(a.work_id)?.activities.push(a);
+  }
+  for (const a of (attachments.data ?? []) as unknown as AttachmentWithUploader[]) {
+    out.get(a.work_id)?.attachments.push(a);
+  }
+  for (const c of (comments.data ?? []) as unknown as CommentWithAuthor[]) {
+    out.get(c.work_id)?.comments.push(c);
+  }
+
+  return out;
 }
 
 /** 내려받기 한 건. 볼 수 없는 업무의 첨부는 RLS가 애초에 돌려주지 않는다. */
@@ -688,19 +860,23 @@ type RawHandover = Handover & {
   items: Array<{ work_id: string; transferred: boolean }>;
 };
 
-async function buildHandover(
-  viewer: Profile,
-  raw: RawHandover,
-): Promise<HandoverView> {
-  const works = await Promise.all(
-    raw.items.map((i) => getWork(viewer, i.work_id)),
-  );
+/**
+ * 인계 한 건을 화면이 쓰는 모양으로.
+ *
+ * viewer 를 받지 않는다. 이 파일의 공개 함수들은 목업 구현과 서명을 맞추려고
+ * 안 쓰는 _viewer 를 달고 있지만, 이건 db.ts 안에서만 쓰는 함수라 맞출 상대가
+ * 없다(목업의 buildHandover 는 인자가 하나다). 인자를 남겨 두면 앞으로
+ * 「viewer 로 거르고 있다」고 오해하기 쉽다 — 실제로 못 보는 업무를 빼는 것은
+ * getWorksByIds 가 RLS 로 비운 결과를 아래에서 filter 하는 것뿐이다.
+ */
+async function buildHandover(raw: RawHandover): Promise<HandoverView> {
+  const works = await getWorksByIds(raw.items.map((i) => i.work_id));
   return {
     handover: raw,
     from: raw.from_profile,
     to: raw.to_profile,
     items: raw.items
-      .map((i, idx) => ({ work: works[idx], transferred: i.transferred }))
+      .map((i) => ({ work: works.get(i.work_id), transferred: i.transferred }))
       // 인계 대상인데 못 보는 업무가 있으면 목록에서 뺀다.
       // 인수자는 아직 참여자가 아닐 수 있고, 그때는 제목도 보이면 안 된다.
       .filter((x): x is { work: WorkListItem; transferred: boolean } =>
@@ -711,7 +887,9 @@ async function buildHandover(
 
 /** 내가 넘겨야 하거나 넘겨받는 인계 건. RLS가 당사자에게만 돌려준다. */
 export async function getHandoverFor(
-  viewer: Profile,
+  // 목업 구현과 서명을 맞춘다(index.ts 머리 주석). 여기서는 RLS 가 판정하므로 쓰지 않는다.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _viewer: Profile,
 ): Promise<HandoverView | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -721,7 +899,7 @@ export async function getHandoverFor(
     .limit(1)
     .maybeSingle();
   if (error) throw error;
-  return data ? buildHandover(viewer, data as unknown as RawHandover) : null;
+  return data ? buildHandover(data as unknown as RawHandover) : null;
 }
 
 /**
@@ -787,7 +965,7 @@ export async function getHandover(
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
-  return data ? buildHandover(viewer, data as unknown as RawHandover) : null;
+  return data ? buildHandover(data as unknown as RawHandover) : null;
 }
 
 // ---------------------------------------------------------------------------

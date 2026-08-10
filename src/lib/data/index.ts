@@ -9,7 +9,7 @@ import type {
   Profile,
   WorkListItem,
 } from "@/lib/types";
-import type { ApprovalSummary, HandoverView, WorkFilter } from "./types";
+import type { HandoverView, WorkFilter } from "./types";
 
 /**
  * 데이터 접근 층 — 화면과 저장소 사이의 유일한 경계.
@@ -28,7 +28,12 @@ import type { ApprovalSummary, HandoverView, WorkFilter } from "./types";
 
 const impl = isSupabaseConfigured ? db : mock;
 
-export type { ApprovalSummary, HandoverView, WorkFilter };
+export type {
+  ApprovalSummary,
+  HandoverView,
+  WorkFilter,
+  WorkRecords,
+} from "./types";
 
 export const listWorks = (viewer: Profile, filter?: WorkFilter) =>
   impl.listWorks(viewer, filter);
@@ -40,6 +45,13 @@ export const getActivities = (workId: string) => impl.getActivities(workId);
 export const getComments = (workId: string) => impl.getComments(workId);
 export const getAttachments = (workId: string) => impl.getAttachments(workId);
 export const getAttachment = (id: string) => impl.getAttachment(id);
+
+/**
+ * 여러 업무의 기록을 한 번에. 인계 초안처럼 업무 목록을 통째로 훑는 화면용.
+ * 한 건만 볼 때는 위의 낱개 함수들을 그대로 쓴다.
+ */
+export const gatherForWorks = (workIds: string[]) =>
+  impl.gatherForWorks(workIds);
 
 export const listProfiles = () => impl.listProfiles();
 

@@ -9,9 +9,9 @@ import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { WorkForm } from "@/components/work/work-form";
 import { createWork } from "@/lib/actions/works";
-import { getDepartment } from "@/lib/data";
+
 import { canMutate } from "@/lib/env";
-import { requireViewer } from "@/lib/session";
+import { getViewerDepartmentName, requireViewer } from "@/lib/session";
 import {
   VISIBILITY_HINT,
   VISIBILITY_LABEL,
@@ -37,9 +37,7 @@ export default async function NewWorkPage({
   const viewer = await requireViewer();
   const sp = await searchParams;
 
-  const department = viewer.department_id
-    ? await getDepartment(viewer.department_id)
-    : null;
+  const departmentName = await getViewerDepartmentName();
 
   return (
     <PageContainer width="form">
@@ -69,7 +67,7 @@ export default async function NewWorkPage({
           데이터베이스에 연결되지 않은 상태에서는 업무를 만들 수 없습니다. 화면과
           동선은 그대로 볼 수 있습니다.
         </Notice>
-      ) : !department ? (
+      ) : !departmentName ? (
         <Notice tone="danger" title="소속 부서가 없어 업무를 만들 수 없습니다">
           업무는 소관 부서에 속합니다. 계정에 소속 부서가 등록되어 있지 않으면
           어느 부서의 일인지 정할 수 없어 만들 수 없습니다. 인사 담당자에게 소속
@@ -85,8 +83,8 @@ export default async function NewWorkPage({
             <WorkForm
               viewer={viewer}
               action={createWork}
-              departmentName={department.name}
-              departmentNote={`업무는 만든 사람의 소속 부서에 속합니다. ${department.name} 외의 부서로는 만들 수 없으며, 다른 부서 사람과 함께 일하려면 만든 뒤 참여자로 추가합니다.`}
+              departmentName={departmentName}
+              departmentNote={`업무는 만든 사람의 소속 부서에 속합니다. ${departmentName} 외의 부서로는 만들 수 없으며, 다른 부서 사람과 함께 일하려면 만든 뒤 참여자로 추가합니다.`}
               submitLabel="업무 만들기"
               cancelHref="/works"
             >

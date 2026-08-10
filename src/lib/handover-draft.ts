@@ -1,12 +1,6 @@
 import "server-only";
 
-import {
-  getActivities,
-  getAttachments,
-  getComments,
-  getWorkDocument,
-  type HandoverView,
-} from "@/lib/data";
+import { gatherForWorks, type HandoverView, type WorkRecords } from "@/lib/data";
 import { formatDate, formatDueLabel, josa } from "@/lib/format";
 import {
   STATUS_LABEL,
@@ -177,18 +171,30 @@ export async function buildHandoverDraft(
 
   // 서식 항목마다 같은 업무를 다시 읽으면 업무 한 건당 왕복이 열 번을 넘는다.
   // 한 번 모아 두고 아래 블록들은 그것만 본다.
-  const gathered: Gathered[] = await Promise.all(
-    works.map(async (work) => {
-      const [{ document, sections }, activities, attachments, comments] =
-        await Promise.all([
-          getWorkDocument(work.id),
-          getActivities(work.id),
-          getAttachments(work.id),
-          getComments(work.id),
-        ]);
-      return { work, document, sections, activities, attachments, comments };
-    }),
-  );
+  //
+  // 업무마다 네 번씩 묻지 않고 표마다 한 번씩 묻는다 — 인계 대상이 몇 건이든
+  // 왕복 수가 늘지 않는다(예전에는 건수 × 5였다).
+  const records = await gatherForWorks(works.map((w) => w.id));
+  // 계약상 요청한 id 는 전부 키로 돌아온다. 그래도 없으면 그 업무만 빈 칸으로
+  // 두고 나머지를 살린다 — 인계서 한 장이 통째로 안 나오는 것보다 낫다.
+  const empty: WorkRecords = {
+    document: null,
+    sections: [],
+    activities: [],
+    attachments: [],
+    comments: [],
+  };
+  const gathered: Gathered[] = works.map((work) => {
+    const r = records.get(work.id) ?? empty;
+    return {
+      work,
+      document: r.document,
+      sections: r.sections,
+      activities: r.activities,
+      attachments: r.attachments,
+      comments: r.comments,
+    };
+  });
 
   const documentCount = gathered.filter((g) => g.document).length;
   const activityCount = gathered.reduce((n, g) => n + g.activities.length, 0);

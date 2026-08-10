@@ -3,7 +3,8 @@ import Link from "next/link";
 import { ChevronRight, FilePlus2, Send } from "lucide-react";
 import { ApprovalFields } from "@/components/approval/approval-fields";
 import { PeoplePicker } from "@/components/approval/people-picker";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ActionFeedback } from "@/components/ui/feedback";
@@ -48,13 +49,15 @@ export default async function NewApprovalPage({
 
   // 결재를 올릴 수 있는 것은 내가 고칠 수 있는 업무다(approval_insert 정책도
   // app.can_edit_work 를 요구한다). 열람만 하는 업무는 목록에 넣지 않는다.
-  const mine = canMutate ? await listWorks(viewer, { mine: true }) : [];
+  const [mine, people] = await Promise.all([
+    canMutate ? listWorks(viewer, { mine: true }) : [],
+    canMutate ? listProfiles() : [],
+  ]);
   const targets = mine.filter((w) => {
     const role = roleIn(w, viewer);
     return role === "owner" || role === "editor";
   });
 
-  const people = canMutate ? await listProfiles() : [];
   // 협조자는 결재선 자동 생성이 끼워 넣는다. 우리 부서 사람은 이미 결재선에
   // 들어가므로 협조 목록에서 뺀다 — 한 사람이 한 문서에 두 칸을 갖지 못한다.
   const coopCandidates = people.filter(
@@ -209,10 +212,10 @@ export default async function NewApprovalPage({
           </Card>
 
           <div className="flex flex-wrap gap-2">
-            <Button type="submit">
+            <SubmitButton>
               <Send aria-hidden className="size-4" />
               문서 만들기
-            </Button>
+            </SubmitButton>
             <ButtonLink href="/approvals" variant="secondary">
               취소
             </ButtonLink>

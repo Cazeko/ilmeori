@@ -28,7 +28,12 @@ import {
 } from "@/lib/mock/works";
 import { departments, profiles } from "@/lib/mock/org";
 import { getDemoState, type DemoState } from "@/lib/demo-state";
-import type { ApprovalSummary, HandoverView, WorkFilter } from "./types";
+import type {
+  ApprovalSummary,
+  HandoverView,
+  WorkFilter,
+  WorkRecords,
+} from "./types";
 import { approvalProgress, byRecent } from "@/lib/approval";
 import { daysUntil } from "@/lib/format";
 import {
@@ -279,6 +284,41 @@ export async function getAttachments(workId: string): Promise<AttachmentWithUplo
     .filter((a) => a.work_id === workId)
     .map((a) => ({ ...a, uploader: requireProfile(a.uploaded_by) }))
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+/**
+ * 여러 업무에 딸린 기록을 한 번에 — Supabase 구현과 같은 계약.
+ *
+ * 목업에는 왕복이 없으므로 여기서는 낱개 함수들을 그대로 모아 준다.
+ * 여기서 빨라질 것은 없고, **두 구현이 같은 모양을 돌려주는 것**만이 목적이다.
+ * (그래서 정렬·삭제된 대화 제외·데모 상태 병합이 전부 낱개 함수에 맡겨져 있다)
+ *
+ * db 구현과 맞춰 둔 두 가지: id 를 소문자로 맞추고, uuid 모양이 아닌 것은 뺀다.
+ * 목업은 find 로 찾으므로 걸러 내지 않아도 동작하지만, 걸러 내지 않으면
+ * 결과 Map 의 **키 집합**이 두 구현에서 달라진다.
+ */
+/** db 구현과 같은 규칙. 여기서도 걸러야 두 구현의 키 집합이 같아진다. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function gatherForWorks(
+  workIds: string[],
+): Promise<Map<string, WorkRecords>> {
+  const ids = [...new Set(workIds.map((id) => id.toLowerCase()))].filter((id) =>
+    UUID.test(id),
+  );
+  const entries = await Promise.all(
+    ids.map(async (id): Promise<[string, WorkRecords]> => {
+      const [{ document, sections }, activities, attachments, comments] =
+        await Promise.all([
+          getWorkDocument(id),
+          getActivities(id),
+          getAttachments(id),
+          getComments(id),
+        ]);
+      return [id, { document, sections, activities, attachments, comments }];
+    }),
+  );
+  return new Map(entries);
 }
 
 /** 내려받기 한 건. 목업에는 실제 파일이 없으므로 메타데이터만 있다. */

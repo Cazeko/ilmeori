@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
-import { getDepartment } from "@/lib/data";
-import { getViewer } from "@/lib/session";
+import { getViewer, getViewerDepartmentName } from "@/lib/session";
 
 /**
  * 로그인한 사람만 들어오는 영역.
@@ -19,15 +18,15 @@ export const dynamic = "force-dynamic";
 export default async function AppLayout({
   children,
 }: LayoutProps<"/">) {
-  const viewer = await getViewer();
+  // 부서 이름은 신원 조회에 임베드로 얹혀 온다 — 질의가 따로 나가지 않는다.
+  const [viewer, departmentName] = await Promise.all([
+    getViewer(),
+    getViewerDepartmentName(),
+  ]);
   if (!viewer) redirect("/login");
 
-  const department = viewer.department_id
-    ? await getDepartment(viewer.department_id)
-    : null;
-
   return (
-    <AppShell viewer={viewer} departmentName={department?.name ?? "소속 없음"}>
+    <AppShell viewer={viewer} departmentName={departmentName ?? "소속 없음"}>
       {children}
     </AppShell>
   );

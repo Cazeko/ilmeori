@@ -1,5 +1,10 @@
 import type {
+  ActivityWithActor,
   ApprovalState,
+  AttachmentWithUploader,
+  CommentWithAuthor,
+  DocSectionWithEditor,
+  Document,
   Handover,
   Profile,
   WorkListItem,
@@ -26,6 +31,23 @@ export type WorkFilter = {
    * 보관은 삭제가 아니므로 반드시 다시 찾아갈 길이 있어야 한다.
    */
   archived?: boolean;
+};
+
+/**
+ * 업무 한 건에 딸린 기록 묶음.
+ *
+ * 인계 초안처럼 **여러 업무를 한꺼번에** 훑는 화면이 쓴다. 화면 하나가 업무
+ * 한 건만 볼 때는 getWorkDocument/getActivities/... 를 그대로 쓰면 된다.
+ *
+ * 계약: gatherForWorks 는 **요청한 id 전부**를 키로 돌려준다. 못 보는 업무는
+ * 키가 없는 것이 아니라 빈 기록이다(uuid 모양이 아닌 id 만 빠진다).
+ */
+export type WorkRecords = {
+  document: Document | null;
+  sections: DocSectionWithEditor[];
+  activities: ActivityWithActor[];
+  attachments: AttachmentWithUploader[];
+  comments: CommentWithAuthor[];
 };
 
 export type HandoverView = {
