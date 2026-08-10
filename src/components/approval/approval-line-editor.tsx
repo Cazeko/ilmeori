@@ -7,7 +7,10 @@ import {
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Field, Select } from "@/components/ui/field";
 import { PeoplePicker } from "@/components/approval/people-picker";
-import { APPROVAL_KIND_LABEL, type ApprovalStepWithApprover } from "@/lib/types";
+import {
+  APPROVAL_KIND_LABEL,
+  type ApprovalStepWithApprover,
+} from "@/lib/types";
 import type { ApprovalWithSteps, ProfileWithDepartment } from "@/lib/types";
 
 /**
@@ -64,9 +67,11 @@ export function ApprovalLineEditor({
               <form action={removeApprovalStep} className="shrink-0">
                 <input type="hidden" name="approvalId" value={approval.id} />
                 <input type="hidden" name="stepId" value={s.id} />
+                {/* size="sm" 은 min-h-9(36px)이라 손가락 목표 44px 에 못 미친다.
+                    결재란을 빼는 것은 되돌리기 번거로운 동작이라 더 그렇다. */}
                 <SubmitButton
                   variant="ghost"
-                  size="sm"
+                  className="size-11 px-0"
                   aria-label={`${s.approver.name} ${s.position} 결재란 빼기`}
                 >
                   <Trash2 aria-hidden className="size-4" />
@@ -105,8 +110,7 @@ export function ApprovalLineEditor({
           )}
         </Field>
         <SubmitButton variant="secondary">
-          <Plus aria-hidden className="size-4" />
-          칸 추가
+          <Plus aria-hidden className="size-4" />칸 추가
         </SubmitButton>
       </form>
 

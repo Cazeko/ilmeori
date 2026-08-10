@@ -41,7 +41,7 @@ export default async function AuditPage() {
     <PageContainer>
       <PageHeader
         title="열람기록"
-        description={`${departmentName ?? ""} 소속으로 볼 수 있는 업무에 대한 열람기록입니다. 볼 수 없는 업무의 기록은 이 목록에도 나타나지 않습니다.`}
+        description={`${departmentName ?? ""} 소속으로 볼 수 있는 업무의 열람기록`}
       />
 
       <Notice
@@ -137,9 +137,8 @@ export default async function AuditPage() {
             <div className="flex items-start gap-2 border-t border-gray-10 bg-gray-5 px-5 py-3.5">
               <ShieldCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-gray-40" />
               <p className="text-body-xs leading-relaxed break-keep text-gray-60">
-                기록에는 사람과 시각, 대상 업무만 남깁니다. 접속 IP나 단말 정보는
-                수집하지 않습니다. 필요 이상으로 모으면 그 자체가 유출 대상이
-                됩니다.
+                사람·시각·대상 업무만 남깁니다. 접속 IP 와 단말 정보는 모으지
+                않습니다 — 필요 이상으로 모으면 그 자체가 유출 대상이 됩니다.
               </p>
             </div>
           </Card>

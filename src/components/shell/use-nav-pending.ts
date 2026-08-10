@@ -30,6 +30,11 @@ function isInAppNavigation(event: MouseEvent, here: string): string | null {
   if (!(anchor instanceof HTMLAnchorElement)) return null;
   if (anchor.target && anchor.target !== "_self") return null;
   if (anchor.hasAttribute("download")) return null;
+  // 파일을 내려주는 주소는 화면을 갈지 않는다. 브라우저가 응답의
+  // Content-Disposition 을 보고 저장으로 넘기므로 이동이 일어나지 않고,
+  // 그러면 여기서 켠 「가는 중」이 풀릴 일이 없어 본문이 자리표시로 덮인 채
+  // 실패대기(8초)까지 굳어 있었다. 첨부 내려받기·한/글 내보내기가 그랬다.
+  if (anchor.dataset.download !== undefined) return null;
   if (anchor.origin !== window.location.origin) return null;
 
   const to = `${anchor.pathname}${anchor.search}`;

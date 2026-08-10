@@ -135,7 +135,9 @@ export default async function HomePage() {
               }
               data-variant="plain"
               className={cn(
-                "block rounded-md border bg-surface px-4 py-3.5 transition-colors duration-150 hover:border-primary-30",
+                "block rounded-md border bg-surface px-5 py-3.5 transition-colors duration-150 hover:border-primary-30",
+                // 누르면 그 조건으로 걸러진 보드로 간다 — 눌리는 면임을 손끝으로도 말한다
+                "active:border-primary active:bg-primary-5",
                 key === "overdue" && counts.overdue > 0
                   ? "border-status-overdue/40"
                   : "border-gray-10",
@@ -147,7 +149,10 @@ export default async function HomePage() {
               <span
                 className={cn(
                   "mt-1 block text-h2 font-bold tabular-nums",
-                  counts[key] > 0 ? tone : "text-gray-30",
+                  // 0 을 gray-30 으로 두면 판(#fafafa) 위에서 대비가 1.92:1 이라
+                  // 사실상 안 보인다. 「0 건」은 좋은 소식이지 감출 정보가 아니다.
+                  // gray-50(4.6:1)이면 강조하지 않으면서 읽히기는 한다.
+                  counts[key] > 0 ? tone : "text-gray-50",
                 )}
               >
                 {counts[key]}
@@ -165,7 +170,8 @@ export default async function HomePage() {
         <Card>
           <CardHeader
             title="지금 손대야 하는 일"
-            description="기한이 지났거나 일주일 안에 마감인 내 업무입니다."
+            /* 「기한이 지났거나 일주일 안에 마감인 내 업무입니다」를 뺐다.
+               카드마다 남은 기한이 붉게 적혀 있어 목록 자체가 같은 말을 한다. */
             action={
               <Link
                 href="/works?mine=1"
@@ -189,7 +195,6 @@ export default async function HomePage() {
             <EmptyState
               icon={CheckCircle2}
               title="당장 급한 일은 없습니다"
-              description="기한이 지난 업무도, 일주일 안에 마감인 업무도 없습니다."
             />
           )}
         </Card>
@@ -201,7 +206,6 @@ export default async function HomePage() {
           <Card>
             <CardHeader
               title="내 업무에서 일어난 일"
-              description="다른 사람이 움직인 것만 모았습니다."
             />
             {recent.length > 0 ? (
               <CardBody>
@@ -211,7 +215,6 @@ export default async function HomePage() {
               <EmptyState
                 icon={Bell}
                 title="아직 새 소식이 없습니다"
-                description="참여 중인 업무를 다른 사람이 고치면 여기에 쌓입니다."
               />
             )}
           </Card>
@@ -240,7 +243,7 @@ export default async function HomePage() {
                             "size-4 shrink-0",
                             w.derived === "overdue"
                               ? "text-status-overdue-text"
-                              : "text-gray-30",
+                              : "text-gray-40",
                           )}
                         />
                         <span className="min-w-0 flex-1">

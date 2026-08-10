@@ -35,18 +35,29 @@ export function TabNav({
 }) {
   return (
     <nav aria-label={label} className="border-b border-gray-10">
+      {/* 좁은 화면에서는 탭 다섯 개가 390px 에 들어가지 않아 옆으로 밀린다.
+          거기까지는 어쩔 수 없지만, **지금 보고 있는 탭이 화면 밖에 있는 것**은
+          다른 문제다. 이력 탭에 들어와 놓고 「내가 어디에 있는지」 표시를 아예
+          못 보게 된다. 활성 탭만 왼쪽에 붙여 둔다(sticky) — 옆으로 아무리
+          밀어도 현재 자리는 늘 보인다. z-10 은 「고정 영역 안쪽 요소」 층이다. */}
       <ul className="-mb-px flex gap-1 overflow-x-auto">
         {items.map((t) => {
           const current = t.key === active;
           const Icon = t.icon;
           return (
-            <li key={t.key} className="shrink-0">
+            <li
+              key={t.key}
+              className={cn(
+                "shrink-0",
+                current && "sticky left-0 z-10 bg-surface sm:static",
+              )}
+            >
               <Link
                 href={t.href}
                 data-variant="plain"
                 aria-current={current ? "page" : undefined}
                 className={cn(
-                  "flex min-h-11 items-center gap-2 border-b-2 px-4 text-body-sm font-bold transition-colors duration-150",
+                  "flex min-h-11 items-center gap-2 border-b-2 px-3 text-body-sm font-bold transition-colors duration-150 sm:px-4",
                   // 누르는 즉시 칠해진다(브라우저가 한다 — 자바스크립트 대기 없음)
                   "active:bg-primary-10 active:text-primary",
                   current
@@ -64,7 +75,9 @@ export function TabNav({
                   <span
                     className={cn(
                       "rounded-xs px-1.5 py-0.5 text-body-xs font-bold tabular-nums",
-                      current ? "bg-primary-5 text-primary" : "bg-gray-5 text-gray-60",
+                      current
+                        ? "bg-primary-5 text-primary"
+                        : "bg-gray-5 text-gray-60",
                     )}
                   >
                     {t.count}

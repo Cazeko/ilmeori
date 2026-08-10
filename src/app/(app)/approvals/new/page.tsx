@@ -189,7 +189,7 @@ export default async function NewApprovalPage({
                 people={coopCandidates}
                 multiple
                 size={6}
-                hint="다른 과에 협조를 구할 사람입니다. Ctrl(⌘)을 누른 채 여럿 고를 수 있습니다. 우리 부서 사람은 이미 결재선에 있으므로 여기 나오지 않습니다."
+                hint="여럿 고를 수 있습니다. 우리 부서 사람은 이미 결재선에 있어 나오지 않습니다."
               />
 
               <Field

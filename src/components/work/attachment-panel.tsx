@@ -1,4 +1,11 @@
-import { Download, FileUp, History, Paperclip, Trash2, Upload } from "lucide-react";
+import {
+  Download,
+  FileUp,
+  History,
+  Paperclip,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
@@ -42,11 +49,12 @@ import type { AttachmentWithUploader } from "@/lib/types";
  * 정작 hwp 파일이 회색으로 비활성화된다. 서버는 확장자로 다시 판정하므로
  * 여기는 어디까지나 편의이고, 실제로 거르는 것은 서버와 버킷이다.
  */
-const ACCEPT = ".hwp,.pdf,.docx,.xlsx,.pptx,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv";
+const ACCEPT =
+  ".hwp,.pdf,.docx,.xlsx,.pptx,.png,.jpg,.jpeg,.gif,.webp,.txt,.csv";
 
 /** 파일 선택 버튼도 손가락으로 누르는 크기(44px)를 지킨다. */
 const FILE_INPUT =
-  "min-h-11 w-full cursor-pointer rounded-sm border border-gray-30 bg-surface text-body-sm text-gray-80 file:mr-3 file:h-11 file:cursor-pointer file:border-0 file:bg-gray-5 file:px-3 file:text-body-sm file:font-bold file:text-gray-80";
+  "min-h-11 w-full cursor-pointer rounded-sm border border-gray-40 bg-surface text-body-sm text-gray-80 file:mr-3 file:h-11 file:cursor-pointer file:border-0 file:bg-gray-5 file:px-3 file:text-body-sm file:font-bold file:text-gray-80";
 
 type Version = AttachmentWithUploader;
 
@@ -116,11 +124,17 @@ export function AttachmentPanel({
                 {/* 줄 전체가 최신 판을 받는 링크다. 이름만 보고 누르는 것이 가장 흔한 동작이다. */}
                 <a
                   href={`/works/${workId}/files/${latest.id}`}
+                  // 화면이 갈리지 않는 주소다 — use-nav-pending 이 「가는 중」을
+                  // 켜지 않게 표시해 둔다. 없으면 본문이 8초간 자리표시로 덮인다.
+                  data-download=""
                   // 보이는 글자(파일 이름)를 접근성 이름에 그대로 품는다.
                   aria-label={`${fileName} 내려받기`}
                   className="flex min-h-11 items-center gap-2 text-body-sm font-bold break-all text-gray-80 underline-offset-2 hover:text-primary hover:underline"
                 >
-                  <Paperclip aria-hidden className="size-3.5 shrink-0 text-gray-40" />
+                  <Paperclip
+                    aria-hidden
+                    className="size-3.5 shrink-0 text-gray-40"
+                  />
                   <span className="min-w-0">{fileName}</span>
                 </a>
 
@@ -157,6 +171,7 @@ export function AttachmentPanel({
                           <li key={v.id}>
                             <a
                               href={`/works/${workId}/files/${v.id}`}
+                              data-download=""
                               aria-label={`${fileName} ${no}판 내려받기`}
                               className="flex min-h-11 items-center gap-1.5 text-body-xs font-bold text-primary underline-offset-2 hover:underline"
                             >
@@ -183,8 +198,8 @@ export function AttachmentPanel({
                 {canWrite ? (
                   <details className="pl-5.5">
                     <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-body-xs font-bold text-gray-70">
-                      <FileUp aria-hidden className="size-3.5 text-gray-40" />
-                      새 판 올리기 · 삭제
+                      <FileUp aria-hidden className="size-3.5 text-gray-40" />새
+                      판 올리기 · 삭제
                     </summary>
 
                     <form
@@ -193,19 +208,17 @@ export function AttachmentPanel({
                       className="border-t border-gray-5 py-3"
                     >
                       <input type="hidden" name="workId" value={workId} />
-                      <input type="hidden" name="replacesId" value={latest.id} />
+                      <input
+                        type="hidden"
+                        name="replacesId"
+                        value={latest.id}
+                      />
                       <Field
                         // 한 화면에 같은 폼이 파일 수만큼 놓인다.
                         // id가 겹치면 라벨이 전부 첫 줄의 입력을 가리킨다.
                         id={`attachment-replace-${latest.id}`}
                         label="새 판 파일"
-                        hint={
-                          <span className="break-all">
-                            「{fileName}」의 다음 판으로 쌓입니다. 이전 판은
-                            지워지지 않습니다. 확장자가 같아야 하며 4MB까지
-                            올릴 수 있습니다.
-                          </span>
-                        }
+                        hint="같은 확장자 · 4MB 까지. 이전 판은 지워지지 않습니다."
                       >
                         {(p) => (
                           <input
@@ -223,8 +236,7 @@ export function AttachmentPanel({
                           variant="secondary"
                           aria-label={`${fileName} 새 판 올리기`}
                         >
-                          <Upload aria-hidden className="size-4" />
-                          새 판 올리기
+                          <Upload aria-hidden className="size-4" />새 판 올리기
                         </SubmitButton>
                       </div>
                     </form>
@@ -236,7 +248,10 @@ export function AttachmentPanel({
                           : "파일이 저장소에서 사라집니다."}{" "}
                         지웠다는 사실은 업무 이력에 남습니다.
                       </Notice>
-                      <form action={deleteAttachment} className="mt-3 flex justify-end">
+                      <form
+                        action={deleteAttachment}
+                        className="mt-3 flex justify-end"
+                      >
                         <input type="hidden" name="workId" value={workId} />
                         <input
                           type="hidden"
@@ -263,7 +278,9 @@ export function AttachmentPanel({
         <CardBody>
           <p className="text-body-sm break-keep text-gray-60">
             첨부된 파일이 없습니다.
-            {canWrite ? " 결재 문서와 붙임 자료를 여기에 올려 두면 담당자가 바뀌어도 함께 넘어갑니다." : null}
+            {canWrite
+              ? " 결재 문서와 붙임 자료를 여기에 올려 두면 담당자가 바뀌어도 함께 넘어갑니다."
+              : null}
           </p>
         </CardBody>
       )}
@@ -305,12 +322,16 @@ export function AttachmentPanel({
         </form>
       ) : null}
 
-      <div className="border-t border-gray-10 bg-gray-5 px-4 py-2.5">
-        <p className="text-body-xs leading-relaxed text-gray-60">
-          파일은 공개 URL이 없는 비공개 저장소에 있습니다. 내려받을 때마다
-          권한을 확인하고 짧은 유효기간의 링크를 발급합니다.
-        </p>
-      </div>
+      {/* 파일이 한 건도 없을 때는 보관 방식을 말할 것이 없다. 예전에는 0건인
+          패널에도 이 3줄이 늘 붙어, 빈 화면에서 가장 긴 글이 정책 설명이었다. */}
+      {attachments.length > 0 ? (
+        <div className="border-t border-gray-10 bg-gray-5 px-4 py-2.5">
+          <p className="text-body-xs leading-relaxed text-gray-60">
+            공개 URL 이 없는 비공개 저장소에 있습니다. 내려받을 때마다 권한을
+            확인합니다.
+          </p>
+        </div>
+      ) : null}
     </Card>
   );
 }

@@ -143,7 +143,7 @@ export async function WorkForm({
       <Field
         id="work-description"
         label="업무 설명"
-        hint="무슨 일인지 한두 문단으로 적습니다. 자세한 내용은 만든 뒤 문서 탭에 항목별로 씁니다."
+        hint="한두 문단이면 됩니다. 자세한 것은 문서 탭에 씁니다."
       >
         {(p) => (
           <Textarea
@@ -159,7 +159,7 @@ export async function WorkForm({
       <Field
         id="work-due-date"
         label="마감일"
-        hint="비워 두어도 됩니다. 마감일이 지나고 완료되지 않은 업무는 목록에서 '지연'으로 올라옵니다."
+        hint="지나면 목록에서 「지연」으로 올라옵니다."
       >
         {(p) => (
           <Input
@@ -176,7 +176,7 @@ export async function WorkForm({
       <Field
         id="work-previous-year"
         label="작년 이맘때"
-        hint="해마다 되풀이되는 일이면 작년 판을 연결해 둡니다. 연결해 두면 이 업무 화면에서 작년 문서와 진행 내역을 바로 열 수 있어, 담당이 바뀌어도 처음부터 다시 알아보지 않아도 됩니다."
+        hint="연결해 두면 작년 문서와 진행 내역을 이 화면에서 바로 엽니다."
       >
         {(p) => (
           <Select
@@ -199,9 +199,7 @@ export async function WorkForm({
       </Field>
 
       <div className="flex flex-wrap gap-2 border-t border-gray-10 pt-5">
-        <SubmitButton size="lg">
-          {submitLabel}
-        </SubmitButton>
+        <SubmitButton size="lg">{submitLabel}</SubmitButton>
         <ButtonLink href={cancelHref} variant="secondary" size="lg">
           취소
         </ButtonLink>

@@ -128,7 +128,10 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
     <PageContainer>
       <PageHeader
         title="업무 보드"
-        description="내가 볼 수 있는 업무만 나타납니다. 참여자로 등록되었거나, 공개 범위가 내 소속을 포함하는 업무입니다."
+        /* 「내가 볼 수 있는 업무만 나타납니다…」 두 줄을 지웠다. 목록에 없는
+           것을 설명하는 말이라 목록을 봐도 확인할 수가 없고, 정작 그 답이
+           필요한 순간(찾던 업무가 안 보일 때)에는 빈 화면이 따로 말해 준다.
+           업무마다 붙는 「이 업무가 보이는 이유」 띠가 같은 말을 구체적으로 한다. */
         action={
           <>
             {/* 「기한이 지난 업무」는 화면에서 가장 급한 사실이다. 조건 칩 줄
@@ -157,88 +160,97 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
 
       {archived ? (
         <Notice tone="info" title="보관함을 보고 있습니다" className="mb-4">
-          보관은 삭제가 아닙니다. 문서·대화·이력·첨부는 그대로 있고, 소유자가 보관을
-          해제하면 원래 목록으로 돌아옵니다.
+          보관은 삭제가 아닙니다. 소유자가 해제하면 원래 목록으로 돌아옵니다.
         </Notice>
       ) : null}
 
-      {/* ── 조건 ─────────────────────────────────────────────────────────── */}
-      <form
-        method="get"
-        action="/works"
-        className="mb-4 rounded-md border border-gray-10 bg-surface p-4"
-      >
-        {/* 칸으로 그리지 않은 조건은 제출할 때 사라진다.
-            보관함에서 검색하면 보관함 밖으로 튕겨 나가고, 그건 고장으로 보인다. */}
-        {overdueOnly ? <input type="hidden" name="overdue" value="1" /> : null}
-        {archived ? <input type="hidden" name="archived" value="1" /> : null}
+      {/* ── 조건 ───────────────────────────────────────────────────────────
+          예전에는 이 폼이 늘 펼쳐진 채 첫 화면을 먹었다. 390px 에서는 화면의
+          42%가 필터였고 업무 카드는 한 장만 보였다. 자주 쓰는 조건은 아래 칩
+          네 개로 충분하므로, 검색어·부서는 접어 두고 걸려 있을 때만 편다.
 
-        {/* items-end 로 맞춘다. 라벨이 붙은 칸(검색·부서)은 라벨 높이만큼 위가
+          「내 업무만」 체크박스는 없앴다. 아래 「내 업무」 칩과 같은 일을 하는데
+          주인이 둘이라, 지연만 + 내 업무만을 함께 걸면 칩 줄이 그 사실을 숨겼다.
+          이제 mine 의 주인은 칩 하나뿐이고, 폼은 그 값을 그대로 들고 간다. */}
+      <details
+        open={Boolean(q) || Boolean(departmentId)}
+        className="mb-4 rounded-md border border-gray-10 bg-surface"
+      >
+        <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-body-sm font-bold text-gray-70">
+          <Filter aria-hidden className="size-4 text-gray-40" />
+          검색어·부서로 좁히기
+          {q || departmentId ? (
+            <span className="rounded-xs bg-primary-5 px-1.5 py-0.5 text-body-xs text-primary">
+              걸림
+            </span>
+          ) : null}
+        </summary>
+        <form
+          method="get"
+          action="/works"
+          className="border-t border-gray-10 p-4"
+        >
+          {/* 칸으로 그리지 않은 조건은 제출할 때 사라진다.
+              보관함에서 검색하면 보관함 밖으로 튕겨 나가고, 그건 고장으로 보인다. */}
+          {overdueOnly ? (
+            <input type="hidden" name="overdue" value="1" />
+          ) : null}
+          {archived ? <input type="hidden" name="archived" value="1" /> : null}
+          {mine ? <input type="hidden" name="mine" value="1" /> : null}
+
+          {/* items-end 로 맞춘다. 라벨이 붙은 칸(검색·부서)은 라벨 높이만큼 위가
             길고, 라벨이 없는 것(체크박스·버튼)은 그렇지 않다. 가운데로 맞추면
             체크박스만 몇 px 내려앉아 한 줄이 삐뚤어 보인다.
             검색칸은 flex-1 로 두지 않는다 — 넓은 화면에서 혼자 다 먹으면
             시선이 그쪽으로 쏠려, 정작 먼저 읽혀야 할 보드가 뒤로 밀린다. */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <Field
-            id="works-q"
-            label="검색"
-            className="min-w-0 flex-1 sm:max-w-xs"
-          >
-            {(p) => (
-              <Input
-                {...p}
-                name="q"
-                type="search"
-                defaultValue={q}
-                placeholder="업무 제목이나 설명에 들어간 말"
-                autoComplete="off"
-              />
-            )}
-          </Field>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <Field
+              id="works-q"
+              label="검색"
+              className="min-w-0 flex-1 sm:max-w-xs"
+            >
+              {(p) => (
+                <Input
+                  {...p}
+                  name="q"
+                  type="search"
+                  defaultValue={q}
+                  placeholder="업무 제목이나 설명에 들어간 말"
+                  autoComplete="off"
+                />
+              )}
+            </Field>
 
-          <Field id="works-dept" label="부서" className="min-w-0 sm:w-56">
-            {(p) => (
-              <Select {...p} name="dept" defaultValue={departmentId ?? ""}>
-                <option value="">전체 부서</option>
-                {tree.map((bureau) =>
-                  bureau.children.length === 0 ? (
-                    <option key={bureau.id} value={bureau.id}>
-                      {bureau.name}
-                    </option>
-                  ) : (
-                    <optgroup key={bureau.id} label={bureau.name}>
-                      {bureau.children.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ),
-                )}
-              </Select>
-            )}
-          </Field>
+            <Field id="works-dept" label="부서" className="min-w-0 sm:w-56">
+              {(p) => (
+                <Select {...p} name="dept" defaultValue={departmentId ?? ""}>
+                  <option value="">전체 부서</option>
+                  {tree.map((bureau) =>
+                    bureau.children.length === 0 ? (
+                      <option key={bureau.id} value={bureau.id}>
+                        {bureau.name}
+                      </option>
+                    ) : (
+                      <optgroup key={bureau.id} label={bureau.name}>
+                        {bureau.children.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ),
+                  )}
+                </Select>
+              )}
+            </Field>
 
-          {/* 체크박스는 라벨과 같은 영역을 눌러도 켜지도록 감싼다.
-              h-11 은 옆의 입력칸·버튼과 같은 높이다. min-h 로 두면 내용에 따라
-              높이가 달라져 밑선이 어긋난다. */}
-          <label className="flex h-11 cursor-pointer items-center gap-2 px-1 text-body-sm font-bold text-gray-70">
-            <input
-              type="checkbox"
-              name="mine"
-              value="1"
-              defaultChecked={mine}
-              className="size-4.5 cursor-pointer accent-primary"
-            />
-            내 업무만
-          </label>
-
-          <Button type="submit" className="sm:ml-auto sm:w-auto">
-            <Filter aria-hidden className="size-4" />
-            적용
-          </Button>
-        </div>
-      </form>
+            <Button type="submit" className="sm:ml-auto sm:w-auto">
+              <Filter aria-hidden className="size-4" />
+              적용
+            </Button>
+          </div>
+        </form>
+      </details>
 
       {/* ── 빠른 조건 ─────────────────────────────────────────────────────── */}
       <div className="mb-4 flex flex-wrap items-center gap-2">

@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw, Users, Wifi, WifiOff } from "lucide-react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -110,7 +116,9 @@ export function WorkLive({
   const [pending, setPending] = useState<TouchKind[]>([]);
   // 화면을 저절로 갈아 끼웠을 때 읽어 줄 말. 같은 갈래가 연달아 오면 문자열이
   // 그대로라 보조기술이 다시 읽지 않으므로, 순번을 함께 들고 다닌다.
-  const [notice, setNotice] = useState<{ text: string; seq: number } | null>(null);
+  const [notice, setNotice] = useState<{ text: string; seq: number } | null>(
+    null,
+  );
   const seq = useRef(0);
 
   // 구독은 업무가 바뀔 때만 다시 맺는다. 그 안에서 읽어야 하는 값들은 ref 로 넘긴다.
@@ -208,12 +216,17 @@ export function WorkLive({
           // 적힌 채 옛 화면을 보여 주게 된다. 그게 끊긴 것보다 나쁘다.
           if (wasLost) {
             wasLost = false;
-            if (editingRef.current) setPending((q) => (q.length ? q : ["work"]));
+            if (editingRef.current)
+              setPending((q) => (q.length ? q : ["work"]));
             else apply(null);
           }
           return;
         }
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
           wasLost = true;
           setLink("lost");
           setPresent([]);
@@ -269,7 +282,30 @@ export function WorkLive({
     .join(", ");
 
   const waiting = pending.length;
-  const waitingLabel = waiting > 0 ? touchLabel(pending[pending.length - 1] ?? null) : "";
+  const waitingLabel =
+    waiting > 0 ? touchLabel(pending[pending.length - 1] ?? null) : "";
+
+  // 「연결됐고 나 혼자 보고 있다」는 이 화면의 기본값이다. 그것을 테두리 친
+  // 판으로 상시 알리면, 업무 상세를 열 때마다 제목 아래 한 줄이 늘 새 정보인
+  // 척 자리를 차지한다. 할 말이 있을 때만 판을 그린다 — 같이 보는 사람이
+  // 있거나, 밀린 변경이 있거나, 연결이 정상이 아닐 때.
+  const quiet = link === "live" && others.length === 0 && waiting === 0;
+
+  if (quiet) {
+    // 테두리 친 판만 걷어낸다. 「연결됨」이라고 적었으면 누가 보고 있는지도
+    // 반드시 같은 자리에 있어야 한다 — 상태만 적고 사람을 빼면 화면이 절반만
+    // 말하는 것이 된다(tests/browser.test.mjs [6] 가 이 규칙을 지킨다).
+    return (
+      <div className="mt-4 print:hidden">
+        <p className="inline-flex items-center gap-1.5 text-body-xs text-gray-60">
+          <Wifi aria-hidden className="size-3.5 text-status-done" />
+          <span className="font-bold text-status-done-text">실시간 연결됨</span>
+          <span aria-hidden>·</span>
+          지금은 나만 보고 있습니다
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-4 print:hidden">

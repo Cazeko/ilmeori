@@ -1,6 +1,7 @@
 import { Inbox } from "lucide-react";
 import { WorkCard } from "@/components/work/work-card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ButtonLink } from "@/components/ui/button";
 import type { ApprovalSummary } from "@/lib/data/types";
 import { STATUS_LABEL, type WorkListItem, type WorkStatus } from "@/lib/types";
 
@@ -33,10 +34,18 @@ export function KanbanBoard({
   if (works.length === 0) {
     return (
       <div className="rounded-md border border-gray-10 bg-surface">
+        {/* 예전에는 「검색어를 줄이거나 부서 필터를 해제해 보세요」라고 적어
+            두고 해제할 단추를 주지 않았다. 보관함에서도 같은 말을 해서, 조건을
+            건 적 없는 사람에게 조건을 풀라고 시켰다. 말 대신 길을 준다. */}
         <EmptyState
           icon={Inbox}
           title="조건에 맞는 업무가 없습니다"
-          description="검색어를 줄이거나 부서 필터를 해제해 보세요. 참여자로 등록되지 않았고 공개 범위에도 해당하지 않는 업무는 애초에 목록에 나타나지 않습니다."
+          description="참여자가 아니고 공개 범위에도 없는 업무는 목록에 나타나지 않습니다."
+          action={
+            <ButtonLink href="/works" variant="secondary" size="sm">
+              조건 모두 풀기
+            </ButtonLink>
+          }
         />
       </div>
     );

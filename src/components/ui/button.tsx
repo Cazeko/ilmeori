@@ -25,7 +25,7 @@ const button = cva(
         primary:
           "bg-primary text-white hover:bg-primary-hover active:bg-primary-active",
         secondary:
-          "border border-gray-30 bg-surface text-gray-80 hover:bg-gray-5 active:bg-gray-10",
+          "border border-gray-40 bg-surface text-gray-80 hover:bg-gray-5 active:bg-gray-10",
         ghost: "text-gray-70 hover:bg-gray-5 active:bg-gray-10",
         danger: "bg-danger text-white hover:brightness-90 active:brightness-75",
       },
@@ -53,7 +53,11 @@ export function Button({
   return (
     <button
       type="button"
-      className={cn(button({ variant, size, block }), "cursor-pointer", className)}
+      className={cn(
+        button({ variant, size, block }),
+        "cursor-pointer",
+        className,
+      )}
       {...props}
     />
   );

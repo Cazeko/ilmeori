@@ -71,7 +71,10 @@ export default async function ApprovalsPage({
     <PageContainer>
       <PageHeader
         title="결재함"
-        description="내부결재문서(시행규칙 별지 제2호서식)를 올리고 처리하는 곳입니다. 대외로 나가는 발신문서는 여기서 만들지 않습니다 — 그건 온나라의 자리입니다."
+        /* 「내부결재문서를 올리고 처리하는 곳입니다」는 제목이 이미 한 말이고,
+           「발신문서는 온나라의 자리」는 이 화면에서 하려던 일을 막는 말이
+           아니라 제품 경계 설명이다. 아래 「결재 올리기」 화면에서 서식을 고를
+           때 같은 말이 그 자리에서 다시 나온다. */
         action={
           canMutate ? (
             <ButtonLink href="/approvals/new">
@@ -158,6 +161,9 @@ export default async function ApprovalsPage({
             </>
           ) : (
             <div className="rounded-md border border-gray-10 bg-surface">
+              {/* description 을 뺐다 — 바로 위 h2 밑에 같은 문장(APPROVAL_BOX_HINT)이
+                  이미 있어서, 문서가 0건인 화면에서 글 세 줄 중 둘이 같은 말이었다.
+                  그 자리에는 대신 다음에 할 수 있는 일을 둔다. */}
               <EmptyState
                 icon={box === "todo" ? Inbox : FileCheck2}
                 title={
@@ -165,7 +171,14 @@ export default async function ApprovalsPage({
                     ? "지금 처리할 결재가 없습니다"
                     : "여기에 해당하는 문서가 없습니다"
                 }
-                description={APPROVAL_BOX_HINT[box]}
+                action={
+                  canMutate ? (
+                    <ButtonLink href="/approvals/new" variant="secondary">
+                      <FilePlus2 aria-hidden className="size-4" />
+                      결재 올리기
+                    </ButtonLink>
+                  ) : undefined
+                }
               />
             </div>
           )}

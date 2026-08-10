@@ -19,6 +19,11 @@ const controlBase = [
   "disabled:cursor-not-allowed disabled:bg-gray-5 disabled:text-gray-50",
 ];
 
+/*
+ * 입력칸 테두리는 gray-30 이었다. 판(#fafafa) 위에서 대비가 1.98:1 이라
+ * KWCAG 2.2 / WCAG 1.4.11「비텍스트 대비」의 3:1 에 못 미친다 — 칸의 경계가
+ * 어디까지인지 눈으로 잡히지 않는다는 뜻이다. gray-40 은 3.0:1 로 통과한다.
+ */
 export function Field({
   id,
   label,
@@ -95,7 +100,7 @@ export function Input({
       className={cn(
         controlBase,
         "min-h-11 px-3",
-        invalid ? "border-danger" : "border-gray-30 hover:border-gray-40",
+        invalid ? "border-danger" : "border-gray-40 hover:border-gray-50",
         className,
       )}
       aria-invalid={invalid}
@@ -114,7 +119,7 @@ export function Textarea({
       className={cn(
         controlBase,
         "min-h-28 px-3 py-2 leading-relaxed",
-        invalid ? "border-danger" : "border-gray-30 hover:border-gray-40",
+        invalid ? "border-danger" : "border-gray-40 hover:border-gray-50",
         className,
       )}
       aria-invalid={invalid}
@@ -132,7 +137,7 @@ export function Select({ className, ...props }: ComponentProps<"select">) {
     <select
       className={cn(
         controlBase,
-        "min-h-11 cursor-pointer border-gray-30 px-3 hover:border-gray-40",
+        "min-h-11 cursor-pointer border-gray-40 px-3 hover:border-gray-50",
         className,
       )}
       {...props}
