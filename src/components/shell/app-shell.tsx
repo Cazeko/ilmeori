@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { LinkPending } from "@/components/ui/link-pending";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
@@ -242,13 +243,21 @@ export function AppShell({
                           aria-current={active ? "page" : undefined}
                           className={cn(
                             "flex min-h-11 items-center gap-3 rounded-sm border-l-3 pr-3 pl-2.5 text-body-sm font-bold transition-colors duration-150",
+                            // 누르는 즉시 칠해진다. :active 는 브라우저가 칠하므로
+                            // 자바스크립트를 기다리지 않는다(0ms). 그 뒤를
+                            // LinkPending 의 표시가 이어받는다.
+                            "active:bg-primary-10 active:text-primary",
                             active
                               ? "border-l-primary bg-primary-5 text-primary"
                               : "border-l-transparent text-gray-70 hover:bg-gray-5 hover:text-gray-90",
                           )}
                         >
                           <Icon aria-hidden className="size-5 shrink-0" />
-                          {label}
+                          <span className="min-w-0 flex-1">{label}</span>
+                          {/* 눌렀다는 표시. 목적지가 동적이라 화면이 갈리기까지
+                              150~230ms 걸리는데, 그동안 아무 일도 없으면
+                              사람은 한 번 더 누른다. */}
+                          <LinkPending />
                         </Link>
                       </li>
                     );

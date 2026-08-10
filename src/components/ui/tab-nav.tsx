@@ -46,6 +46,8 @@ export function TabNav({
                 aria-current={current ? "page" : undefined}
                 className={cn(
                   "flex min-h-11 items-center gap-2 border-b-2 px-4 text-body-sm font-bold transition-colors duration-150",
+                  // 누르는 즉시 칠해진다(브라우저가 한다 — 자바스크립트 대기 없음)
+                  "active:bg-primary-10 active:text-primary",
                   current
                     ? "border-primary text-primary"
                     : "border-transparent text-gray-60 hover:border-gray-20 hover:text-gray-80",

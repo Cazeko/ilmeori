@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LinkPendingMark } from "@/components/ui/link-pending";
 import { Building2, EyeOff, Hourglass } from "lucide-react";
 import { ApprovalBadge } from "@/components/approval/approval-badge";
 import { cn } from "@/lib/cn";
@@ -36,6 +37,10 @@ export function ApprovalRow({
     <li
       className={cn(
         "relative border-l-4 bg-surface px-4 py-3.5 sm:px-5",
+        // 누르는 즉시 칠해지고(:active — 자바스크립트 대기 없음),
+        // 이동이 끝날 때까지 흐려진다(안쪽 LinkPendingMark 가 표식을 심는다).
+        "transition-colors duration-150 active:bg-primary-5",
+        "has-[[data-link-pending]]:opacity-55 has-[[data-link-pending]]:transition-opacity",
         mine ? "border-l-primary" : "border-l-transparent",
       )}
     >
@@ -67,6 +72,7 @@ export function ApprovalRow({
             읽는 순서도 흐트러지지 않는다. */}
         <Link href={`/approvals/${approval.id}`} className="after:absolute after:inset-0">
           {approval.title}
+          <LinkPendingMark />
         </Link>
       </h3>
 

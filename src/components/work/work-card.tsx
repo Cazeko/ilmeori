@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LinkPendingMark } from "@/components/ui/link-pending";
 import {
   Building2,
   MessageSquare,
@@ -64,6 +65,11 @@ export function WorkCard({
       className={cn(
         "relative flex min-h-36 flex-col rounded-md border border-gray-10 bg-surface p-3",
         "transition-colors duration-150 hover:border-primary-30",
+        // 누르는 즉시. :active 는 자바스크립트를 기다리지 않는다.
+        "active:border-primary active:bg-primary-5",
+        // 눌린 카드는 흐려진다. 안쪽 LinkPendingMark 가 표식을 심으면
+        // 여기서 받는다 — 카드를 client 컴포넌트로 만들지 않기 위한 배치다.
+        "has-[[data-link-pending]]:opacity-55 has-[[data-link-pending]]:transition-opacity",
         overdue
           ? "border-l-4 border-l-status-overdue"
           : dueNow
@@ -103,6 +109,9 @@ export function WorkCard({
           className="after:absolute after:inset-0 hover:underline"
         >
           <span className="line-clamp-2">{work.title}</span>
+          {/* 카드는 글자가 많아 점 하나로는 눌린 것이 안 보인다.
+              표식만 심어 두고 카드 전체를 흐리게 만든다(아래 has-[…]). */}
+          <LinkPendingMark />
         </Link>
       </h3>
 
