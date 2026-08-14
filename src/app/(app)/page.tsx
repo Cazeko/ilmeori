@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ActivityFeed } from "@/components/work/activity-timeline";
+import { PreviousYearCard } from "@/components/work/previous-year-callout";
 import { WorkCard } from "@/components/work/work-card";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDueLabel } from "@/lib/format";
@@ -21,6 +22,7 @@ import {
   getApprovalSummaries,
   getDashboard,
   getHandoverFor,
+  getPreviousYearBrief,
   listApprovalsAwaitingMe,
 } from "@/lib/data";
 import { myTurn } from "@/lib/approval";
@@ -63,12 +65,30 @@ export default async function HomePage() {
     (a) => myTurn(a, a.steps, viewer.id) !== null,
   ).length;
 
+  // 「작년 이맘때」 — 해마다 반복되는 업무 중 아직 끝나지 않은 것 하나.
+  // 여럿이면 마감이 가장 가까운 것을 고른다. 작년 판을 꺼내 보는 일은
+  // 그 업무를 실제로 시작할 때 필요하지, 목록으로 늘어놓을 것이 아니다.
+  const repeating =
+    mine
+      .filter((w) => w.previous_year && w.derived !== "done")
+      .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"))
+      .at(0) ?? null;
+
+  // 두 번째 왕복도 한꺼번에 던진다. 앞의 Promise.all 결과가 있어야 무엇을
+  // 물을지 정해지므로 두 겹이 되는 것은 어쩔 수 없지만, 두 겹이 세 겹이 되지는
+  // 않게 한다.
+  //
   // 「지금 손대야 하는 일」 카드에도 결재 진행률을 붙인다. 급한 업무일수록
   // 「결재가 어디까지 갔는가」가 다음 행동을 정한다.
-  const approvals = await getApprovalSummaries(
-    viewer,
-    urgent.map((w) => w.id),
-  );
+  const [approvals, prevYear] = await Promise.all([
+    getApprovalSummaries(
+      viewer,
+      urgent.map((w) => w.id),
+    ),
+    repeating?.previous_year
+      ? getPreviousYearBrief(viewer, repeating.previous_year.id)
+      : null,
+  ]);
 
   return (
     <PageContainer>
@@ -175,7 +195,7 @@ export default async function HomePage() {
             action={
               <Link
                 href="/works?mine=1"
-                className="text-body-sm font-bold text-primary"
+                className="inline-flex items-center text-body-sm font-bold text-primary pointer-coarse:min-h-11"
               >
                 내 업무 전체
               </Link>
@@ -280,6 +300,17 @@ export default async function HomePage() {
               />
             )}
           </Card>
+
+          {/* ── 작년 이맘때 ────────────────────────────────────────────────
+              마감 다음에 둔다. 「올해 무엇을 해야 하는가」를 먼저 보고,
+              그 다음에 「작년에는 어떻게 했는가」를 본다. 순서가 뒤집히면
+              회고가 할 일보다 위에 오는 화면이 된다. */}
+          {prevYear && repeating ? (
+            <PreviousYearCard
+              brief={prevYear}
+              currentWork={{ id: repeating.id, title: repeating.title }}
+            />
+          ) : null}
         </div>
       </div>
     </PageContainer>

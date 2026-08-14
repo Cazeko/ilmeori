@@ -91,6 +91,46 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
               </li>
             ))}
           </ul>
+
+          {/* ── 왜 이 문제인가 ──────────────────────────────────────────────
+              왼쪽 아래가 화면 절반 가까이 비어 있었다. 그림이나 큰 문구로 채우면
+              히어로 섹션이 되고, 이 제품은 그것을 쓰지 않기로 했다.
+              대신 밀도로 채운다 — 근거가 있는 숫자 세 개.
+
+              전부 행정안전부 연구용역(한국행정연구원, 2011)의 조사값이며
+              우리가 추정한 수치가 아니다. 출처를 함께 적는 이유가 그것이다. */}
+          <section
+            aria-labelledby="why-heading"
+            className="mt-8 border-t border-gray-10 pt-6"
+          >
+            <h2
+              id="why-heading"
+              className="text-body-sm font-bold break-keep text-gray-90"
+            >
+              인계가 부실하면 무슨 일이 생기는가
+            </h2>
+            <dl className="mt-4 grid grid-cols-3 gap-3">
+              {[
+                ["1.14개월", "업무 파악이 늦어지는 기간"],
+                ["30.2%", "그만큼의 효율성 개선 여지"],
+                ["35.0%", "현행 인계가 비효율적이라는 응답"],
+              ].map(([figure, label]) => (
+                <div key={label}>
+                  <dt className="text-h3 leading-none font-bold tabular-nums text-primary">
+                    {figure}
+                  </dt>
+                  <dd className="mt-1.5 text-body-xs leading-snug break-keep text-gray-60">
+                    {label}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-4 text-body-xs leading-relaxed break-keep text-gray-50">
+              행정안전부 연구용역 「행정업무 효율성 진단 및 관리방안 구축 — 업무
+              인계인수를 중심으로」(한국행정연구원, 2011). 같은 조사에서 대면
+              인계인수는 통상 30분 안에 끝나는 것으로 나타났습니다.
+            </p>
+          </section>
         </div>
 
         {/* ── 계정 선택 ─────────────────────────────────────────────────── */}

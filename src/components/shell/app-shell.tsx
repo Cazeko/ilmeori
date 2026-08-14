@@ -128,7 +128,7 @@ function NavList({ pathname }: { pathname: string }) {
 function DemoNotice() {
   return (
     <details className="mx-3 mb-4 rounded-md border border-warning/30 bg-warning-bg px-3 py-2">
-      <summary className="cursor-pointer list-none text-body-xs font-bold text-gray-90 [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center text-body-xs font-bold text-gray-90 pointer-coarse:min-h-11 [&::-webkit-details-marker]:hidden">
         시연용 가상 데이터
         <span className="ml-1 font-normal text-gray-60">자세히</span>
       </summary>
@@ -274,7 +274,7 @@ export function AppShell({
         <Link
           href="/"
           data-variant="plain"
-          className="flex shrink-0 items-center gap-2 lg:w-[calc(var(--spacing-sidebar)-1rem)]"
+          className="flex shrink-0 items-center gap-2 pointer-coarse:min-h-11 lg:w-[calc(var(--spacing-sidebar)-1rem)]"
         >
           <BrandMark className="size-8" />
           <span className="text-body font-bold tracking-tight text-gray-90">
@@ -339,10 +339,14 @@ export function AppShell({
           <form action={leaveDemo}>
             {/* 서버 액션 폼 중 여기만 눌린 표시가 없었다. 세션을 끊고 다시
                 들어오는 왕복이라 오히려 제일 오래 걸리는 폼이다. */}
+            {/* 보이는 크기는 32px 그대로 두고, 손가락이 닿는 넓이만 44px 로 넓힌다.
+                ::after 를 겹쳐 두면 칸이 커지지 않아 머리 줄의 무게 배분이 안 바뀐다.
+                (2.5.8 은 보이는 상자가 아니라 눌리는 넓이를 잰다)
+                좌우로 6px 씩만 자라고 옆에 선 이름·아바타는 눌리는 것이 아니라 겹쳐도 뺏을 것이 없다. */}
             <SubmitButton
               variant="ghost"
               title="세션을 끊고 다른 데모 계정으로 들어갑니다"
-              className="h-8 min-h-8 min-w-8 gap-1.5 border border-gray-50 px-1.5 text-body-xs font-bold text-gray-60 sm:px-2"
+              className="relative h-8 min-h-8 min-w-8 gap-1.5 border border-gray-50 px-1.5 text-body-xs font-bold text-gray-60 after:absolute after:top-1/2 after:left-1/2 after:size-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] sm:px-2"
             >
               <Repeat aria-hidden className="size-3.5" />
               {/* 좁은 화면에서는 아이콘만. 글자까지 두면 검색칸이 눌려 버린다. */}

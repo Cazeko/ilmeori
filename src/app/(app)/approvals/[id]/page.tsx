@@ -112,7 +112,7 @@ export default async function ApprovalDetailPage({
       <nav aria-label="현재 위치" className="mb-4">
         <ol className="flex items-center gap-1 text-body-xs text-gray-60">
           <li>
-            <Link href="/approvals" className="font-bold hover:text-primary">
+            <Link href="/approvals" className="inline-flex items-center font-bold hover:text-primary pointer-coarse:min-h-11">
               결재함
             </Link>
           </li>

@@ -40,7 +40,7 @@ export default async function NewWorkPage({
       <nav aria-label="현재 위치" className="mb-4">
         <ol className="flex items-center gap-1 text-body-xs text-gray-60">
           <li>
-            <Link href="/works" className="font-bold hover:text-primary">
+            <Link href="/works" className="inline-flex items-center font-bold hover:text-primary pointer-coarse:min-h-11">
               업무 보드
             </Link>
           </li>

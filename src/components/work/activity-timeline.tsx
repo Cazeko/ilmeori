@@ -205,9 +205,13 @@ export function ActivityFeed({
               <p className="mt-0.5 flex items-center gap-2 text-body-xs text-gray-60">
                 {/* data-variant를 붙이지 않아 전역 밑줄 규칙이 그대로 적용된다.
                     링크를 색상만으로 구분하지 않기 위해서다. */}
+                {/* 소식 8줄이 잇달아 서는 자리라 44px 를 주면 목록이 화면 두 배로
+                    길어진다. 문장 안에 섞인 링크는 2.5.8 의 예외이기도 해서,
+                    여기는 AA 기준선인 24px 까지만 넓힌다. 손가락으로 눌러야 하는
+                    **조작 도구**(단추·펼침·이동 메뉴)에만 44px 를 준다. */}
                 <Link
                   href={`/works/${a.work.id}`}
-                  className="truncate font-bold text-gray-60 hover:text-primary"
+                  className="inline-flex min-w-0 items-center truncate font-bold text-gray-60 hover:text-primary pointer-coarse:min-h-6"
                 >
                   {a.work.title}
                 </Link>

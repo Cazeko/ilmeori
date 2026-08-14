@@ -194,7 +194,7 @@ export default async function WorkDetailPage({
       <nav aria-label="현재 위치" className="mb-4">
         <ol className="flex items-center gap-1 text-body-xs text-gray-60">
           <li>
-            <Link href="/works" className="font-bold hover:text-primary">
+            <Link href="/works" className="inline-flex items-center font-bold hover:text-primary pointer-coarse:min-h-11">
               업무 보드
             </Link>
           </li>
@@ -552,7 +552,7 @@ export default async function WorkDetailPage({
                 <div className="border-t border-gray-10 px-5 py-2.5">
                   <Link
                     href={`/works/${work.id}?tab=people`}
-                    className="text-body-sm font-bold text-primary"
+                    className="inline-flex items-center text-body-sm font-bold text-primary pointer-coarse:min-h-11"
                   >
                     참여자 {work.members.length}명 전체 보기
                   </Link>

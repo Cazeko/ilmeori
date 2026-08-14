@@ -31,8 +31,11 @@ const button = cva(
         danger: "bg-danger text-white hover:brightness-90 active:brightness-75",
       },
       size: {
-        // 최소 44px — 모바일 터치 목표 크기
-        sm: "min-h-9 px-3 text-body-sm",
+        // 마우스에서는 36px 로 촘촘하게, 손가락에서는 44px 로.
+        // 예전에는 여기 「최소 44px」라고 적어 두고 실제로는 36px 이었다.
+        // pointer-coarse 는 뷰포트가 아니라 **가리키는 장치**를 본다 — 창을 좁힌
+        // 데스크톱은 그대로 두고, 태블릿·휴대폰에서만 커진다.
+        sm: "min-h-9 px-3 text-body-sm pointer-coarse:min-h-11",
         md: "min-h-11 px-4 text-body-sm",
         lg: "min-h-12 px-6 text-body",
       },
