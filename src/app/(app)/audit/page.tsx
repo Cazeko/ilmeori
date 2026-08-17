@@ -41,7 +41,14 @@ export default async function AuditPage() {
     <PageContainer>
       <PageHeader
         title="열람기록"
-        description={`${departmentName ?? ""} 소속으로 볼 수 있는 업무의 열람기록`}
+        /* 「부서 소속으로 볼 수 있는 업무의 열람기록」이라고 적혀 있었는데,
+           정책(access_log_select_self)은 **본인 열람만** 돌려준다. 화면이 정책보다
+           넓게 말하고 있었던 셈이고, 그러면 「남이 내 업무를 열어 본 것도 여기
+           나오나」라는 잘못된 기대가 생긴다. 정책이 하는 말을 그대로 적는다. */
+        description={`${viewer.name} ${viewer.position ?? ""} 님이 열어 본 기록입니다`.replace(
+          /\s+/g,
+          " ",
+        )}
       />
 
       <Notice
@@ -52,6 +59,14 @@ export default async function AuditPage() {
         사용자 계정에는 이 표에 대한 쓰기 권한이 없습니다. 기록은 서버의 지정된
         함수만 남길 수 있고, 화면을 우회해 직접 요청을 보내도 추가·수정·삭제가
         되지 않습니다. 감사 기록이 당사자의 손에 있으면 기록이 아니기 때문입니다.
+        {/* 「왜 남의 열람은 안 보이나」는 반드시 나오는 질문이다. 감사 담당자가
+            아닌 사람에게 남의 열람 이력을 보여 주면, 그 자체가 「누가 무엇에
+            관심이 있는가」라는 새로운 정보가 된다. */}{" "}
+        <strong className="font-bold">
+          남의 열람 이력은 본인에게 보이지 않습니다
+        </strong>
+        {" — "}누가 무엇에 관심이 있는가도 보호해야 할 정보이기 때문입니다.
+        {departmentName ? ` (${departmentName} 소속으로 볼 수 있는 업무에 한합니다)` : null}
       </Notice>
 
       <div className="grid gap-5 xl:grid-cols-[1fr_300px]">

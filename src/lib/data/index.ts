@@ -120,8 +120,8 @@ export const getHandoverNotes = (
 export const listAccessLogs = (viewer: Profile, limit?: number) =>
   impl.listAccessLogs(viewer, limit);
 
-export const getAccessLogsForWork = (workId: string) =>
-  impl.getAccessLogsForWork(workId);
+export const getAccessLogsForWork = (workId: string, viewer: Profile) =>
+  impl.getAccessLogsForWork(workId, viewer);
 
 /**
  * 열람기록 남기기. 목업 모드에서는 남길 곳이 없으므로 아무 일도 하지 않는다.

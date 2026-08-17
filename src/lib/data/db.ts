@@ -993,6 +993,10 @@ export async function listAccessLogs(
 
 export async function getAccessLogsForWork(
   workId: string,
+  // 목업 구현과 서명을 맞춘다. 여기서는 정책(access_log_select_self)이
+  // 본인 것만 돌려주므로 쓰지 않는다.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _viewer: Profile,
 ): Promise<AccessLogWithActor[]> {
   if (!UUID.test(workId)) return [];
 

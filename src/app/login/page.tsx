@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { enterAsDemo } from "./actions";
 import { Avatar } from "@/components/ui/avatar";
+import { BrandMark } from "@/components/brand-mark";
+import { CityMark } from "@/components/city-mark";
 import { Notice } from "@/components/ui/notice";
 import { demoAccounts } from "@/lib/mock/org";
 import { safeNext } from "@/lib/safe-next";
@@ -41,14 +43,20 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <div className="mx-auto grid max-w-5xl gap-8 px-5 py-10 lg:grid-cols-[1fr_1.1fr] lg:gap-12 lg:py-20">
         {/* ── 제품 소개 ─────────────────────────────────────────────────── */}
         <div className="lg:pt-6">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-10 items-center justify-center rounded-md bg-primary text-body font-bold text-white">
-              일
-            </span>
+          {/* 표식이 두 개 선다 — 제품과 조직.
+              예전에는 파란 네모 안에 「일」 한 글자였는데, 그건 어떤 제품이든
+              그 자리에 자기 첫 글자를 넣을 수 있는 표식이라 이 제품에 대해
+              한 가지도 말하지 않는다. 머리 줄이 쓰는 것과 같은 BrandMark 로
+              바꾼다 — 로그인에서 본 표식과 들어가서 보는 표식이 다르면
+              사용자는 그 둘을 같은 제품으로 묶지 못한다. */}
+          <div className="flex items-center gap-3">
+            <BrandMark className="size-10" />
             <span className="text-h3 font-bold text-gray-90">일머리</span>
+            <span aria-hidden className="h-8 w-px bg-gray-20" />
+            <CityMark size="lg" />
           </div>
 
-          <h1 className="mt-6 text-h1 leading-tight font-bold break-keep text-gray-90">
+          <h1 className="mt-7 text-h1 leading-tight font-bold break-keep text-gray-90">
             파일은 넘겨받는데,
             <br />
             일머리는 못 넘겨받습니다.
@@ -56,8 +64,19 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
           <p className="mt-5 max-w-md text-body leading-relaxed break-keep text-gray-60">
             부서 간 협업을 업무 단위로 쌓고, 인사이동이 와도 그 기록이 끊기지 않게
-            하는 내부 업무공유 플랫폼입니다. 2026 화성시 AI·DATA 공모전 지정과제
-            N7 출품작입니다.
+            하는 내부 업무공유 플랫폼입니다.
+          </p>
+
+          {/* 어느 공모전의 무슨 과제인지. 본문 문단 안에 섞여 있으면 읽고
+              지나가는데, 심사위원에게는 이게 첫 번째 확인 사항이다. */}
+          <p className="mt-4 inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-sm border border-gray-20 bg-surface px-3 py-2 text-body-xs text-gray-70">
+            <span className="font-bold text-gray-90">
+              2026 화성시 AI·DATA 공모전
+            </span>
+            <span aria-hidden className="text-gray-30">
+              ·
+            </span>
+            <span>지정과제 N7 — 부서 간 협업 업무공유</span>
           </p>
 
           {/* dl로 두면 dt·dd가 감싸는 div 두 겹 아래로 내려가 정의 목록으로 읽히지 않는다.

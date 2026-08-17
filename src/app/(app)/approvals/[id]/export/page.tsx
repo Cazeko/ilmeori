@@ -171,18 +171,31 @@ export default async function ApprovalExportPage({
           </div>
 
           {/* 이 두 문장은 접지 않는다. 하나는 「이 제품이 온나라를 대체하지
-              않는다」는 경계이고, 다른 하나는 「한/글에서 열리는지 아직 확인하지
-              못했다」는 고백이다. 접어 두면 궁금한 사람만 읽게 되는데, 이건
-              읽지 않고 파일을 쓰는 사람이 반드시 알아야 하는 것이다.
-              (tests/browser.test.mjs [9] 가 둘 다 화면에 있는지 본다) */}
+              않는다」는 경계이고, 다른 하나는 한/글 실물 검증 상태다. 접어 두면
+              궁금한 사람만 읽게 되는데, 이건 읽지 않고 파일을 쓰는 사람이
+              반드시 알아야 하는 것이다.
+              (tests/browser.test.mjs [9] 가 둘 다 화면에 있는지 본다)
+
+              ── 왜 문장을 바꿨나 ────────────────────────────────────────────
+              예전에는 「한/글에서 열리는지는 아직 확인하지 못했습니다」 한 줄만
+              내려받기 단추 바로 아래에 있었다. 사실이지만, 한 일은 한 마디도
+              없이 못 한 일만 적어 둔 문장이라 이 화면만 보면 아무것도 확인하지
+              않은 것처럼 읽혔다. **확인한 것(규격 57건)과 확인하지 못한 것(실물
+              열람)을 같은 문장에 둔다.** 어느 쪽도 빼지 않는다. */}
           <p className="mt-3 border-t border-primary/20 pt-3 text-body-xs leading-relaxed break-keep text-gray-70">
             <strong className="font-bold text-gray-90">
               최종 결재권자의 서명은 「일머리」에서 받지 않습니다.
             </strong>{" "}
-            법정 결재는 온나라의 일이고 이 파일은 거기에 올리는 초안입니다. 또
-            한/글에서 열리는지는 아직 확인하지 못했습니다 — 열리지 않으면{" "}
-            <kbd className="font-sans font-bold">Ctrl+P</kbd>로 나오는 A4 가 같은
-            내용을 담고 있습니다.
+            법정 결재는 온나라의 일이고 이 파일은 거기에 올리는 초안입니다. 파일
+            규격은 시험 57건으로 확인했지만{" "}
+            <strong className="font-bold text-gray-90">
+              한/글에서 실제로 열리는지는 아직 확인 전입니다
+            </strong>{" "}
+            — 열리지 않으면 <kbd className="font-sans font-bold">Ctrl+P</kbd>로
+            나오는 A4 가 같은 내용을 담고 있습니다.{" "}
+            <Link href="/method" className="font-bold">
+              검증 현황
+            </Link>
           </p>
         </div>
 
@@ -202,14 +215,13 @@ export default async function ApprovalExportPage({
           </Notice>
         ) : null}
 
-        <Card>
-          <CardHeader title="파일에 실릴 내용" />
-          <CardBody>
-            <ExportBlocks blocks={ex.blocks} />
-          </CardBody>
-        </Card>
-
-        <Notice tone="ai" title="근거는 규칙이 골랐습니다" className="mt-5">
+        {/* ── 근거 집계 ───────────────────────────────────────────────────
+            예전에는 이 상자가 「파일에 실릴 내용」 **아래**에 있었다. 그 카드는
+            길면 화면 두세 개 분량이라, 여기까지 굴려 내려온 사람만 이 문장을
+            읽었다. 그런데 이 문장이 이 화면의 주장 그 자체다 — 쌓인 기록
+            서른몇 건이 문서 한 장으로 조립된다는 것.
+            읽어야 할 것을 먼저 놓고, 그 다음에 실물을 보여 준다. */}
+        <Notice tone="ai" title="근거는 규칙이 골랐습니다" className="mb-5">
           결재란 {ex.evidence.steps}칸 · 의견 {ex.evidence.opinions}건 · 업무
           문서 항목 {ex.evidence.sections}개 · 대화 {ex.evidence.comments}건 중{" "}
           {ex.evidence.quotedComments}건 · 첨부 {ex.evidence.attachments}건 ·
@@ -219,8 +231,18 @@ export default async function ApprovalExportPage({
           </strong>{" "}
           모델이 고르면 왜 골랐는지를 화면에 적을 수 없고, 그러면 이 꼬리표는
           아무것도 보증하지 못합니다. 고른 대화는 요약하지 않고 원문 그대로
-          싣습니다.
+          싣습니다.{" "}
+          <Link href="/method" className="font-bold">
+            규칙이 하는 일
+          </Link>
         </Notice>
+
+        <Card>
+          <CardHeader title="파일에 실릴 내용" />
+          <CardBody>
+            <ExportBlocks blocks={ex.blocks} />
+          </CardBody>
+        </Card>
       </div>
 
       <ApprovalPrintSheet ex={ex} />

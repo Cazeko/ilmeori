@@ -15,6 +15,7 @@ import {
   Repeat,
   ScrollText,
   Search,
+  Sparkles,
   Stamp,
   X,
   type LucideIcon,
@@ -23,6 +24,7 @@ import { leaveDemo } from "@/app/login/actions";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
 import { BrandMark } from "@/components/brand-mark";
+import { CityMark } from "@/components/city-mark";
 import { RegisterServiceWorker } from "@/components/pwa/register-sw";
 import type { Profile } from "@/lib/types";
 
@@ -51,6 +53,17 @@ const NAV: Array<{ heading: string; items: NavItem[] }> = [
   {
     heading: "기록",
     items: [{ href: "/audit", label: "열람기록", icon: ScrollText }],
+  },
+  {
+    // 「AI 어디 있어요?」와 「이거 진짜 돌아요?」는 반드시 나오는 두 질문인데,
+    // 답이 인계·인수 화면 안쪽의 접힌 상자와 내보내기 화면의 각주로 흩어져
+    // 있었다. 메뉴에 자리를 하나 내어 준다.
+    //
+    // 이름을 「AI」로 달지 않는다. 이 제품은 어떤 모델도 부르지 않고, 부르지
+    // 않는 것을 부른다고 적는 순간 심사에서 「모델이 뭐예요」 한 마디에
+    // 무너진다. 하는 일을 그대로 적는 편이 더 강하다.
+    heading: "제품",
+    items: [{ href: "/method", label: "자동 생성·검증", icon: Sparkles }],
   },
 ];
 
@@ -280,6 +293,14 @@ export function AppShell({
           <span className="text-body font-bold tracking-tight text-gray-90">
             일머리
           </span>
+          {/* 어느 조직을 위한 것인지. 세로선을 하나 세워 제품 이름과 갈라 둔다 —
+              붙여 두면 「일머리 화성특례시」가 한 덩어리 이름으로 읽힌다.
+              md 미만에서는 접는다. 390px 머리 줄에는 검색칸이 먼저 서야 한다. */}
+          <span
+            aria-hidden
+            className="ml-0.5 hidden h-6 w-px shrink-0 bg-gray-20 md:block"
+          />
+          <CityMark className="hidden md:flex" />
         </Link>
 
         {/* ── 가운데: 검색 ──────────────────────────────────────────────

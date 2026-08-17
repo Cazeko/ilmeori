@@ -624,9 +624,24 @@ async function buildHandover(base: Handover): Promise<HandoverView> {
 // ---------------------------------------------------------------------------
 
 /**
- * 내가 볼 수 있는 업무에 대한 열람기록만 돌려준다.
- * 열람기록 자체가 "누가 무엇에 관심이 있는가"라는 정보이므로,
- * 볼 수 없는 업무의 기록이 새면 그것 역시 유출이다.
+ * **본인이 남긴 열람기록만** 돌려준다.
+ *
+ * ── 목업이 정책보다 넓게 열어 주고 있었다 ──────────────────────────────────
+ *
+ * 여기는 「내가 볼 수 있는 업무의 열람기록」을 돌려주고 있었다. 그래서 목업으로
+ * 돌 때는 남이 내 업무를 열어 본 기록까지 화면에 나왔다. 그런데 실제 정책은
+ * 그렇지 않다 —
+ *
+ *   0002_rls.sql · access_log_select_self
+ *     for select to authenticated using (actor_id = (select auth.uid()))
+ *
+ * 둘이 어긋나면 목업이 있는 이유 자체가 없어진다. 목업은 개발 편의를 위한
+ * 다른 앱이 아니라 **DB가 없을 때도 같은 화면을 보여 주는 같은 앱**이어야 하고,
+ * 특히 권한처럼 이 제품이 주장하는 것을 목업이 더 헐겁게 흉내 내면, 심사에서
+ * 목업으로 본 화면과 DB로 본 화면이 다른 말을 하게 된다.
+ *
+ * 업무를 볼 수 있는지도 함께 본다. 정책 하나로는 걸리지 않지만, 열람기록이
+ * 가리키는 업무 제목이 화면에 함께 나오기 때문이다.
  */
 export async function listAccessLogs(
   viewer: Profile,
@@ -641,7 +656,12 @@ export async function listAccessLogs(
   );
 
   return accessLogs
-    .filter((l) => l.work_id !== null && readable.has(l.work_id))
+    .filter(
+      (l) =>
+        l.actor_id === viewer.id &&
+        l.work_id !== null &&
+        readable.has(l.work_id),
+    )
     .slice(0, limit)
     .map((l) => {
       const work = readable.get(l.work_id as string);
@@ -653,10 +673,20 @@ export async function listAccessLogs(
     });
 }
 
-/** 이 업무를 누가 열어 봤는지 — 업무 상세의 이력 탭에서 함께 보여준다 */
-export async function getAccessLogsForWork(workId: string): Promise<AccessLogWithActor[]> {
+/**
+ * 이 업무에 대해 **내가 남긴** 열람기록 — 업무 상세의 이력 탭.
+ *
+ * 여기도 listAccessLogs 와 같은 이유로 viewer 를 받는다. 정책이 본인 것만
+ * 돌려주므로(access_log_select_self), 목업이 남의 열람까지 보여 주면 목업으로
+ * 본 화면과 DB로 본 화면이 다른 말을 한다. 화면 문구도 그에 맞춰 「내가 이
+ * 업무를 열어 본 기록」이라고 적는다.
+ */
+export async function getAccessLogsForWork(
+  workId: string,
+  viewer: Profile,
+): Promise<AccessLogWithActor[]> {
   return accessLogs
-    .filter((l) => l.work_id === workId)
+    .filter((l) => l.work_id === workId && l.actor_id === viewer.id)
     .map((l) => ({
       ...l,
       actor: l.actor_id ? requireProfile(l.actor_id) : null,

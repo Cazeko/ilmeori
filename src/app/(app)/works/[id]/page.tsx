@@ -133,7 +133,7 @@ export default async function WorkDetailPage({
     getComments(work.id),
     getActivities(work.id),
     getAttachments(work.id),
-    getAccessLogsForWork(work.id),
+    getAccessLogsForWork(work.id, viewer),
     getApprovalsForWork(viewer, work.id),
   ]);
 
@@ -452,13 +452,22 @@ export default async function WorkDetailPage({
                 <section aria-labelledby="access-heading">
                   {/* 「공문서를 다루는 이상 본 사람도 기록되어야 합니다」는
                       제품의 주장이지 이 목록을 읽는 데 필요한 말이 아니다.
-                      열람기록 화면(/audit)에 같은 취지가 한 번 적혀 있다. */}
+                      열람기록 화면(/audit)에 같은 취지가 한 번 적혀 있다.
+
+                      다만 **누구의 기록인지**는 적어야 한다. 정책이 본인 것만
+                      돌려주므로(access_log_select_self) 여기 서는 이름은 언제나
+                      나 하나인데, 제목이 「열람기록」이면 「이 업무를 아무도 안
+                      열어 봤나」로 읽힌다. 없는 것과 못 보는 것은 다르다. */}
                   <h2
                     id="access-heading"
-                    className="mb-4 text-h3 font-bold text-gray-90"
+                    className="mb-1 text-h3 font-bold text-gray-90"
                   >
-                    열람기록
+                    내 열람기록
                   </h2>
+                  <p className="mb-4 text-body-sm break-keep text-gray-60">
+                    내가 이 업무를 열어 본 기록입니다. 남이 열어 본 기록은
+                    본인에게만 보입니다.
+                  </p>
                   {accessLogs.length > 0 ? (
                     <ul className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-surface">
                       {accessLogs.map((l) => (
@@ -485,7 +494,7 @@ export default async function WorkDetailPage({
                     </ul>
                   ) : (
                     <p className="rounded-md border border-gray-10 bg-surface px-4 py-6 text-center text-body-sm text-gray-60">
-                      아직 열람기록이 없습니다.
+                      이 업무를 연 기록이 아직 없습니다.
                     </p>
                   )}
                 </section>

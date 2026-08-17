@@ -224,8 +224,25 @@ console.log("\n[3] 보이는 이유 · 같은 주소 다른 계정");
     const form = page.locator(`form:has(input[name=next][value="${privatePath}"])`);
     ok("폼이 이 주소를 들고 있다", (await form.count()) === 1);
     ok("펼치기 전에는 버튼이 안 보인다", (await form.locator("button").isVisible()) === false);
+
     // details 는 스크립트 없이 열린다. 그것도 함께 확인하는 셈이다.
-    await page.locator("details:has-text('이 업무가 보이는 이유') summary").click();
+    //
+    // ── 왜 한 번 더 눌러 보는가 ────────────────────────────────────────────
+    // 이 줄은 간헐적으로 실패해 왔다. 따로 떼어 돌리면 언제나 열리는데,
+    // 전체 시험처럼 컨텍스트를 여럿 띄운 채로 돌리면 클릭이 페이지가 자리를
+    // 잡기 전에 닿아 토글이 먹지 않는 일이 있다. **화면의 문제가 아니라
+    // 시험의 문제다.**
+    //
+    // 그래서 무엇을 보는지는 그대로 두고, 여는 일만 확실히 한다. 세 번을
+    // 눌러도 안 열리면 넘어가지 않고 그 사실대로 실패시킨다 —
+    // 못 연 것을 조용히 통과시키면 이 시험이 지키던 것이 사라진다.
+    const reasonDetails = page.locator("details:has-text('이 업무가 보이는 이유')");
+    for (let i = 0; i < 3; i += 1) {
+      if (await reasonDetails.evaluate((e) => e.open)) break;
+      await reasonDetails.locator("summary").click();
+      await page.waitForTimeout(150);
+    }
+    ok("펼치면 설명이 열린다", await reasonDetails.evaluate((e) => e.open));
     ok("펼치면 버튼이 보인다", await form.locator("button").isVisible());
     await form.locator("button[type=submit]").click();
     await page.waitForLoadState("domcontentloaded");
@@ -773,9 +790,17 @@ console.log("\n[9] 온나라로 넘기기 — 근거 꼬리표가 붙은 내보�
     );
     // 이 제품은 「초록불을 본 적이 없으면 통과했다고 세지 않는다」를 지켜 왔다.
     // 화면에서만 예외를 두면 그 규칙이 무너진다.
+    //
+    // 문구는 「확인한 것 + 확인하지 못한 것」을 한 문장에 담도록 바뀌었다.
+    // 시험이 지키는 것은 글자 그대로가 아니라 **못 한 일을 숨기지 않는가**이므로,
+    // 둘 다 화면에 있는지 본다 — 규격 통과만 적고 실물 미확인을 빼면 실패한다.
     ok(
       "한/글 실물 검증이 아직임을 화면이 밝힌다",
-      ex.includes("한/글에서 열리는지는 아직 확인하지 못했습니다"),
+      ex.includes("한/글에서 실제로 열리는지는 아직 확인 전입니다"),
+    );
+    ok(
+      "확인한 것(규격)도 함께 밝힌다",
+      ex.includes("파일 규격은 시험 57건으로 확인했지만"),
     );
     ok("인쇄 폴백을 함께 안내한다", ex.includes("Ctrl+P"));
 

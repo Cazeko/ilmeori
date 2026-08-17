@@ -30,12 +30,24 @@ import { PrintButton } from "@/components/handover/print-button";
 import { HandoverPrintSheet } from "@/components/handover/print-sheet";
 import { BlockNotes } from "@/components/handover/block-notes";
 import { StatusBadge } from "@/components/status-badge";
-import { formatFullDateTime, josa } from "@/lib/format";
-import { getDepartment, getHandoverFor, getHandoverNotes } from "@/lib/data";
+import {
+  formatDate,
+  formatDueLabel,
+  formatFullDateTime,
+  josa,
+} from "@/lib/format";
+import {
+  getDepartment,
+  getHandoverFor,
+  getHandoverNotes,
+  listWorks,
+  roleIn,
+} from "@/lib/data";
 import { buildHandoverDraft } from "@/lib/handover-draft";
 import { requireViewer } from "@/lib/session";
 import { canMutate, isSupabaseConfigured } from "@/lib/env";
 import { handoverBlockAnchor, type HandoverNoteWithAuthor } from "@/lib/types";
+import type { Profile } from "@/lib/types";
 
 export const metadata: Metadata = { title: "인계·인수" };
 
@@ -57,29 +69,7 @@ export default async function HandoverPage({
   const sp = await searchParams;
   const view = await getHandoverFor(viewer);
 
-  if (!view) {
-    return (
-      <PageContainer>
-        <PageHeader title="인계·인수" />
-        <ActionFeedback msg={sp.msg} className="mb-4" />
-        <Card>
-          <EmptyState
-            icon={Inbox}
-            title="진행 중인 인계·인수가 없습니다"
-            description="넘길 업무와 인수자만 고르면 나머지는 쌓인 기록에서 뽑아 채웁니다."
-            action={
-              canMutate ? (
-                <ButtonLink href="/handover/new">
-                  인계 시작하기
-                  <ArrowRight aria-hidden className="size-4" />
-                </ButtonLink>
-              ) : undefined
-            }
-          />
-        </Card>
-      </PageContainer>
-    );
-  }
+  if (!view) return <HandoverStandby viewer={viewer} msg={sp.msg} />;
 
   const { handover, from, to, items } = view;
   const draft = await buildHandoverDraft(view);
@@ -622,6 +612,266 @@ export default async function HandoverPage({
           </div>
         </div>
       </div>
+    </PageContainer>
+  );
+}
+
+/**
+ * 진행 중인 인계가 없을 때의 화면.
+ *
+ * ── 왜 빈 화면이면 안 되는가 ──────────────────────────────────────────────
+ *
+ * 이 화면은 제품의 결론이다. 그런데 진행 중인 인계 건은 한 사람이 몇 년에 한 번
+ * 갖는 것이고, 데모 계정 넷 중 둘(김서연·최민재)은 인계 당사자가 아니다.
+ * 그 둘로 들어와 왼쪽 메뉴에서 「인계·인수」를 누르면 — 즉 심사위원이 처음 받는
+ * 계정으로 가장 궁금한 메뉴를 누르면 — **아이콘 하나와 단추 하나가 있는 빈 판**이
+ * 나왔다. 제품의 결론이 백지였다.
+ *
+ * ── 그래서 무엇을 그리는가 ────────────────────────────────────────────────
+ *
+ * 없는 인계를 지어내지 않는다. 대신 **지금 넘긴다면 무엇이 실리는지**를 실제로
+ * 세어 보여 준다. 이 숫자는 꾸민 것이 아니라 그 계정이 주담당인 업무에서 그대로
+ * 나온 것이고, 그래서 계정마다 다르다.
+ *
+ * 「평소 협업의 부산물이 곧 인수인계서가 된다」가 이 제품의 설계 원리다.
+ * 그 원리는 인계가 시작되기 **전에도** 참이어야 하고, 이 화면이 그것을 말한다.
+ *
+ * 세는 것은 listWorks 가 이미 돌려주는 값뿐이다(대화·첨부 수). 문서 항목과 이력을
+ * 함께 세려면 업무마다 질의를 더 돌려야 하는데, 아직 시작하지도 않은 인계의
+ * 미리보기가 그만큼의 비용을 쓸 이유가 없다.
+ */
+async function HandoverStandby({
+  viewer,
+  msg,
+}: {
+  viewer: Profile;
+  msg: string | string[] | undefined;
+}) {
+  const mine = await listWorks(viewer, { mine: true });
+  const owned = mine.filter((w) => roleIn(w, viewer) === "owner");
+
+  const comments = owned.reduce((n, w) => n + w.comment_count, 0);
+  const attachments = owned.reduce((n, w) => n + w.attachment_count, 0);
+  const repeating = owned.filter((w) => w.previous_year).length;
+  const departments = new Set(owned.map((w) => w.department_id)).size;
+  const overdue = owned.filter((w) => w.derived === "overdue").length;
+
+  return (
+    <PageContainer>
+      <PageHeader
+        title="인계·인수"
+        description="시행규칙 별지 제12호서식을 그대로 따릅니다."
+      />
+      <ActionFeedback msg={msg} className="mb-4" />
+
+      {owned.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={Inbox}
+            title="진행 중인 인계·인수가 없습니다"
+            description="넘길 수 있는 것은 내가 주담당인 업무뿐입니다. 지금은 주담당인 업무가 없습니다."
+            action={
+              <ButtonLink href="/works" variant="secondary">
+                업무 보드로 가기
+                <ArrowRight aria-hidden className="size-4" />
+              </ButtonLink>
+            }
+          />
+        </Card>
+      ) : (
+        <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
+          <div className="min-w-0">
+            <Notice
+              tone="ai"
+              title="지금 인사이동이 나면 이만큼이 인계서에 실립니다"
+              className="mb-4"
+            >
+              아래 숫자는 예시가 아니라 {viewer.name} {viewer.position} 님이
+              주담당인 업무에서 <strong className="font-bold">지금 세어 본 것</strong>
+              입니다. 인계를 시작하면 이 기록이 별지 제12호서식의 순서대로 조립되고,
+              항목마다 어느 기록에서 나왔는지가 함께 붙습니다.{" "}
+              <strong className="font-bold text-gray-90">
+                인계서를 위해 따로 적어 둔 것은 한 줄도 없습니다.
+              </strong>
+            </Notice>
+
+            <Card className="mb-4">
+              <CardHeader title="지금 넘긴다면" as="h2" />
+              <CardBody>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
+                  {/* 꼬리말은 그 숫자가 서식 어디로 가는지만 적는다.
+                      「대화」에 「원문 그대로 실린다」고 적었다가 고쳤다 —
+                      대화가 전부 실리는 것이 아니라 현안 규칙에 걸린 것만
+                      인용된다. 세는 수와 실리는 수가 다른데 같은 것처럼
+                      적으면, 옆에 붙은 근거 꼬리표와 같은 종류의 거짓이 된다. */}
+                  {[
+                    ["업무", owned.length, "주담당인 것만"],
+                    ["대화", comments, "현안에 걸린 것이 원문 그대로 인용된다"],
+                    ["첨부", attachments, "서식 2장에 목록으로"],
+                    ["연간 반복", repeating, "작년 판이 붙어 있다"],
+                  ].map(([label, value, hint]) => (
+                    <div key={label as string}>
+                      <dt className="text-body-xs font-bold text-gray-60">
+                        {label}
+                      </dt>
+                      <dd className="mt-1 text-h2 leading-none font-bold tabular-nums text-primary">
+                        {value}
+                        <span className="ml-0.5 text-body-sm font-normal text-gray-60">
+                          건
+                        </span>
+                      </dd>
+                      <p className="mt-1.5 text-body-xs break-keep text-gray-60">
+                        {hint}
+                      </p>
+                    </div>
+                  ))}
+                </dl>
+              </CardBody>
+              {/* 「빠뜨리면 비싼 것」을 따로 말한다. 인계에서 가장 먼저 사라지는
+                  것이 지연 사유와 해마다 반복되는 일의 작년 맥락이기 때문이다. */}
+              {overdue > 0 || repeating > 0 ? (
+                <div className="border-t border-gray-10 bg-gray-5 px-5 py-3.5">
+                  <ul className="flex flex-col gap-1.5">
+                    {overdue > 0 ? (
+                      <li className="flex gap-2 text-body-sm break-keep text-gray-70">
+                        <PenLine
+                          aria-hidden
+                          className="mt-0.5 size-4 shrink-0 text-danger"
+                        />
+                        <span>
+                          기한이 지난 업무 {overdue}건 — 왜 멈췄는지가 문서와
+                          대화에 남아 있으면 그대로 실립니다. 담당자가 바뀔 때
+                          가장 먼저 사라지는 것이 이 「왜」입니다.
+                        </span>
+                      </li>
+                    ) : null}
+                    {repeating > 0 ? (
+                      <li className="flex gap-2 text-body-sm break-keep text-gray-70">
+                        <RotateCcw
+                          aria-hidden
+                          className="mt-0.5 size-4 shrink-0 text-accent-text"
+                        />
+                        <span>
+                          해마다 반복되는 업무 {repeating}건 — 작년 판이 함께
+                          걸려 있어 인수자가 작년 시행착오부터 읽을 수 있습니다.
+                        </span>
+                      </li>
+                    ) : null}
+                  </ul>
+                </div>
+              ) : null}
+            </Card>
+
+            <Card>
+              <CardHeader
+                title={`넘길 수 있는 업무 ${owned.length}건`}
+                as="h2"
+                description={`${departments}개 부서 소관. 편집자·열람자로 참여만 한 업무는 주담당이 따로 있어 여기 없습니다.`}
+              />
+              <ul className="divide-y divide-gray-5">
+                {owned.map((w) => (
+                  <li key={w.id} className="px-5 py-3.5">
+                    <Link
+                      href={`/works/${w.id}`}
+                      className="text-body-sm font-bold break-keep text-gray-90 hover:text-primary"
+                    >
+                      {w.title}
+                    </Link>
+                    <span className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <StatusBadge status={w.derived} size="sm" />
+                      <span className="text-body-xs text-gray-60">
+                        {w.due_date
+                          ? `${formatDate(w.due_date)} (${formatDueLabel(w.due_date)})`
+                          : "마감 없음"}
+                      </span>
+                      {w.previous_year ? (
+                        <span className="inline-flex items-center gap-1 rounded-xs bg-accent-bg px-1.5 py-0.5 text-body-xs font-bold text-accent-text">
+                          <RotateCcw aria-hidden className="size-3" />
+                          연간 반복
+                        </span>
+                      ) : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+
+          {/* ── 옆칸 ────────────────────────────────────────────────────────── */}
+          <div className="flex flex-col gap-5">
+            <Card>
+              <CardHeader title="인계를 시작하면" as="h2" />
+              <CardBody>
+                <ol className="flex flex-col gap-3.5">
+                  {[
+                    [
+                      "대상 선정",
+                      "넘길 업무와 인수자만 고릅니다. 사람이 적는 것은 여기까지입니다.",
+                    ],
+                    [
+                      "초안 생성",
+                      "쌓인 기록에서 별지 제12호서식 순서대로 뽑습니다. 항목마다 근거가 붙습니다.",
+                    ],
+                    [
+                      "인계자 확인",
+                      "근거가 맞는지 봅니다. 물품·예산처럼 근거가 없는 칸은 비워 두고 직접 적습니다.",
+                    ],
+                    [
+                      "인계 완료",
+                      "주담당이 실제로 바뀌고, 넘긴 사람에게는 열람 권한이 남습니다.",
+                    ],
+                  ].map(([term, desc], i) => (
+                    <li key={term} className="flex gap-3">
+                      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-gray-10 text-body-xs font-bold tabular-nums text-gray-70">
+                        {i + 1}
+                      </span>
+                      <div>
+                        <p className="text-body-sm font-bold text-gray-90">
+                          {term}
+                        </p>
+                        <p className="mt-0.5 text-body-xs leading-relaxed break-keep text-gray-60">
+                          {desc}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </CardBody>
+              {canMutate ? (
+                <div className="border-t border-gray-10 px-5 py-4">
+                  <ButtonLink href="/handover/new" block>
+                    인계 시작하기
+                    <ArrowRight aria-hidden className="size-4" />
+                  </ButtonLink>
+                </div>
+              ) : null}
+            </Card>
+
+            {/* 데모에서 실제로 굴러가는 인계 건이 어디 있는지 알려 준다.
+                이 계정은 인계 당사자가 아니므로, 여기서 「시작하기」를 눌러 새로
+                만드는 것 말고 **이미 진행 중인 것을 보는 길**도 있어야 한다.
+                (정책이 당사자에게만 보여 주므로 계정을 바꿔야 열린다) */}
+            <Card>
+              <CardHeader title="진행 중인 인계를 보려면" as="h2" />
+              <CardBody>
+                <p className="text-body-sm leading-relaxed break-keep text-gray-60">
+                  인계·인수 문서는 <strong className="font-bold text-gray-80">
+                    넘기는 사람과 받는 사람에게만
+                  </strong>{" "}
+                  보입니다. 화면이 아니라 정책(handover_select)이 그렇게
+                  정해 두었습니다.
+                </p>
+                <p className="mt-2.5 text-body-sm leading-relaxed break-keep text-gray-60">
+                  시연용으로 준비된 인계 건은 자원순환과{" "}
+                  <strong className="font-bold text-gray-80">박준호 → 이하람</strong>{" "}
+                  입니다. 오른쪽 위 「계정 전환」에서 두 사람 중 하나로 들어가면
+                  초안·근거 표시·실행까지 볼 수 있습니다.
+                </p>
+              </CardBody>
+            </Card>
+          </div>
+        </div>
+      )}
     </PageContainer>
   );
 }
