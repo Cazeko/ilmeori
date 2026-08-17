@@ -154,6 +154,24 @@ function DemoNotice() {
   );
 }
 
+/**
+ * 옆줄 맨 아래의 운영기관 표식.
+ *
+ * 머리 줄의 것은 제품 이름 옆에 서느라 작을 수밖에 없다(34px). 그 크기로는
+ * 「어느 시의 도구인가」가 눈에 안 들어온다. 옆줄 아래는 폭이 남는 자리이고,
+ * 공공 서비스에서 운영기관을 밝히는 자리가 원래 화면 아래다.
+ *
+ * 위에 선을 하나 긋고 여백을 넉넉히 준다 — 메뉴에 딱 붙여 두면 표식이 메뉴의
+ * 마지막 항목처럼 읽힌다.
+ */
+function SidebarCityMark() {
+  return (
+    <div className="mt-2 border-t border-gray-10 px-5 pt-5 pb-6">
+      <CityMark size="block" />
+    </div>
+  );
+}
+
 export function AppShell({
   viewer,
   departmentName,
@@ -279,6 +297,7 @@ export function AppShell({
               <NavList pathname={pathname} />
             </div>
             <DemoNotice />
+            <SidebarCityMark />
           </div>
         </details>
 
@@ -389,6 +408,7 @@ export function AppShell({
             <NavList pathname={pathname} />
           </div>
           <DemoNotice />
+          <SidebarCityMark />
         </aside>
 
         {/* ── 본문 ────────────────────────────────────────────────────────── */}

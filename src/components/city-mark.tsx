@@ -9,42 +9,32 @@ import { cn } from "@/lib/cn";
  * 「이게 우리 시 것인가」를 먼저 본다. 제품 이름만 있으면 그 질문에 답하는
  * 자리가 화면 어디에도 없다.
  *
- * ── 왜 그림 파일인가 ──────────────────────────────────────────────────────
+ * ── 그림 파일을 그대로 쓴다 ────────────────────────────────────────────────
  *
- * 처음에는 글자로만 짰다. 시의 공식 상징을 **비슷하게 그려 넣는 것**은 없는
- * 권위를 만드는 일이라 하지 않기로 했었다. 지금은 시가 배포하는 그 표식을
- * 그대로 쓴다 — 흉내가 아니라 실물이라 그때의 걱정이 성립하지 않는다.
+ * 시가 배포하는 가로형 표식이다. 「특별한 시민, 빛나는 도시」와 로마자 줄까지
+ * 한 벌로 들어 있고, 잘라 쓰지 않는다 — 공식 표식은 비율과 여백까지가
+ * 규정이라 마음에 드는 부분만 오려 쓰면 그건 「비슷하게 만든 것」이 된다.
  *
- * 「특별한 시민, 빛나는 도시」와 로마자 줄까지 한 벌로 들어 있는 가로형이다.
- * 잘라 쓰지 않는다. 공식 표식은 비율과 여백까지가 규정이고, 우리가 그중
- * 마음에 드는 부분만 오려 쓰면 그건 다시 「비슷하게 만든 것」이 된다.
+ * 바탕은 투명하다. 처음 받은 파일은 바탕이 불투명한 흰색이라 회색 화면에서
+ * 흰 네모로 떠 보였고, 흰 판을 깔아 가렸었다. 지금 파일은 누끼가 따져 있어
+ * 어느 바탕에 놓아도 그대로 얹힌다 — 그 판을 걷어냈다.
+ *
+ * 원본(1956×804, 619KB)은 화면에 쓰기엔 지나치게 크다. 가장 크게 쓰는 자리가
+ * 옆줄 너비(약 220px)라 480×197 로 줄여 넣었다(69KB). 그래도 2배 넘는 밀도다.
  *
  * ── 크기 ──────────────────────────────────────────────────────────────────
  *
- * 원본이 250×123 이라 가로세로비는 2.03:1 이다. width/height 를 둘 다 적어
- * 두는 이유는 글꼴·그림이 늦게 와도 줄이 밀리지 않게 하기 위해서다.
+ *   sm     머리 줄 — 제품 표식 옆
+ *   lg     로그인 화면
+ *   block  옆줄 아래 — 폭에 맞춰 늘어난다
  *
- * ── 흰 판 위에 올리는 이유 ────────────────────────────────────────────────
- *
- * 이 파일은 **바탕이 불투명한 흰색**이다(모서리 픽셀 alpha=255). 회색 판인
- * 로그인 화면에 그냥 얹으면 흰 네모가 떠 있는 것으로 보인다.
- *
- * 흰색을 투명으로 뚫지 않는다. 가장자리가 안티에일리어싱된 그림이라 뚫으면
- * 글자 테두리에 흰 실이 남고, 무엇보다 **공식 표식을 우리가 고쳐 쓰는 일**이
- * 된다. 대신 흰 판을 의도한 것으로 만든다 — 여백을 주고 모서리를 둥글린다.
- * 머리 줄은 원래 흰 바탕이라 이 판이 보이지 않고, 회색 화면에서는 표식을
- * 얹어 둔 자리로 읽힌다.
- *
- * ── 다만 공식 서비스가 아니다 ──────────────────────────────────────────────
- *
- * 운영 중인 시 서비스로 오해되면 안 된다. 그래서 `note` 를 붙일 수 있게 두었고,
- * 로그인 화면처럼 자리가 있는 곳에서는 「AI·DATA 공모전 출품작」을 함께 적는다.
- * 좁은 머리 줄에서는 표식만 서고, 그 화면에는 「시연용 가상 데이터」 쪽지가
- * 상시로 떠 있어 같은 일을 한다.
+ * width/height 를 늘 함께 적는다. 그림이 늦게 와도 줄이 밀리지 않아야 한다.
  */
 
-/** 원본 크기. 여기서 비율이 나온다. */
-const RATIO = 250 / 123;
+/** 파일 크기. 여기서 가로세로비가 나온다. */
+const SRC_W = 480;
+const SRC_H = 197;
+const RATIO = SRC_W / SRC_H;
 
 export function CityMark({
   className,
@@ -54,39 +44,38 @@ export function CityMark({
   className?: string;
   /** 아래 줄에 덧붙일 한 마디 — 「AI·DATA 공모전 출품작」 등 */
   note?: string;
-  size?: "sm" | "lg";
+  size?: "sm" | "lg" | "block";
 }) {
-  const height = size === "lg" ? 44 : 30;
+  const block = size === "block";
+  const height = size === "lg" ? 52 : 34;
   const width = Math.round(height * RATIO);
 
   return (
     <span className={cn("flex flex-col justify-center", className)}>
       {/*
-        next/image 를 쓰지 않는다. 이 그림은 크기가 고정이고 15KB 이며 판이
-        바뀌지 않는다 — 최적화 서버를 한 번 더 태울 이유가 없고, 태우면
-        내부망 온프레미스로 옮길 때 그 경로가 검토 대상이 된다.
+        next/image 를 쓰지 않는다. 크기가 고정이고 판이 바뀌지 않는 그림이라
+        최적화 서버를 한 번 더 태울 이유가 없고, 태우면 내부망 온프레미스로
+        옮길 때 그 경로가 검토 대상이 된다.
 
         alt 에 「로고」라고 적지 않는다. 스크린리더는 이미 「그림」이라고
         읽어 주므로, 거기에 「로고 그림」이 되면 같은 말이 두 번 나온다.
       */}
-      <span
+      {/* eslint-disable-next-line @next/next/no-img-element -- 위 주석 참고 */}
+      <img
+        src="/brand/hwaseong.png"
+        alt="화성특례시"
+        width={block ? SRC_W : width}
+        height={block ? SRC_H : height}
+        style={block ? undefined : { width, height }}
         className={cn(
-          "inline-flex w-fit items-center justify-center rounded-sm bg-white",
-          size === "lg" ? "px-2.5 py-1.5" : "px-1.5 py-1",
+          "block object-contain",
+          // 옆줄에서는 남은 폭을 그대로 쓴다. height:auto 가 없으면 위에서 적은
+          // height 속성이 그대로 살아 그림이 눌린다.
+          block ? "h-auto w-full" : "max-w-full",
         )}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element -- 위 주석 참고: 크기 고정 15KB, 최적화 서버를 태울 이유가 없다 */}
-        <img
-          src="/brand/hwaseong.png"
-          alt="화성특례시"
-          width={width}
-          height={height}
-          style={{ width, height }}
-          className="block max-w-full object-contain"
-        />
-      </span>
+      />
       {note ? (
-        <span className="mt-2 text-body-xs break-keep text-gray-60">
+        <span className="mt-2.5 text-body-xs break-keep text-gray-60">
           {note}
         </span>
       ) : null}
