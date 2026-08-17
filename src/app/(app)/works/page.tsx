@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Field, Input, Select } from "@/components/ui/field";
+import { GetForm } from "@/components/ui/get-form";
 import { Notice } from "@/components/ui/notice";
 import { LinkPending } from "@/components/ui/link-pending";
 import { getApprovalSummaries, getDepartmentTree, listWorks } from "@/lib/data";
@@ -188,11 +189,10 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
             </span>
           ) : null}
         </summary>
-        <form
-          method="get"
-          action="/works"
-          className="border-t border-gray-10 p-4"
-        >
+        {/* GetForm — 스크립트가 있으면 화면을 갈지 않고 옮긴다.
+            평범한 GET 폼은 전체 페이지 로드라, 조건을 한 번 걸고 나면 그 뒤의
+            앞으로·뒤로가 전부 bfcache 없이 서버까지 갔다 왔다. get-form.tsx 참고. */}
+        <GetForm action="/works" className="border-t border-gray-10 p-4">
           {/* 칸으로 그리지 않은 조건은 제출할 때 사라진다.
               보관함에서 검색하면 보관함 밖으로 튕겨 나가고, 그건 고장으로 보인다. */}
           {overdueOnly ? (
@@ -252,7 +252,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
               적용
             </Button>
           </div>
-        </form>
+        </GetForm>
       </details>
 
       {/* ── 빠른 조건 ───────────────────────────────────────────────────────

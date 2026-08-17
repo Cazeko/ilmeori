@@ -80,13 +80,22 @@ export function ApprovalFields({
         )}
       </Field>
 
-      {/* items-start — 두 칸의 hint 길이가 달라 한쪽이 두 줄이 되면, 기본값
-          (stretch)에서는 짧은 쪽 <select> 가 늘어나 밑선이 어긋난다. */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+      {/* ── 두 칸을 같은 줄에 세운다 ──────────────────────────────────────
+          Field 는 라벨 → 설명 → 입력칸 순으로 쌓는다. 그런데 두 칸의 설명
+          길이가 달라서 192px 안에서 한쪽은 두 줄, 한쪽은 한 줄이 되고,
+          그만큼 아래의 <select> 가 서로 어긋난 높이에 섰다.
+          (items-start 는 **위**를 맞추므로 이 어긋남을 못 고친다. 위가 맞을수록
+           설명 줄 수 차이가 그대로 입력칸 위치 차이가 된다)
+
+          subgrid 로 푼다. 바깥이 세 줄(라벨·설명·입력칸)을 정하고, 각 Field 가
+          그 줄을 그대로 물려받는다. 그러면 설명이 몇 줄이 되든 **같은 줄에 있는
+          것끼리** 높이를 맞추므로 라벨도 입력칸도 나란히 선다.
+          좁은 화면(sm 미만)에서는 두 칸이 위아래로 서니 맞출 것이 없다. */}
+      <div className="flex flex-col gap-4 sm:grid sm:grid-cols-[12rem_12rem] sm:grid-rows-[auto_auto_auto] sm:gap-x-4">
         <Field
           id="approval-retention"
           label="보존연한"
-          className="sm:w-48"
+          className="sm:row-span-3 sm:grid sm:grid-rows-subgrid sm:gap-y-1.5"
           hint="「공공기록물 관리에 관한 법률 시행령」 제26조"
         >
           {(p) => (
@@ -108,7 +117,7 @@ export function ApprovalFields({
         <Field
           id="approval-security"
           label="공개 구분"
-          className="sm:w-48"
+          className="sm:row-span-3 sm:grid sm:grid-rows-subgrid sm:gap-y-1.5"
           hint="「비밀」은 이 시스템에 담지 않습니다."
         >
           {(p) => (

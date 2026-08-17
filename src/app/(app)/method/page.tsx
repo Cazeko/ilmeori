@@ -101,11 +101,13 @@ const CHECKS = [
     verified: false,
   },
   {
+    // 오래 「아직 확인 전」이었다. 이 저장소가 리눅스 컨테이너라 한/글이 없어
+    // 규격 시험 위쪽을 볼 수 없었기 때문이다. 실물로 열어 보고 넘겼다.
     what: "한/글에서 실제로 열리는가",
-    how: "이 저장소는 리눅스 컨테이너라 한/글이 없다. 규격 시험이 지키는 것은 「규격대로 짜였는가」까지이고, 한글과컴퓨터의 실제 프로그램이 그 파일을 여는지는 다른 문제다",
-    result: "아직 확인 전",
+    how: "규격 시험이 지키는 것은 「규격대로 짜였는가」까지다. 그 위는 한글과컴퓨터의 실제 프로그램으로 열어 확인했다 — 자동 시험이 아니라 사람이 한 번 확인한 것이라, 여기에는 시험 명령이 없다",
+    result: "열림 확인",
     cmd: null,
-    verified: false,
+    verified: true,
   },
   {
     what: "실제 공문서로 시험",
@@ -243,11 +245,12 @@ export default function MethodPage() {
         <div className="border-t border-gray-10 bg-gray-5 px-5 py-3.5">
           <p className="text-body-sm leading-relaxed break-keep text-gray-70">
             <strong className="font-bold text-gray-90">
-              한/글에서 열리지 않아도 같은 내용의 종이가 나옵니다.
+              한/글이 없는 자리에서도 같은 내용의 종이가 나옵니다.
             </strong>{" "}
-            내보내기 화면에 인쇄(A4) 폴백을 붙여 둔 채로 두었고, 그 화면이 이
-            사실을 글자로 적습니다. 확인하지 못한 것을 확인한 것처럼 적어 두는
-            쪽이, 못 한 채로 적어 두는 쪽보다 훨씬 비쌉니다.
+            내보내기 화면에 인쇄(A4) 폴백을 붙여 두었습니다. 파일이 열리는 것을
+            확인한 뒤에도 이 폴백을 걷어내지 않는 이유는, 폴백이 「안 열릴까 봐」만이
+            아니라 <strong className="font-bold text-gray-90">그 자리에 한/글이
+            없을 수도 있어서</strong> 있는 것이기 때문입니다.
           </p>
         </div>
       </Card>

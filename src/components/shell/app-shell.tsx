@@ -25,6 +25,7 @@ import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
 import { BrandMark } from "@/components/brand-mark";
 import { CityMark } from "@/components/city-mark";
+import { GetForm } from "@/components/ui/get-form";
 import { RegisterServiceWorker } from "@/components/pwa/register-sw";
 import type { Profile } from "@/lib/types";
 
@@ -308,9 +309,11 @@ export function AppShell({
             폭을 max-w-md 로 묶고 가운데에 세운다 — 남는 자리를 다 먹게 두면
             화면에서 가장 무거운 것이 검색칸이 되고, 정작 먼저 읽혀야 할
             화면 제목과 보드가 그 뒤로 밀린다. */}
-        <form
+        {/* GetForm — 스크립트가 있으면 화면을 갈지 않고 옮긴다.
+            평범한 GET 폼은 전체 페이지 로드였고, 그 뒤의 뒤로가기가 bfcache 를
+            못 쓴다(응답에 no-store 가 붙는다). 자세한 이유는 get-form.tsx 에. */}
+        <GetForm
           action="/works"
-          method="get"
           role="search"
           className="flex min-w-0 flex-1 justify-center"
         >
@@ -339,7 +342,7 @@ export function AppShell({
               className="h-11 w-full rounded-sm border border-gray-50 bg-gray-5 pr-3 pl-9 text-body text-gray-90 placeholder:text-gray-60 hover:border-gray-60 focus:bg-surface sm:text-body-sm"
             />
           </div>
-        </form>
+        </GetForm>
 
         {/* ── 오른쪽: 사람 ──────────────────────────────────────────────── */}
         <div className="flex shrink-0 items-center gap-2">
