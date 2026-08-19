@@ -179,6 +179,17 @@ function q(v) {
 function ts(v) {
   return v === null || v === undefined ? "NULL" : `${q(v)}::timestamptz`;
 }
+/**
+ * jsonb 한 칸.
+ *
+ * 캐스팅을 붙이는 이유는 insert 의 값이 여러 줄로 늘어서 있어 Postgres 가 첫 행의
+ * 타입으로 나머지를 읽기 때문이다. 첫 문서의 blocks 가 NULL 이면 그 칸이 통째로
+ * text 로 잡히고, 뒤에 오는 진짜 jsonb 에서 「column is of type jsonb but
+ * expression is of type text」로 죽는다.
+ */
+function jsonb(v) {
+  return v === null || v === undefined ? "NULL::jsonb" : `${q(JSON.stringify(v))}::jsonb`;
+}
 
 /**
  * 편집 잠금 시각만은 고정된 값을 적을 수 없다.
@@ -439,11 +450,18 @@ function build(org, works) {
     "-- -----------------------------------------------------------------------------",
     "-- 6. 문서와 항목",
     "-- -----------------------------------------------------------------------------",
-    "insert into document (id, work_id, title, created_by, created_at, updated_at) values",
+    // 서식 문서의 본문(blocks)도 함께 내보낸다. 이걸 빼면 데모 모드(목업)에서는
+    // 서식 문서가 보이고 DB 를 붙인 데모에서는 안 보인다 — 같은 데모가 두 벌이
+    // 되는 그 자리다(이 파일 머리말).
+    "insert into document (",
+    "  id, work_id, title, created_by, created_at, updated_at,",
+    "  blocks, blocks_rev, blocks_updated_by, blocks_updated_at",
+    ") values",
     rows(
       documents.map(
         (d) =>
-          `${q(d.id)}, ${q(d.work_id)}, ${q(d.title)}, ${q(d.created_by)}, ${ts(d.created_at)}, ${ts(d.updated_at)}`,
+          `${q(d.id)}, ${q(d.work_id)}, ${q(d.title)}, ${q(d.created_by)}, ${ts(d.created_at)}, ${ts(d.updated_at)}, ` +
+          `${jsonb(d.blocks)}, ${d.blocks_rev ?? 0}, ${q(d.blocks_updated_by)}, ${ts(d.blocks_updated_at)}`,
       ),
     ) + "\non conflict (id) do nothing;",
     "",

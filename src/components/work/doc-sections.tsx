@@ -1,4 +1,13 @@
-import { FileText, Lock, PenLine, Plus, Save, Trash2, X } from "lucide-react";
+import {
+  FileText,
+  Lock,
+  PenLine,
+  Plus,
+  Save,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import {
   addSection,
   createDocument,
@@ -9,6 +18,7 @@ import {
   saveSection,
   unlockSection,
 } from "@/lib/actions/documents";
+import { convertToRichDoc, createRichDocument } from "@/lib/actions/rich-doc";
 import { Avatar } from "@/components/ui/avatar";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -85,7 +95,11 @@ export function DocSections({
         }
         action={
           canWrite ? (
-            <form action={createDocument} className="w-full max-w-sm text-left">
+            /* 제목 칸은 하나이고 단추가 둘이다. 같은 값으로 두 갈래를 만들 수
+               있으므로 폼을 두 벌 두면 제목을 두 번 적게 된다. 아래 「항목으로
+               만들기」는 formAction 으로 다른 액션을 가리킨다 — 브라우저가
+               원래 하는 일이라 스크립트가 없어도 그대로 동작한다. */
+            <form action={createRichDocument} className="w-full max-w-sm text-left">
               <input type="hidden" name="workId" value={workId} />
               <Field
                 id="new-document-title"
@@ -96,9 +110,24 @@ export function DocSections({
                 {(p) => <Input {...p} name="title" maxLength={120} />}
               </Field>
               <SubmitButton block className="mt-3">
-                <Plus aria-hidden className="size-4" />
-                문서 만들기
+                <Sparkles aria-hidden className="size-4" />
+                서식 문서 만들기
               </SubmitButton>
+              <SubmitButton
+                block
+                variant="secondary"
+                className="mt-2"
+                formAction={createDocument}
+              >
+                <Plus aria-hidden className="size-4" />
+                항목 문서로 만들기
+              </SubmitButton>
+              <p className="mt-2 text-body-xs leading-relaxed break-keep text-gray-60">
+                <b className="font-bold">서식 문서</b>는 한/글처럼 굵게·표·번호를
+                쓰고 여럿이 동시에 고칠 수 있습니다. <b className="font-bold">항목
+                문서</b>는 항목마다 한 사람씩 잠그고 쓰는 방식으로, 스크립트 없는
+                환경에서도 똑같이 동작합니다.
+              </p>
             </form>
           ) : undefined
         }
@@ -117,6 +146,37 @@ export function DocSections({
 
       {canWrite ? (
         <div className="mb-5 flex flex-col gap-2">
+          {/* 서식 편집기로 옮기기.
+              한 방향이고 되돌리지 않는다 — 그래서 무엇이 달라지는지와 무엇이
+              남는지를 누르기 **전에** 다 적는다. 접어 두지 않은 것도 뜻이 있다:
+              지금 항목 문서를 쓰고 있는 사람에게 이 길이 있다는 사실 자체가
+              정보이고, 접어 두면 아무도 못 찾는다. */}
+          <div className="rounded-md border border-primary-10 bg-primary-5 px-4 py-3.5">
+            <p className="flex items-center gap-2 text-body-sm font-bold text-primary">
+              <Sparkles aria-hidden className="size-4" />
+              서식 편집기로 옮길 수 있습니다
+            </p>
+            <p className="mt-1.5 text-body-sm leading-relaxed break-keep text-gray-70">
+              굵게·표·번호 매기기를 쓰고, 여럿이 <b className="font-bold">동시에</b>{" "}
+              한 문서를 고칠 수 있게 됩니다. 항목 제목은 「큰 항목」으로, 「-」나
+              「1.」로 시작하는 줄은 목록으로 바뀝니다.
+            </p>
+            <p className="mt-1.5 text-body-xs leading-relaxed break-keep text-gray-60">
+              지금 항목 {sections.length}개는 <b className="font-bold">지우지 않고</b>{" "}
+              그대로 남습니다. 옮긴 결과가 원본과 다르면 그것으로 확인하실 수
+              있습니다. 다만 화면은 서식 문서 하나만 보여 주므로,{" "}
+              <b className="font-bold">되돌리는 단추는 없습니다.</b>
+            </p>
+            <form action={convertToRichDoc} className="mt-3">
+              <input type="hidden" name="workId" value={workId} />
+              <input type="hidden" name="documentId" value={doc.id} />
+              <SubmitButton size="sm">
+                <Sparkles aria-hidden className="size-4" />
+                서식 편집기로 옮기기
+              </SubmitButton>
+            </form>
+          </div>
+
           <details className="rounded-md border border-gray-10 bg-surface">
             <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-body-sm font-bold text-gray-70">
               <PenLine aria-hidden className="size-4 text-gray-40" />

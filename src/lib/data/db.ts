@@ -256,6 +256,23 @@ async function getWorksByIds(ids: string[]): Promise<Map<string, WorkListItem>> 
 // 문서 · 대화 · 첨부 · 이력
 // ---------------------------------------------------------------------------
 
+/**
+ * 서식 문서의 본문(document.blocks)에 대하여.
+ *
+ * 아래 두 질의는 `select("*")` 라 blocks 가 따라온다. 칸을 손으로 세지 않아도
+ * 되는 것이 이 별표의 값이고, 0018 이 칸을 넷 더했어도 여기는 그대로다.
+ *
+ * 대신 짚어 둘 것이 있다. gatherForWorks 는 업무 여러 건의 문서를 **한 번에**
+ * 끌어오므로, 서식 문서가 늘어나면 인계 초안 화면이 쓰지도 않는 본문을 함께
+ * 받는다(handover-draft.ts 는 title 과 항목만 본다). 그래도 칸을 골라 뽑지
+ * 않는 이유는, 낱개(getWorkDocument)와 배치가 **같은 모양을 돌려주기로 한
+ * 계약** 때문이다 — tests/data-contract.test.mjs 가 두 결과를 통째로 비교한다.
+ * 배치에서만 blocks 를 빼면 그 시험이 빨간불이 되고, 뺀 자리에 null 을 채우면
+ * 「항목 문서」와 구분되지 않는다. 즉 지금 고르면 계약이 깨진다.
+ *
+ * 크기가 실제로 문제가 되면 그때 고칠 자리는 여기가 아니라 계약 쪽이다.
+ * (한 문서의 본문은 0018 의 document_blocks_size 가 2MB 에서 자른다)
+ */
 export async function getWorkDocument(workId: string): Promise<{
   document: Document | null;
   sections: DocSectionWithEditor[];

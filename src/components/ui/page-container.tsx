@@ -28,6 +28,15 @@ const WIDTH = {
   wide: "max-w-[1440px]",
   doc: "max-w-4xl",
   form: "max-w-3xl",
+  /**
+   * 서식 편집기 전용.
+   *
+   * 「읽기 좋은 줄 길이」 규칙이 여기서는 적용되지 않는다. 이 화면의 본문은
+   * A4 종이(794px)이고 그 폭은 우리가 정하는 값이 아니다. 양옆의 개요·의견
+   * 칸까지 1,230px 이 들어야 셋이 나란히 서므로, 그만큼은 내어 준다.
+   * 그보다 넓어져도 종이는 커지지 않고 가운데 정렬로 남는다.
+   */
+  editor: "max-w-[1700px]",
 } as const;
 
 export function PageContainer({

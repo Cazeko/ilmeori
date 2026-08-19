@@ -7,6 +7,7 @@ import {
   CalendarClock,
   ChevronRight,
   Eye,
+  FileDown,
   FileText,
   History,
   MessageSquare,
@@ -29,6 +30,8 @@ import { ActivityTimeline } from "@/components/work/activity-timeline";
 import { AttachmentPanel } from "@/components/work/attachment-panel";
 import { CommentThread } from "@/components/work/comment-thread";
 import { DocSections } from "@/components/work/doc-sections";
+import { DocPreview } from "@/components/editor/doc-preview";
+import { docTitle, parseRichDoc } from "@/lib/editor/model";
 import { MemberList } from "@/components/work/member-list";
 import { PreviousYearCallout } from "@/components/work/previous-year-callout";
 import { StatusChanger } from "@/components/work/status-changer";
@@ -119,6 +122,10 @@ export default async function WorkDetailPage({
   // 문서 항목을 편집 중인지는 주소에 있다. 그래야 새로고침해도 편집칸이 남고,
   // 잠금을 쥔 채로 화면을 떠났다가 뒤로 가기로 돌아와도 이어서 쓸 수 있다.
   const editingId = typeof sp.edit === "string" ? sp.edit : null;
+  // 서식 문서를 스크립트 없이 고칠 때 열린 문단. 항목 문서의 ?edit= 와 겹치지
+  // 않게 다른 이름을 쓴다 — 한 화면에 둘이 동시에 있을 수는 없지만, 같은 이름을
+  // 쓰면 두 갈래 중 어느 쪽 id 인지 화면이 알 수 없다.
+  const editingBlockId = typeof sp.b === "string" && sp.b ? sp.b : null;
 
   // 한 화면에 필요한 것을 한꺼번에 가져온다. 순서대로 기다리면 왕복이 그만큼 쌓인다.
   const [
@@ -136,6 +143,16 @@ export default async function WorkDetailPage({
     getAccessLogsForWork(work.id, viewer),
     getApprovalsForWork(viewer, work.id),
   ]);
+
+  /**
+   * 서식 문서인가.
+   *
+   * `document.blocks` 는 jsonb 라 DB 가 보장하는 것은 「JSON 인가」까지다.
+   * 안이 우리가 기대하는 모양인지는 아무도 보장하지 않으므로 반드시 거른다
+   * (src/lib/editor/model.ts 의 parseRichDoc). 모양이 아니면 null 이 되고,
+   * 화면은 지금까지의 항목 문서를 그린다 — 문서가 사라지는 것보다 낫다.
+   */
+  const richDoc = doc ? parseRichDoc(doc.blocks) : null;
 
   // 부를 수 있는 사람 목록은 참여자 탭에서 소유자에게만 필요하다.
   // 다른 탭을 볼 때마다 전 직원을 읽어 올 이유가 없다.
@@ -156,7 +173,8 @@ export default async function WorkDetailPage({
       label: "문서",
       href: `/works/${work.id}?tab=doc`,
       icon: FileText,
-      count: sections.length,
+      // 서식 문서는 항목이 없다. 세는 단위가 다르므로 문단 수를 센다.
+      count: richDoc ? richDoc.blocks.length : sections.length,
     },
     {
       key: "talk",
@@ -321,7 +339,12 @@ export default async function WorkDetailPage({
               name: m.profile.name,
               position: m.profile.position,
             }))}
-            editing={tab === "doc" && editingId !== null}
+            // 글을 쓰고 있는 사람의 화면을 남의 변경으로 갈아 끼우지 않는다.
+            // 서식 문서는 자동 저장이 도는 동안에도 신호가 나가지 않으므로
+            // (0018 §2-2) 여기서는 스크립트 없이 문단을 여는 경우만 세면 된다.
+            editing={
+              tab === "doc" && (editingId !== null || editingBlockId !== null)
+            }
             // 이 화면을 서버가 그린 시각. 값이 바뀌면 화면이 새 데이터로 갈린 것이다.
             serverAt={new Date().toISOString()}
           />
@@ -341,15 +364,70 @@ export default async function WorkDetailPage({
 
           <div className="pt-5">
             {tab === "doc" ? (
-              <DocSections
-                workId={work.id}
-                document={doc}
-                sections={sections}
-                viewer={viewer}
-                canWrite={canWrite}
-                canDelete={canOwn}
-                editingId={editingId}
-              />
+              // 문서는 두 갈래다. blocks 가 있으면 서식 문서(편집기), 없으면
+              // 지금까지의 항목 문서. 한 업무에 문서는 하나이므로 둘이 함께
+              // 서는 일은 없다 — 옮기는 것은 한 방향이고 되돌리지 않는다.
+              richDoc && doc ? (
+                <section aria-labelledby="doc-heading">
+                  <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2
+                        id="doc-heading"
+                        className="text-h3 font-bold break-keep text-gray-90"
+                      >
+                        {docTitle(richDoc) || doc.title}
+                      </h2>
+                      <p className="mt-1 text-body-xs text-gray-60">
+                        서식 문서 · 문단 {richDoc.blocks.length}개
+                        {doc.blocks_updated_at
+                          ? ` · ${formatDateTime(doc.blocks_updated_at)} 저장됨`
+                          : null}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <ButtonLink href={`/works/${work.id}/doc`} size="sm">
+                        <PencilLine aria-hidden className="size-4" />
+                        {/* canWrite 가 아니라 canEdit 이다. 데모 모드에서도
+                            편집기는 열리고 고칠 수 있다 — 저장만 되지 않는다
+                            (works/[id]/doc/page.tsx 의 canWrite 주석). */}
+                        {canEdit ? "문서 편집기 열기" : "문서 크게 보기"}
+                      </ButtonLink>
+                      {/* 내보내기는 평범한 링크다. 스크립트가 없어도 눌린다. */}
+                      <ButtonLink
+                        href={`/works/${work.id}/doc/export/hwpx`}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        <FileDown aria-hidden className="size-4" />
+                        한/글
+                      </ButtonLink>
+                      <ButtonLink
+                        href={`/works/${work.id}/doc/export/docx`}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        <FileDown aria-hidden className="size-4" />
+                        워드
+                      </ButtonLink>
+                    </div>
+                  </div>
+
+                  {/* 여기서는 보여 주기만 한다. A4 종이와 양옆 칸이 서려면
+                      1,230px 이 드는데 이 칸에는 그 절반이 남는다 — 왜 편집을
+                      다른 화면으로 옮겼는지는 doc-preview.tsx 머리말에 있다. */}
+                  <DocPreview doc={richDoc} />
+                </section>
+              ) : (
+                <DocSections
+                  workId={work.id}
+                  document={doc}
+                  sections={sections}
+                  viewer={viewer}
+                  canWrite={canWrite}
+                  canDelete={canOwn}
+                  editingId={editingId}
+                />
+              )
             ) : null}
 
             {tab === "talk" ? (

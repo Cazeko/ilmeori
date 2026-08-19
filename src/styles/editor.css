@@ -1,0 +1,875 @@
+/* =============================================================================
+   서식 편집기
+
+   ── 크기를 종이에 맞춘다 ────────────────────────────────────────────────────
+
+   본문 10pt, 큰 항목 11.5pt, 제목 16pt. 이 값들은 눈대중이 아니라
+   src/lib/hwpx/pack.ts 의 charPr 과 **같은 값**이다(1000·1150·1600 = 1/100pt).
+   화면에서 크게 보이라고 여기만 키우면, 내보낸 파일이 화면과 다른 문서가 된다.
+   96dpi 에서 1pt = 1.333px 이므로 10pt = 13.33px 다. 작다 — 실제로 작기 때문이다.
+   읽기 힘든 사람을 위해 상태줄에 배율이 있다.
+
+   종이 폭도 마찬가지다. A4 210mm = 794px, 좌우 여백 20mm = 75.6px.
+   pack.ts 의 PAGE_WIDTH·MARGIN_SIDE 를 px 로 옮긴 값이다.
+
+   ── 색은 토큰만 쓴다 ────────────────────────────────────────────────────────
+
+   globals.css 의 KRDS 토큰 밖으로 나가지 않는다. 문서 안에서 고를 수 있는
+   글자색·형광펜도 이미 대비를 재 둔 다섯 가지뿐이다(model.ts 의 TEXT_COLORS).
+   ============================================================================= */
+
+:root {
+  --ilm-page-w: 794px;
+  --ilm-page-pad: 76px;
+  /* A4 297mm 에서 위아래 여백 35mm 를 뺀 높이. 쪽 경계선을 그리는 데 쓴다. */
+  --ilm-page-h: 990px;
+}
+
+/* ── 틀 ──────────────────────────────────────────────────────────────────── */
+
+.ilm-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--color-gray-10);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  overflow: hidden;
+  /* 아래 @container 질의가 이 판의 폭을 잰다. */
+  container-type: inline-size;
+  container-name: ilm;
+}
+
+.ilm-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-gray-10);
+  background: var(--color-surface);
+}
+
+/* 세 칸이 서려면 190 + 794 + 250 = 1,234px 이 든다. 컨테이너가 그만큼을
+   내어 주지 못하면 칸을 하나씩 접는다 — **종이가 먼저다.** 종이를 줄이는
+   선택지는 없다. 줄이는 순간 화면과 인쇄물이 다른 문서가 되기 때문이다.
+
+   컨테이너 질의를 쓴다. 미디어 질의로 재면 왼쪽 사이드바(260px)가 접히는
+   화면에서 틀린다 — 창은 넓은데 이 판에 남는 폭은 좁을 수 있다. */
+.ilm-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
+  background: var(--color-gray-5);
+}
+/* 좁을 때는 개요를 감추고, 의견은 **종이 아래로 옮긴다.**
+   예전에는 의견 칸도 함께 display:none 이었는데 「의견 달기」 단추와
+   Ctrl+Alt+M 은 그대로 켜져 있었다. 1366px 노트북에서 의견을 달면 아무 일도
+   일어나지 않고, 이미 달린 의견은 읽을 방법조차 없었다 — 기능이 있는데 화면만
+   없는 것이 가장 나쁘다. 감추는 대신 자리를 옮긴다. */
+.ilm-outline {
+  display: none;
+}
+.ilm-rail {
+  border-left: none;
+  border-top: 1px solid var(--color-gray-10);
+  max-height: 280px;
+}
+
+/* 종이 + 의견 */
+@container ilm (min-width: 1090px) {
+  .ilm-body {
+    grid-template-columns: minmax(0, 1fr) 250px;
+  }
+  .ilm-rail {
+    border-left: 1px solid var(--color-gray-10);
+    border-top: none;
+    max-height: 72vh;
+  }
+}
+
+/* 개요 + 종이 + 의견 */
+@container ilm (min-width: 1290px) {
+  .ilm-body {
+    grid-template-columns: 190px minmax(0, 1fr) 250px;
+  }
+  .ilm-outline {
+    display: block;
+  }
+}
+
+.ilm-scroll {
+  min-width: 0;
+  max-height: 72vh;
+  overflow: auto;
+  padding: 20px 16px 40px;
+  /* 스크롤이 이 안에서만 돌게 한다. 안 막으면 문서 끝에서 바깥 페이지가 밀린다. */
+  overscroll-behavior: contain;
+}
+
+.ilm-page {
+  display: flex;
+  justify-content: center;
+}
+
+/* ── 종이 ────────────────────────────────────────────────────────────────── */
+
+.ilm-sheet {
+  position: relative;
+  /* flex 항목의 기본값은 shrink: 1 이다. 그대로 두면 좁은 칸에서 종이가
+     **소리 없이 줄어든다** — A4 를 그린다고 해 놓고 화면마다 다른 폭이
+     된다는 뜻이라, 이 한 줄이 이 파일에서 가장 중요하다. */
+  flex: none;
+  width: var(--ilm-page-w);
+  min-height: var(--ilm-page-h);
+  padding: var(--ilm-page-pad);
+  background: #fff;
+  color: #000;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.06),
+    0 8px 24px rgb(0 0 0 / 0.08);
+  font-size: 13.33px; /* 10pt */
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+/* 쪽이 나뉘는 자리를 옅은 선으로 알린다.
+   실제로 쪽을 나누어 그리지는 않는다 — 그러려면 조판 엔진이 필요하고,
+   그 엔진 없이 「2쪽」이라고 적으면 인쇄 결과와 어긋나는 거짓말이 된다.
+   여기서는 「대략 이쯤에서 넘어갑니다」까지만 말한다. */
+.ilm-sheet::before {
+  content: "";
+  position: absolute;
+  inset: var(--ilm-page-pad) 0 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--ilm-page-h) - 1px),
+    var(--color-gray-20) calc(var(--ilm-page-h) - 1px),
+    var(--color-gray-20) var(--ilm-page-h)
+  );
+  opacity: 0.7;
+}
+
+.ilm-sheet-ro {
+  cursor: default;
+}
+
+/* 미리보기 — 업무 상세의 좁은 칸에서는 A4 를 고집하지 않는다.
+   여기서는 **읽는 것**이 전부이고, 고칠 때는 넓은 화면으로 간다.
+   쪽 경계선도 그리지 않는다 — 폭이 다르면 넘어가는 자리도 다르다. */
+.ilm-previewbox {
+  border: 1px solid var(--color-gray-10);
+  border-radius: var(--radius-md);
+  background: var(--color-gray-5);
+  padding: 12px;
+  max-height: 460px;
+  overflow: auto;
+}
+.ilm-sheet-fluid {
+  width: 100%;
+  min-height: 0;
+  padding: 28px 32px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+.ilm-sheet-fluid::before {
+  display: none;
+}
+
+/* ── 블록 ────────────────────────────────────────────────────────────────── */
+
+.ilm-shell {
+  position: relative;
+  border-radius: var(--radius-xs);
+  transition: background-color 120ms ease;
+}
+.ilm-shell-active {
+  background: color-mix(in srgb, var(--color-primary) 4%, transparent);
+}
+
+.ilm-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/* 목록 부호는 편집칸 밖에 있다(block-view.tsx 주석). 줄이 접혀도 글이
+   부호 아래로 들어가지 않도록 별도 칸으로 둔다. */
+.ilm-marker {
+  flex: none;
+  min-width: 1.6em;
+  padding-top: 0.05em;
+  color: #000;
+  text-align: left;
+  user-select: none;
+}
+
+.ilm-caretbox {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.ilm-block {
+  outline: none;
+  /* 빈칸을 살린다. 이걸 안 걸면 브라우저가 연속 빈칸을 접으면서
+     contenteditable 이 줄바꿈 없는 빈칸( )을 끼워 넣고, 그 글자가
+     그대로 내보내는 파일까지 흘러간다. */
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  min-height: 1.6em;
+}
+.ilm-block:focus-visible {
+  outline: none;
+}
+
+/* 갈래마다의 모양 — 크기는 pack.ts 의 charPr 과 같은 값이다 */
+.ilm-k-title {
+  font-size: 21.33px; /* 16pt */
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.35;
+  margin: 4px 0 14px;
+}
+.ilm-k-heading {
+  font-size: 15.33px; /* 11.5pt */
+  font-weight: 700;
+  margin: 12px 0 3px;
+}
+.ilm-k-subheading {
+  font-size: 14px; /* 10.5pt */
+  font-weight: 700;
+  margin: 8px 0 2px;
+}
+.ilm-k-body {
+  margin: 1px 0;
+}
+.ilm-k-bullet,
+.ilm-k-numbered {
+  margin: 1px 0;
+}
+.ilm-k-quote {
+  margin: 4px 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--color-gray-30);
+  color: var(--color-gray-80);
+}
+.ilm-k-source {
+  font-size: 12px; /* 9pt */
+  color: #333;
+  margin: 0 0 2px;
+}
+.ilm-k-note {
+  font-size: 12px; /* 9pt */
+  color: #333;
+  margin: 3px 0;
+}
+
+/* 빈 문단에 무엇을 쓰는 자리인지 적어 둔다. 빈 종이만 있으면 어디를 눌러야
+   하는지 알 수 없다. :empty 가 아니라 <br> 하나만 있는 상태도 잡아야 한다. */
+.ilm-block:empty::before,
+.ilm-block:has(> br:only-child)::before {
+  content: attr(data-ph);
+  /* gray-40 은 흰 종이 위 3.08:1 로 4.5:1 에 못 미친다. gray-50 은 4.61:1.
+     안내글도 읽히라고 두는 글자이므로 대비 규칙에서 예외가 아니다. */
+  color: var(--color-gray-50);
+  pointer-events: none;
+}
+.ilm-k-title:empty::before,
+.ilm-k-title:has(> br:only-child)::before {
+  content: "문서 제목";
+}
+.ilm-k-heading:empty::before,
+.ilm-k-heading:has(> br:only-child)::before {
+  content: "큰 항목 (예: 1. 추진 배경)";
+}
+.ilm-k-body:empty::before,
+.ilm-k-body:has(> br:only-child)::before {
+  content: "";
+}
+
+.ilm-spacer {
+  height: 1.6em;
+}
+.ilm-divider {
+  border: none;
+  border-top: 1px solid #000;
+  margin: 10px 0;
+}
+.ilm-pagebreak {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  color: var(--color-gray-50);
+  font-size: 11px;
+  user-select: none;
+}
+.ilm-pagebreak::before,
+.ilm-pagebreak::after {
+  content: "";
+  flex: 1;
+  border-top: 1px dashed var(--color-gray-30);
+}
+
+/* ── 글자 서식 ───────────────────────────────────────────────────────────── */
+
+.ilm-c-primary { color: var(--color-primary); }
+.ilm-c-accent { color: var(--color-accent-text); }
+.ilm-c-danger { color: var(--color-danger); }
+.ilm-c-gray { color: var(--color-gray-60); }
+
+.ilm-h-yellow { background: #fff3b0; }
+.ilm-h-green { background: #d7f0d9; }
+.ilm-h-blue { background: #d6ecfb; }
+.ilm-h-pink { background: #fbd9e4; }
+
+/* 의견이 달린 자리. 색만으로 알리지 않는다 — 점선 밑줄이 함께 있다. */
+.ilm-cm-anchor {
+  background: #fff3b0;
+  border-bottom: 1px dashed var(--color-accent-text);
+  cursor: pointer;
+}
+
+/* ── 표 ──────────────────────────────────────────────────────────────────── */
+
+.ilm-tablebox {
+  position: relative;
+  margin: 6px 0 10px;
+}
+.ilm-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.ilm-cell {
+  position: relative;
+  border: 1px solid #000;
+  padding: 3px 6px;
+  vertical-align: top;
+  font-weight: 400;
+}
+.ilm-table th.ilm-cell {
+  background: var(--color-gray-5);
+  font-weight: 700;
+  text-align: center;
+}
+.ilm-cell-active {
+  box-shadow: inset 0 0 0 2px var(--color-primary-30);
+}
+.ilm-cellbody {
+  outline: none;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  min-height: 1.5em;
+}
+
+/* 열 너비 손잡이. 칸 경계 위에 겹쳐 둔다. */
+.ilm-colgrip {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 7px;
+  cursor: col-resize;
+  z-index: 10;
+  touch-action: none;
+}
+.ilm-colgrip:hover,
+.ilm-colgrip:focus-visible {
+  background: color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.ilm-tabletools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 4px 6px;
+  border: 1px solid var(--color-gray-10);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  user-select: none;
+}
+
+/* ── 갈래 이름표(왼쪽 여백) ──────────────────────────────────────────────── */
+
+.ilm-gutter {
+  position: absolute;
+  left: calc(var(--ilm-page-pad) * -1 + 6px);
+  top: 0.15em;
+  width: 62px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  /* 흰 종이 위 대비. gray-40 은 3.08:1 로 미달이라 gray-50(4.61:1)로 올린다. */
+  color: var(--color-gray-50);
+  text-align: right;
+  user-select: none;
+}
+.ilm-gutter-active {
+  color: var(--color-primary);
+}
+
+/* ── 남의 커서 ───────────────────────────────────────────────────────────── */
+
+.ilm-remote {
+  position: absolute;
+  left: var(--x, 0);
+  top: var(--y, 0);
+  height: var(--h, 1.4em);
+  width: 2px;
+  pointer-events: none;
+  z-index: 5;
+}
+.ilm-remote-name {
+  position: absolute;
+  top: -13px;
+  left: -1px;
+  padding: 1px 4px;
+  border-radius: var(--radius-xs) var(--radius-xs) var(--radius-xs) 0;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* 사람마다 다른 색. 자리 이름에서 뽑으므로 새로고침해도 같은 색이다.
+
+   ── 왜 색이 두 벌인가 ────────────────────────────────────────────────────
+   `--tone` 은 **선**의 색이고 `--tone-on` 은 **흰 글자를 얹는 바탕**의 색이다.
+   둘을 하나로 쓰면 주황(#dc6e2d) 위의 흰 글자가 3.33:1 이 된다 —
+   globals.css 가 「이 색은 3.33:1 이라 글자에 쓰지 않는다」고 직접 못박아 둔
+   바로 그 색이다. 이름표는 작은 글자라 더 지켜야 한다.
+   아래 -on 값은 전부 흰 글자 대비 4.5:1 을 넘는다(실측 4.57~7.04). */
+.ilm-remote[data-tone="0"] { --tone: #dc6e2d; }
+.ilm-peer[data-tone="0"]   { --tone: #dc6e2d; }
+.ilm-remote[data-tone="1"] { --tone: #0b78cb; }
+.ilm-peer[data-tone="1"]   { --tone: #0b78cb; }
+.ilm-remote[data-tone="2"] { --tone: #228738; }
+.ilm-peer[data-tone="2"]   { --tone: #228738; }
+.ilm-remote[data-tone="3"] { --tone: #8a3ffc; }
+.ilm-peer[data-tone="3"]   { --tone: #8a3ffc; }
+.ilm-remote[data-tone="4"] { --tone: #b8355f; }
+.ilm-peer[data-tone="4"]   { --tone: #b8355f; }
+.ilm-remote[data-tone="5"] { --tone: #6d7882; }
+.ilm-peer[data-tone="5"]   { --tone: #6d7882; }
+
+[data-tone="0"] { --tone-on: #a55221; } /* 4.57:1 — globals.css 의 accent-text */
+[data-tone="1"] { --tone-on: #0966ac; } /* 5.14:1 */
+[data-tone="2"] { --tone-on: #1c722f; } /* 4.99:1 */
+[data-tone="3"] { --tone-on: #6b23d6; } /* 6.16:1 */
+[data-tone="4"] { --tone-on: #9c2b4e; } /* 6.35:1 */
+[data-tone="5"] { --tone-on: #4d565f; } /* 7.04:1 */
+
+.ilm-remote { background: var(--tone); }
+.ilm-remote-name { background: var(--tone-on); }
+
+.ilm-peer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--tone-on);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px var(--color-surface);
+}
+
+/* ── 도구모음 ────────────────────────────────────────────────────────────── */
+
+.ilm-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-gray-10);
+  background: var(--color-surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.ilm-tbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  color: var(--color-gray-70);
+  background: transparent;
+  cursor: pointer;
+  list-style: none;
+}
+.ilm-tbtn::-webkit-details-marker {
+  display: none;
+}
+.ilm-tbtn:hover {
+  background: var(--color-gray-10);
+}
+.ilm-tbtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.ilm-tbtn-on {
+  background: var(--color-primary-5);
+  color: var(--color-primary);
+}
+@media (pointer: coarse) {
+  /* 손가락으로 누르는 크기. 예전에는 .ilm-tbtn 에만 걸려 있어서, 바로 옆의
+     갈래 고르기와 드롭다운 안의 색 항목·개요 항목만 32px 로 남아 있었다.
+     같은 줄에서 어떤 것은 커지고 어떤 것은 안 커지면 그건 규칙이 아니다. */
+  .ilm-tbtn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .ilm-select,
+  .ilm-sw,
+  .ilm-outline-item {
+    min-height: 44px;
+  }
+  /* 열 너비 손잡이는 손가락으로 잡을 수 없을 만큼 얇았다. */
+  .ilm-colgrip {
+    width: 16px;
+    right: -8px;
+  }
+}
+
+.ilm-tooldiv {
+  width: 1px;
+  height: 20px;
+  margin: 0 3px;
+  background: var(--color-gray-20);
+}
+
+.ilm-select {
+  min-height: 32px;
+  padding: 0 6px;
+  border: 1px solid var(--color-gray-50);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: var(--text-body-sm);
+  color: var(--color-gray-90);
+}
+
+/* 색 고르기 */
+.ilm-picker {
+  position: relative;
+}
+.ilm-picker > summary {
+  list-style: none;
+}
+.ilm-swbar {
+  display: block;
+  width: 15px;
+  height: 3px;
+  margin-top: 1px;
+  border-radius: 1px;
+  background: currentColor;
+}
+.ilm-swbar.ilm-c-default { background: var(--color-gray-90); }
+.ilm-swbar.ilm-h-none { background: var(--color-gray-20); }
+
+.ilm-pickerbox {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--color-gray-20);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.12);
+}
+.ilm-sw {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 8px 0 6px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-body-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ilm-sw:hover {
+  background: var(--color-gray-10);
+}
+.ilm-sw-on {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+.ilm-swname::before {
+  content: "가";
+  display: inline-block;
+  width: 20px;
+  margin-right: 6px;
+  border: 1px solid var(--color-gray-20);
+  border-radius: 2px;
+  text-align: center;
+  font-weight: 700;
+}
+.ilm-sw.ilm-c-default .ilm-swname::before { color: var(--color-gray-90); }
+.ilm-sw.ilm-c-primary .ilm-swname::before { color: var(--color-primary); }
+.ilm-sw.ilm-c-accent .ilm-swname::before { color: var(--color-accent-text); }
+.ilm-sw.ilm-c-danger .ilm-swname::before { color: var(--color-danger); }
+.ilm-sw.ilm-c-gray .ilm-swname::before { color: var(--color-gray-60); }
+.ilm-sw.ilm-h-none .ilm-swname::before { background: transparent; }
+.ilm-sw.ilm-h-yellow .ilm-swname::before { background: #fff3b0; }
+.ilm-sw.ilm-h-green .ilm-swname::before { background: #d7f0d9; }
+.ilm-sw.ilm-h-blue .ilm-swname::before { background: #d6ecfb; }
+.ilm-sw.ilm-h-pink .ilm-swname::before { background: #fbd9e4; }
+/* 색 이름 칩에는 본문 색이 새어 들어가면 안 된다 */
+.ilm-sw { color: var(--color-gray-80); }
+
+/* ── 옆 판 ───────────────────────────────────────────────────────────────── */
+
+.ilm-outline,
+.ilm-rail {
+  min-width: 0;
+  max-height: 72vh;
+  overflow: auto;
+  background: var(--color-surface);
+}
+.ilm-outline {
+  border-right: 1px solid var(--color-gray-10);
+}
+.ilm-rail {
+  border-left: 1px solid var(--color-gray-10);
+}
+
+.ilm-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: sticky;
+  top: 0;
+  padding: 10px 12px 8px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-gray-10);
+  font-size: var(--text-body-xs);
+  font-weight: 700;
+  color: var(--color-gray-70);
+}
+
+.ilm-outline-item {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  padding: 5px 12px;
+  text-align: left;
+  font-size: var(--text-body-xs);
+  color: var(--color-gray-70);
+  border-left: 2px solid transparent;
+}
+.ilm-outline-item:hover {
+  background: var(--color-gray-5);
+}
+.ilm-outline-on {
+  border-left-color: var(--color-primary);
+  background: var(--color-primary-5);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.ilm-cmcard {
+  padding: 8px 10px;
+  border: 1px solid var(--color-gray-10);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.ilm-cmcard-on {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+.ilm-cmbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 28px;
+  padding: 0 7px;
+  border-radius: var(--radius-xs);
+  font-size: var(--text-body-xs);
+  font-weight: 700;
+  color: var(--color-gray-70);
+}
+.ilm-cmbtn:hover {
+  background: var(--color-gray-10);
+}
+.ilm-cmbtn:disabled {
+  opacity: 0.45;
+}
+.ilm-cmbtn-go {
+  background: var(--color-primary);
+  color: #fff;
+}
+.ilm-cmbtn-go:hover {
+  background: var(--color-primary-hover);
+}
+@media (pointer: coarse) {
+  .ilm-cmbtn {
+    min-height: 44px;
+  }
+}
+
+/* ── 상태줄 ──────────────────────────────────────────────────────────────── */
+
+.ilm-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--color-gray-10);
+  background: var(--color-surface);
+  font-size: var(--text-body-xs);
+  color: var(--color-gray-70);
+}
+
+.ilm-kbd {
+  display: inline-block;
+  padding: 0 4px;
+  border: 1px solid var(--color-gray-30);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-xs);
+  background: var(--color-gray-0);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-gray-70);
+}
+
+.ilm-xbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--color-gray-50);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: var(--text-body-xs);
+  font-weight: 700;
+  color: var(--color-gray-80);
+  text-decoration: none;
+}
+.ilm-xbtn:hover {
+  background: var(--color-gray-5);
+}
+@media (pointer: coarse) {
+  .ilm-kbd {
+  display: inline-block;
+  padding: 0 4px;
+  border: 1px solid var(--color-gray-30);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-xs);
+  background: var(--color-gray-0);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-gray-70);
+}
+
+.ilm-xbtn {
+    min-height: 44px;
+  }
+}
+
+/* =============================================================================
+   인쇄 — 화면의 편집기를 걷어내고 종이만 남긴다
+   ============================================================================= */
+
+@media print {
+  .ilm-wrap {
+    border: none;
+    border-radius: 0;
+    background: #fff;
+  }
+  .ilm-top,
+  .ilm-toolbar,
+  .ilm-status,
+  .ilm-outline,
+  .ilm-rail,
+  .ilm-gutter,
+  .ilm-remote,
+  .ilm-tabletools,
+  .ilm-colgrip,
+  .ilm-pagebreak::before,
+  .ilm-pagebreak::after {
+    display: none !important;
+  }
+  .ilm-body {
+    display: block;
+    background: #fff;
+  }
+  .ilm-scroll {
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+  }
+  .ilm-page {
+    display: block;
+    zoom: 1 !important;
+  }
+  .ilm-sheet {
+    width: auto;
+    min-height: 0;
+    padding: 0;
+    box-shadow: none;
+    font-size: 10pt;
+  }
+  /* 화면에만 있던 쪽 경계선. 종이에는 진짜 쪽이 있다. */
+  .ilm-sheet::before {
+    display: none;
+  }
+  .ilm-shell,
+  .ilm-shell-active {
+    background: transparent !important;
+  }
+  .ilm-k-title { font-size: 16pt; }
+  .ilm-k-heading { font-size: 11.5pt; break-after: avoid; }
+  .ilm-k-subheading { font-size: 10.5pt; break-after: avoid; }
+  .ilm-k-source,
+  .ilm-k-note { font-size: 9pt; }
+  .ilm-block {
+    orphans: 2;
+    widows: 2;
+  }
+  .ilm-tablebox {
+    break-inside: avoid;
+  }
+  /* 쪽 나눔 블록은 종이에서 진짜로 쪽을 나눈다. */
+  .ilm-pagebreak {
+    break-after: page;
+    height: 0;
+    margin: 0;
+    color: transparent;
+  }
+  /* 형광펜은 흑백 인쇄에서 회색 덩어리가 된다. 밑줄로 바꾸되 **점선**이다 —
+     실선으로 바꿨더니 원래 밑줄(<u>)과 굵기·색이 같아 종이에서 「강조」와
+     「밑줄」을 구별할 수 없었다. 서식이 두 가지인데 결과가 하나면 그건
+     서식을 잃은 것이다. */
+  .ilm-h-yellow,
+  .ilm-h-green,
+  .ilm-h-blue,
+  .ilm-h-pink {
+    background: transparent !important;
+    border-bottom: 1.5px dotted #000;
+  }
+  .ilm-cm-anchor {
+    background: transparent !important;
+  }
+}

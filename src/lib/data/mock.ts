@@ -244,6 +244,18 @@ export async function getWork(
   return work;
 }
 
+/**
+ * 문서 한 판과 그 항목.
+ *
+ * 목업 문서 중 하나(감량 시범사업 계획)는 **서식 문서**다. blocks 가 차 있고,
+ * 그러면서 doc_section 도 그대로 있다. 둘 다 있는 것이 정상이다 —
+ * 서식 문서로 옮기는 것은 되돌릴 수 없어서 항목을 안전망으로 남기기 때문이고
+ * (src/lib/actions/rich-doc.ts 의 convertToRichDoc), 목업은 옮긴 직후의
+ * 상태를 그대로 보여 준다. 화면은 blocks 가 있으면 그쪽을 그린다.
+ *
+ * 데모 모드는 읽기 전용이므로(env.ts 의 canMutate) 여기서 blocks 가 바뀌는 길은
+ * 없다. 쿠키에 담기에는 문서 한 벌이 너무 크다 — 4KB 상한을 첫 저장에서 넘긴다.
+ */
 export async function getWorkDocument(workId: string): Promise<{
   document: Document | null;
   sections: DocSectionWithEditor[];

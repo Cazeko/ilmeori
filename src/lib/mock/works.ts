@@ -30,6 +30,10 @@ import type {
   Work,
   WorkMember,
 } from "@/lib/types";
+// 서식 문서의 모양은 여기서 다시 적지 않는다. model.ts 의 RichDoc 을 그대로 쓰면
+// 갈래 이름을 잘못 적었을 때 타입 검사에서 걸린다 — 목업이 화면에서 조용히
+// 「본문」으로 떨어지는 것보다 낫다(parseRichDoc 은 모르는 갈래를 body 로 읽는다).
+import type { RichDoc } from "@/lib/editor/model";
 import { dept, person } from "./org";
 
 export const workId = (n: number) =>
@@ -573,6 +577,191 @@ export const workMembers: WorkMember[] = SEEDS.flatMap((s) => {
 // 문서 — 업무 안에서 여럿이 나눠 쓰는 계획서
 // ---------------------------------------------------------------------------
 
+/**
+ * 데모에 하나 있는 서식 문서 — 「음식물류폐기물 감량 시범사업 확대계획」.
+ *
+ * ── 왜 목업에 이런 것이 필요한가 ───────────────────────────────────────────
+ *
+ * 서식 문서가 「항목 + 평문」과 무엇이 다른지는 설명해서 알 수 있는 것이 아니라
+ * 한 화면에 제목·큰 항목·글머리표·표·근거 꼬리표가 같이 있는 것을 봐야 안다.
+ * 데모 모드에는 DB 가 없으므로, 여기 없으면 심사 동선에서 그 화면을 한 번도
+ * 만나지 못한다.
+ *
+ * ── 왜 이 문서에 붙였는가 ──────────────────────────────────────────────────
+ *
+ * docId(8) 은 자원순환과 박준호의 감량 시범사업 문서다. 인계 이야기(머리말 ②)의
+ * 한복판이라, 「작년 이맘때」와 인계서 초안을 보러 온 사람이 지나는 길에 만난다.
+ * 항목(secId 21·22)은 지우지 않고 그대로 두었다 — convertToRichDoc 이 실제로
+ * 하는 일이 그것이라(되돌릴 수 없으므로 항목을 안전망으로 남긴다), 목업도 옮긴
+ * 직후의 상태를 그대로 보여 준다.
+ *
+ * ── 블록 id 를 손으로 적는 이유 ────────────────────────────────────────────
+ *
+ * model.ts 의 newId() 는 난수다. 목업이 실행할 때마다 다른 id 를 내면 서버가
+ * 그린 화면과 브라우저가 그린 화면의 React 키가 어긋나 화면이 통째로 다시 붙는다.
+ * 목업의 다른 값들을 날짜까지 고정해 둔 것과 같은 이유다(파일 머리말).
+ */
+const rid = (n: number) => `d8${String(n).padStart(8, "0")}`;
+
+const pilotPlanDoc: RichDoc = {
+  v: 1,
+  blocks: [
+    { id: rid(1), kind: "title", spans: [{ t: "음식물류폐기물 감량 시범사업 확대계획" }] },
+    { id: rid(2), kind: "note", spans: [{ t: "자원순환과 · 2026. 8. 5. 기준" }], align: "right" },
+    { id: rid(3), kind: "spacer", spans: [] },
+
+    { id: rid(4), kind: "heading", spans: [{ t: "1. 추진 배경" }] },
+    {
+      id: rid(5),
+      kind: "bullet",
+      spans: [
+        { t: "공동주택 감량기 보급 시범을 " },
+        { t: "4개 단지에서 12개 단지", m: ["b"] },
+        { t: "로 넓힌다." },
+      ],
+    },
+    {
+      id: rid(6),
+      kind: "bullet",
+      spans: [{ t: "감량 실적은 이듬해 수집·운반 대행 원가산정의 물량 추계에 그대로 들어간다." }],
+    },
+    {
+      id: rid(7),
+      kind: "bullet",
+      indent: 1,
+      spans: [
+        { t: "작년 산정에서 보급률 보정을 빠뜨려 중간보고 수치를 한 번 되돌린 적이 있다.", h: "yellow" },
+      ],
+    },
+    {
+      id: rid(8),
+      kind: "source",
+      spans: [{ t: "근거: 「폐기물관리법」 제14조 제1항, 2026년 자원순환과 주요업무계획 3-나" }],
+    },
+    { id: rid(9), kind: "spacer", spans: [] },
+
+    { id: rid(10), kind: "heading", spans: [{ t: "2. 시범 결과" }] },
+    {
+      id: rid(11),
+      kind: "table",
+      spans: [],
+      table: {
+        widths: [3, 1.2, 1.6, 1.6, 1.2],
+        header: true,
+        rows: [
+          {
+            cells: [
+              { id: rid(21), spans: [{ t: "단지", m: ["b"] }] },
+              { id: rid(22), spans: [{ t: "세대수", m: ["b"] }], align: "right" },
+              { id: rid(23), spans: [{ t: "시범 전(kg/일)", m: ["b"] }], align: "right" },
+              { id: rid(24), spans: [{ t: "시범 후(kg/일)", m: ["b"] }], align: "right" },
+              { id: rid(25), spans: [{ t: "감량률", m: ["b"] }], align: "right" },
+            ],
+          },
+          {
+            cells: [
+              { id: rid(26), spans: [{ t: "봉담 ○○1단지" }] },
+              { id: rid(27), spans: [{ t: "720" }], align: "right" },
+              { id: rid(28), spans: [{ t: "412" }], align: "right" },
+              { id: rid(29), spans: [{ t: "318" }], align: "right" },
+              { id: rid(30), spans: [{ t: "22.8%" }], align: "right" },
+            ],
+          },
+          {
+            cells: [
+              { id: rid(31), spans: [{ t: "향남 ○○2단지" }] },
+              { id: rid(32), spans: [{ t: "540" }], align: "right" },
+              { id: rid(33), spans: [{ t: "305" }], align: "right" },
+              { id: rid(34), spans: [{ t: "241" }], align: "right" },
+              { id: rid(35), spans: [{ t: "21.0%" }], align: "right" },
+            ],
+          },
+          {
+            cells: [
+              { id: rid(36), spans: [{ t: "동탄 ○○3단지" }] },
+              { id: rid(37), spans: [{ t: "1,120" }], align: "right" },
+              { id: rid(38), spans: [{ t: "638" }], align: "right" },
+              { id: rid(39), spans: [{ t: "511" }], align: "right" },
+              { id: rid(40), spans: [{ t: "19.9%" }], align: "right" },
+            ],
+          },
+          {
+            cells: [
+              { id: rid(41), spans: [{ t: "병점 ○○4단지" }] },
+              { id: rid(42), spans: [{ t: "380" }], align: "right" },
+              { id: rid(43), spans: [{ t: "214" }], align: "right" },
+              { id: rid(44), spans: [{ t: "166" }], align: "right" },
+              { id: rid(45), spans: [{ t: "22.4%" }], align: "right" },
+            ],
+          },
+          {
+            cells: [
+              { id: rid(46), spans: [{ t: "계", m: ["b"] }] },
+              { id: rid(47), spans: [{ t: "2,760", m: ["b"] }], align: "right" },
+              { id: rid(48), spans: [{ t: "1,569", m: ["b"] }], align: "right" },
+              { id: rid(49), spans: [{ t: "1,236", m: ["b"] }], align: "right" },
+              { id: rid(50), spans: [{ t: "21.4%", m: ["b"] }], align: "right" },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      id: rid(12),
+      kind: "note",
+      spans: [{ t: "※ 감량률은 2026. 3. ~ 6. 넉 달 평균이다. 배출 양상이 다른 설 연휴 주간은 뺐다." }],
+    },
+    { id: rid(13), kind: "spacer", spans: [] },
+
+    { id: rid(14), kind: "heading", spans: [{ t: "3. 확대 시행 방안" }] },
+    {
+      id: rid(15),
+      kind: "numbered",
+      spans: [
+        { t: "관리 주체를 " },
+        { t: "관리사무소", m: ["b"] },
+        { t: "로 통일한다. 시범 단지 4곳의 관리 주체가 달라(관리사무소 3, 입주자대표회의 1) 유지관리 편차가 컸다." },
+      ],
+    },
+    {
+      id: rid(16),
+      kind: "numbered",
+      spans: [{ t: "감량기 고장 신고 창구를 자원순환과 단일 창구로 둔다." }],
+    },
+    {
+      id: rid(17),
+      kind: "numbered",
+      indent: 1,
+      spans: [{ t: "신고 접수 후 48시간 안에 현장 확인을 마친다." }],
+    },
+    {
+      id: rid(18),
+      kind: "numbered",
+      spans: [{ t: "원가산정 착수 전에 감량 실적을 먼저 넘긴다(9월 중)." }],
+    },
+    { id: rid(19), kind: "subheading", spans: [{ t: "가. 소요 예산" }] },
+    {
+      id: rid(20),
+      kind: "body",
+      spans: [
+        { t: "감량기 8대 추가 보급 " },
+        { t: "1억 2,400만 원", m: ["b"] },
+        { t: " (2026년 본예산 자원순환 시책추진비에서 충당한다). 부족분은 추경에 반영을 요구한다." },
+      ],
+    },
+    {
+      id: rid(51),
+      kind: "quote",
+      spans: [{ t: "확대 시행 조건을 붙이지 않으면 관리 주체가 다시 갈릴 수 있다는 것이 시범의 결론이다." }],
+    },
+    {
+      id: rid(52),
+      kind: "source",
+      spans: [{ t: "근거: 2025년 음식물류폐기물 수집·운반 대행 원가산정 용역 최종보고서 42쪽 「보급률 보정계수」" }],
+    },
+  ],
+};
+
 export const documents: Document[] = [
   {
     id: docId(1),
@@ -581,6 +770,10 @@ export const documents: Document[] = [
     created_by: person("김서연").id,
     created_at: "2026-03-02T09:31:00+09:00",
     updated_at: "2026-08-05T17:41:00+09:00",
+    blocks: null,
+    blocks_rev: 0,
+    blocks_updated_by: null,
+    blocks_updated_at: null,
   },
   {
     id: docId(2),
@@ -589,6 +782,10 @@ export const documents: Document[] = [
     created_by: person("박준호").id,
     created_at: "2026-06-15T10:05:00+09:00",
     updated_at: "2026-08-05T18:10:00+09:00",
+    blocks: null,
+    blocks_rev: 0,
+    blocks_updated_by: null,
+    blocks_updated_at: null,
   },
   {
     id: docId(3),
@@ -597,6 +794,10 @@ export const documents: Document[] = [
     created_by: person("박준호").id,
     created_at: "2025-09-22T14:00:00+09:00",
     updated_at: "2025-10-14T16:30:00+09:00",
+    blocks: null,
+    blocks_rev: 0,
+    blocks_updated_by: null,
+    blocks_updated_at: null,
   },
   {
     // 홈에서 가장 크게 보이는 업무(기한 17일 지남)의 문서.
@@ -609,6 +810,10 @@ export const documents: Document[] = [
     created_by: person("한지우").id,
     created_at: "2026-05-20T14:45:00+09:00",
     updated_at: "2026-07-02T16:20:00+09:00",
+    blocks: null,
+    blocks_rev: 0,
+    blocks_updated_by: null,
+    blocks_updated_at: null,
   },
   {
     id: docId(5),
@@ -617,6 +822,10 @@ export const documents: Document[] = [
     created_by: person("배도현").id,
     created_at: "2025-07-15T09:25:00+09:00",
     updated_at: "2025-10-02T15:40:00+09:00",
+    blocks: null,
+    blocks_rev: 0,
+    blocks_updated_by: null,
+    blocks_updated_at: null,
   },
   {
     // 최민재 계정으로 들어가면 문서 탭이 어느 업무에서도 비어 있었다.
@@ -628,6 +837,10 @@ export const documents: Document[] = [
     created_by: person("최민재").id,
     created_at: "2026-03-24T10:02:00+09:00",
     updated_at: "2026-08-06T11:48:00+09:00",
+    blocks: null,
+    blocks_rev: 0,
+    blocks_updated_by: null,
+    blocks_updated_at: null,
   },
   {
     id: docId(7),
@@ -636,6 +849,10 @@ export const documents: Document[] = [
     created_by: person("김서연").id,
     created_at: "2026-06-25T09:50:00+09:00",
     updated_at: "2026-08-06T10:35:00+09:00",
+    blocks: null,
+    blocks_rev: 0,
+    blocks_updated_by: null,
+    blocks_updated_at: null,
   },
   {
     id: docId(8),
@@ -644,6 +861,13 @@ export const documents: Document[] = [
     created_by: person("박준호").id,
     created_at: "2026-04-09T15:10:00+09:00",
     updated_at: "2026-08-05T17:05:00+09:00",
+    // 데모에서 유일한 서식 문서. 항목(secId 21·22)도 그대로 남아 있다.
+    blocks: pilotPlanDoc,
+    // 옮긴 뒤 몇 번 더 고친 문서로 둔다. 판이 0이면 「한 번도 저장된 적 없는
+    // 문서」로 읽히는데, 화면에는 8월 5일에 고친 것으로 적혀 있어 서로 어긋난다.
+    blocks_rev: 6,
+    blocks_updated_by: person("박준호").id,
+    blocks_updated_at: "2026-08-05T17:05:00+09:00",
   },
 ];
 

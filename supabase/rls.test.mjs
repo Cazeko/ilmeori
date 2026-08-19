@@ -1505,6 +1505,301 @@ console.log("\n[15] 결재 — 서명은 손으로 찍히지 않는다");
 }
 
 // ---------------------------------------------------------------------------
+console.log("\n[16] 서식 문서 — 자동 저장이 권한도 이력도 밀어내지 않는가");
+// ---------------------------------------------------------------------------
+// 0018 이 막으려는 것은 셋이다.
+//   ① 열람 권한만 있는 사람이 본문을 고치는 것
+//   ② 몇 초마다 도는 자동 저장이 업무 이력과 실시간 신호를 뒤덮는 것
+//   ③ 늦게 저장한 사람이 앞사람 글을 통째로 덮어쓰는 것
+// ①은 정책이, ②는 트리거 조건이, ③은 blocks_rev 를 건 한 문장이 막는다.
+//
+// ②에는 반대쪽 함정이 있다. 「뒤덮지 않게」를 「한 줄도 남기지 않게」로 하면
+// 서식 문서로 옮긴 뒤부터 **본문을 누가 언제 고쳤는지가 감사에서 사라진다.**
+// 그래서 0013 처럼 10분을 한 번으로 묶는다. 아래는 그 둘을 함께 본다 —
+// 연달아 저장해도 한 줄, 창이 지나면 다시 한 줄.
+//
+// 앞 절들이 kim·park·choi 의 역할을 여러 번 바꿔 놓았으므로 자기 자산으로만 돈다.
+{
+  const [w16] = await admin(
+    `insert into work (title, department_id, owner_id, created_by, visibility, status)
+     values ('서식 문서 확인용 업무', $1, $2, $2, 'private', 'doing') returning id`,
+    [deptA.id, kim],
+  );
+  const [doc16] = await admin(
+    `insert into document (work_id, title, created_by) values ($1, '서식 문서 확인용 문서', $2) returning id`,
+    [w16.id, kim],
+  );
+  // park 는 열람만, choi 는 편집.
+  await admin(
+    `insert into work_member (work_id, profile_id, role, added_by) values ($1, $2, 'viewer', $3)`,
+    [w16.id, park, kim],
+  );
+  await admin(
+    `insert into work_member (work_id, profile_id, role, added_by) values ($1, $2, 'editor', $3)`,
+    [w16.id, choi, kim],
+  );
+
+  const DOC = '{"v":1,"blocks":[{"id":"aaaaaaaaaa","kind":"title","spans":[{"t":"확인용"}]}]}';
+  const save = (who, rev, body) =>
+    as(
+      who,
+      `update document
+          set blocks = $1::jsonb, blocks_rev = $2, blocks_updated_by = $3, blocks_updated_at = now()
+        where id = $4 and blocks_rev = $5
+      returning blocks_rev`,
+      [body, rev + 1, who, doc16.id, rev],
+    );
+
+  // --- ① 권한 -------------------------------------------------------------
+  check(
+    "열람 권한만 있는 사람은 blocks 를 못 고친다",
+    await denied(park, `update document set blocks = $1::jsonb where id = $2 returning id`, [
+      DOC,
+      doc16.id,
+    ]),
+  );
+  check(
+    "업무를 아예 못 보는 사람도 blocks 를 못 고친다",
+    await denied(lee, `update document set blocks = $1::jsonb where id = $2 returning id`, [
+      DOC,
+      doc16.id,
+    ]),
+  );
+  {
+    // 첫 저장은 항목 문서가 서식 문서가 되는 순간이다(convertToRichDoc).
+    // 화면이 통째로 달라지므로 이때만은 신호가 나가야 하고, 되돌릴 수 없는
+    // 사건이라 이력에도 한 줄 남아야 한다.
+    await admin(`truncate realtime.messages`);
+    const r = await save(choi, 0, DOC);
+    const sig = await admin(
+      `select payload->>'kind' as kind from realtime.messages where topic = $1`,
+      [`work:${w16.id}`],
+    );
+    check(
+      "편집 권한이 있으면 blocks 를 고친다",
+      r.ok && r.rows.length === 1 && Number(r.rows[0].blocks_rev) === 1,
+      r.ok ? JSON.stringify(r.rows) : r.error,
+    );
+    check(
+      "항목 문서가 서식 문서가 되는 순간에는 신호가 나간다",
+      sig.length === 1 && sig[0].kind === "document",
+      `${sig.length}건 ${sig[0]?.kind ?? ""}`,
+    );
+    const conv = await admin(
+      `select summary, detail from activity
+        where work_id = $1 and detail->>'converted' = 'true'`,
+      [w16.id],
+    );
+    check(
+      "서식 문서로 옮긴 사실이 이력에 남는다",
+      conv.length === 1 && conv[0].summary.includes("서식 문서로 옮겼습니다"),
+      conv.map((c) => c.summary).join(" / "),
+    );
+  }
+  check(
+    "열람자는 남이 써 둔 blocks 를 읽기는 한다",
+    (await as(park, `select blocks from document where id = $1`, [doc16.id])).rows?.[0]?.blocks !== undefined,
+  );
+
+  // --- ② 자동 저장이 이력·신호를 뒤덮지 않는가 -----------------------------
+  const countActivity = `select count(*)::int as n from activity where work_id = $1`;
+  const countVersion = `select count(*)::int as n from doc_version where document_id = $1`;
+  const DOC_TOPIC_WORK = `work:${w16.id}`;
+
+  /** 이 업무의 「본문을 고쳤습니다」 이력만 센다(제목 변경과 갈라 본다). */
+  const countBlockEdits = `select count(*)::int as n from activity
+    where work_id = $1 and kind = 'document.updated' and detail->>'blocks' = 'true'`;
+  /** 10분 창을 지나가게 한다. 시험에서 10분을 기다릴 수는 없다. */
+  const ageActivity = `update activity set created_at = created_at - interval '20 minutes'
+    where work_id = $1`;
+
+  {
+    await admin(`truncate realtime.messages`);
+    const a0 = await admin(countActivity, [w16.id]);
+    const v0 = await admin(countVersion, [doc16.id]);
+    // 자동 저장 다섯 번. 실제 편집기는 몇 초마다 이만큼을 보낸다.
+    for (let i = 1; i <= 5; i += 1) await save(choi, i, DOC);
+    const a1 = await admin(countActivity, [w16.id]);
+    const v1 = await admin(countVersion, [doc16.id]);
+    const sig = await admin(`select count(*)::int as n from realtime.messages where topic = $1`, [
+      DOC_TOPIC_WORK,
+    ]);
+    check(
+      "이어지는 자동 저장은 이력을 한 줄도 더하지 않는다 (앞의 한 줄에 묶인다)",
+      a0[0].n === a1[0].n,
+      `${a0[0].n} → ${a1[0].n}`,
+    );
+    check("blocks 만 고치면 문서 판(doc_version)도 늘지 않는다", v0[0].n === v1[0].n);
+    check(
+      "blocks 만 고치면 업무 토픽으로 신호가 나가지 않는다",
+      sig[0].n === 0,
+      `${sig[0].n}건`,
+    );
+  }
+  {
+    // 창이 지나면 다시 한 줄. 이것이 없으면 「고친 사람이 아무도 없다」가 된다.
+    await admin(ageActivity, [w16.id]);
+    const b0 = await admin(countBlockEdits, [w16.id]);
+    const [cur] = await admin(`select blocks_rev from document where id = $1`, [doc16.id]);
+    let rev = Number(cur.blocks_rev);
+    for (let i = 0; i < 5; i += 1) {
+      const r = await save(choi, rev, DOC);
+      if (r.ok && r.rows.length) rev = Number(r.rows[0].blocks_rev);
+    }
+    const b1 = await admin(countBlockEdits, [w16.id]);
+    check(
+      "10분이 지난 뒤의 저장은 이력 한 줄을 남긴다 (다섯 번 저장해도 한 줄)",
+      b1[0].n === b0[0].n + 1,
+      `${b0[0].n} → ${b1[0].n}`,
+    );
+    const last = await admin(
+      `select actor_id, summary from activity
+        where work_id = $1 and detail->>'blocks' = 'true' order by created_at desc limit 1`,
+      [w16.id],
+    );
+    check(
+      "그 한 줄은 고친 사람 이름으로 남는다",
+      last[0].actor_id === choi && last[0].summary.includes("본문을 고쳤습니다"),
+      `${last[0].summary}`,
+    );
+  }
+  {
+    // 창은 사람마다 따로다. 옆 사람이 방금 고쳤다고 내 편집이 안 남으면
+    // 「누가 고쳤는가」가 뒤바뀐다 — 감사에서 가장 나쁜 종류의 거짓이다.
+    const b0 = await admin(countBlockEdits, [w16.id]);
+    const [cur] = await admin(`select blocks_rev from document where id = $1`, [doc16.id]);
+    const r = await save(kim, Number(cur.blocks_rev), DOC);
+    const b1 = await admin(countBlockEdits, [w16.id]);
+    check(
+      "다른 사람이 고치면 그 사람 몫으로 한 줄이 남는다",
+      r.ok && b1[0].n === b0[0].n + 1,
+      `${b0[0].n} → ${b1[0].n}`,
+    );
+  }
+  {
+    // 기존 동작이 살아 있는가. 여기가 빨간불이면 트리거를 너무 많이 잘라 낸 것이다.
+    await admin(`truncate realtime.messages`);
+    const a0 = await admin(countActivity, [w16.id]);
+    await as(kim, `update document set title = '이름을 바꾼 문서' where id = $1`, [doc16.id]);
+    const a1 = await admin(countActivity, [w16.id]);
+    const sig = await admin(
+      `select payload->>'kind' as kind from realtime.messages where topic = $1`,
+      [DOC_TOPIC_WORK],
+    );
+    check("문서 이름을 바꾸면 지금까지처럼 이력이 남는다", a1[0].n === a0[0].n + 1);
+    check(
+      "문서 이름을 바꾸면 지금까지처럼 신호가 나간다",
+      sig.length === 1 && sig[0].kind === "document",
+      `${sig.length}건 ${sig[0]?.kind ?? ""}`,
+    );
+  }
+
+  // --- ③ 판 밀림 -----------------------------------------------------------
+  {
+    const [cur] = await admin(`select blocks_rev from document where id = $1`, [doc16.id]);
+    const rev = Number(cur.blocks_rev);
+    const late = await save(choi, rev - 1, '{"v":1,"blocks":[{"id":"b","kind":"body","spans":[]}]}');
+    const still = await admin(`select blocks_rev from document where id = $1`, [doc16.id]);
+    check(
+      "내가 본 판이 이미 밀렸으면 저장은 0행이다 (앞사람 글을 덮어쓰지 않는다)",
+      late.ok && late.rows.length === 0 && Number(still[0].blocks_rev) === rev,
+      late.ok ? `${late.rows.length}행` : late.error,
+    );
+  }
+  {
+    const [cur] = await admin(`select blocks_rev from document where id = $1`, [doc16.id]);
+    const rev = Number(cur.blocks_rev);
+    const r = await save(choi, rev, DOC);
+    check("판이 맞으면 그 다음 저장은 통과한다", r.ok && r.rows.length === 1);
+  }
+
+  // --- 크기 제한 -----------------------------------------------------------
+  {
+    const [cur] = await admin(`select blocks_rev from document where id = $1`, [doc16.id]);
+    const rev = Number(cur.blocks_rev);
+    const r = await as(
+      choi,
+      `update document set blocks = jsonb_build_object('v', 1, 'blocks', repeat('x', 2200000)),
+              blocks_rev = $1
+        where id = $2 and blocks_rev = $3 returning id`,
+      [rev + 1, doc16.id, rev],
+    );
+    check(
+      "2MB 를 넘는 본문은 DB 가 막는다 (편집기가 폭주해도)",
+      !r.ok && /check constraint|document_blocks_size/i.test(r.error ?? ""),
+      r.ok ? "통과해 버렸다" : "",
+    );
+  }
+
+  // --- doc: 채널 -----------------------------------------------------------
+  const DOC_TOPIC = `doc:${doc16.id}`;
+  await admin(`insert into realtime.messages (topic, extension) values ($1, 'broadcast')`, [
+    DOC_TOPIC,
+  ]);
+  const countDoc = `select count(*)::int as n from realtime.messages where topic = $1`;
+
+  {
+    const r = await admin(
+      `select app.topic_document_id($1) as a, app.topic_document_id('doc:zzz') as b,
+              app.topic_document_id(null) as c, app.topic_document_id($2) as d,
+              app.topic_document_id($3) as e`,
+      [DOC_TOPIC, DOC_TOPIC_WORK, doc16.id],
+    );
+    check(
+      "app.topic_document_id 는 모양이 맞을 때만 문서 id 를 돌려준다",
+      r[0].a === doc16.id && r[0].b === null && r[0].c === null && r[0].d === null && r[0].e === null,
+      JSON.stringify(r[0]),
+    );
+  }
+  {
+    const r = await onTopic(choi, DOC_TOPIC, countDoc, [DOC_TOPIC]);
+    check("문서를 고칠 수 있는 사람은 doc: 채널을 듣는다", r.ok && r.rows[0].n > 0, r.error ?? "");
+  }
+  {
+    // 여기가 이 채널의 존재 이유다. park 는 업무를 **볼 수** 있어서 work: 토픽은
+    // 열려 있지만, 아직 저장되지 않은 남의 글이 흐르는 이 채널에는 못 들어온다.
+    const work = await onTopic(park, DOC_TOPIC_WORK, countDoc, [DOC_TOPIC_WORK]);
+    const doc = await onTopic(park, DOC_TOPIC, countDoc, [DOC_TOPIC]);
+    check(
+      "열람 권한만 있는 사람은 work: 는 듣고 doc: 는 못 듣는다",
+      work.ok && doc.ok && doc.rows[0].n === 0,
+      `work ${work.rows?.[0]?.n} / doc ${doc.rows?.[0]?.n}`,
+    );
+  }
+  {
+    const r = await onTopic(lee, DOC_TOPIC, countDoc, [DOC_TOPIC]);
+    check("타 부서는 doc: 채널에서 한 건도 못 듣는다", r.ok && r.rows[0].n === 0);
+  }
+  {
+    // 접속자 표시·편집 연산은 쓰기다. 커서 하나도 열람자에게는 열려 있으면 안 된다.
+    const ins = `insert into realtime.messages (topic, extension) values ($1, 'presence')`;
+    const n = `select count(*)::int as n from realtime.messages where topic = $1 and extension = 'presence'`;
+    const b = await admin(n, [DOC_TOPIC]);
+    const mine = await onTopic(choi, DOC_TOPIC, ins, [DOC_TOPIC]);
+    const a = await admin(n, [DOC_TOPIC]);
+    check("편집자는 doc: 채널에 쓸 수 있다 (커서·연산)", mine.ok && a[0].n === b[0].n + 1);
+
+    const theirs = await onTopic(park, DOC_TOPIC, ins, [DOC_TOPIC]);
+    const a2 = await admin(n, [DOC_TOPIC]);
+    check(
+      "열람자는 doc: 채널에 쓸 수 없다",
+      !theirs.ok && /row-level security|42501/i.test(theirs.error ?? "") && a2[0].n === a[0].n,
+      theirs.ok ? "들어가졌다" : "",
+    );
+  }
+  for (const bad of ["doc:", "doc:새문서", "doc:00000000-0000-0000-0000", "lobby", "doc"]) {
+    const r = await onTopic(choi, bad, countDoc, [DOC_TOPIC]);
+    check(`이상한 doc 토픽(${bad})은 예외 없이 0행이다`, r.ok && r.rows[0].n === 0, r.error ?? "");
+  }
+  {
+    // 정책이 하나 늘었다고 0012 의 판정이 넓어지면 안 된다. 같은 명령의 permissive
+    // 정책은 OR 로 합쳐지므로, 두 정책이 겹치는 순간 조용히 열린다.
+    const r = await onTopic(lee, DOC_TOPIC_WORK, countDoc, [DOC_TOPIC_WORK]);
+    check("doc: 정책이 늘어도 work: 토픽은 그대로 닫혀 있다", r.ok && r.rows[0].n === 0);
+  }
+}
+
+// ---------------------------------------------------------------------------
 await db.close();
 console.log(`\n${pass}개 통과 · ${fail}개 실패`);
 if (fail) {

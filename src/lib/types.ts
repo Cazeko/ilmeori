@@ -116,6 +116,27 @@ export interface Document {
   created_by: string;
   created_at: string;
   updated_at: string;
+  /**
+   * 서식 문서의 본문(블록 배열). null 이면 지금까지의 「항목 + 평문」 문서다.
+   *
+   * `unknown` 인 것은 게으름이 아니다. 이 칸은 jsonb 라 DB 가 보장하는 것은
+   * 「JSON 인가」까지이고, 안이 우리가 기대하는 모양인지는 아무도 보장하지
+   * 않는다. 화면과 내보내기는 반드시 `parseRichDoc()` 를 거친 값만 본다
+   * (src/lib/editor/model.ts).
+   */
+  blocks: unknown | null;
+  /**
+   * 저장할 때마다 1 씩 오른다.
+   *
+   * 두 사람이 같은 문서를 편집하다 각자 저장하면, 늦게 저장한 쪽이 앞사람의
+   * 글을 통째로 덮어쓴다 — 실시간으로 합쳐 놓고 마지막 한 번에서 잃는다.
+   * 저장 요청에 「내가 본 판」을 함께 실어 보내고, 그 사이 판이 올랐으면
+   * 저장을 거절한다. 실제로 막는 것은 UPDATE 에 붙은 `where blocks_rev = <내가 본 판>`
+   * 한 줄이다(rich-doc.ts). DB 함수로 감싸지 않은 이유는 0018 §4 에 적혀 있다.
+   */
+  blocks_rev: number;
+  blocks_updated_by: string | null;
+  blocks_updated_at: string | null;
 }
 
 export interface DocSection {

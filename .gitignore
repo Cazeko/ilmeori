@@ -15,6 +15,8 @@
 
 # next.js
 /.next/
+# 데모 모드 빌드(next.config.ts 의 distDir 주석 참조)
+/.next-demo/
 /out/
 
 # production
