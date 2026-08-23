@@ -54,7 +54,7 @@ export function CommentThread({
             const mine = c.author_id === viewer.id;
             return (
               <li key={c.id} className="flex gap-3">
-                <Avatar profile={c.author} className="mt-0.5" />
+                <Avatar profile={c.author} className="mt-1" />
                 <div className="min-w-0 flex-1">
                   {/* 삭제는 <form>이라 문단(<p>) 안에 넣을 수 없다.
                       글자끼리의 기준선 정렬은 안쪽 span이 그대로 맡는다. */}
@@ -68,7 +68,7 @@ export function CommentThread({
                       ) : null}
                     </span>
                     {mine ? (
-                      <span className="rounded-xs bg-primary-5 px-1.5 py-0.5 text-[11px] font-bold text-primary">
+                      <span className="rounded-xs bg-primary-5 px-chip-x py-chip-y text-[11px] font-bold text-primary">
                         나
                       </span>
                     ) : null}
@@ -98,7 +98,7 @@ export function CommentThread({
                       </form>
                     ) : null}
                   </div>
-                  <p className="mt-1 rounded-md rounded-tl-none border border-gray-10 bg-surface px-3.5 py-2.5 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
+                  <p className="mt-1 rounded-sm rounded-tl-none border border-rule-frame bg-surface px-4 py-3 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
                     {c.body}
                   </p>
                 </div>
@@ -114,7 +114,7 @@ export function CommentThread({
         />
       )}
 
-      <form action={postComment} className="mt-6 border-t border-gray-10 pt-5">
+      <form action={postComment} className="mt-6 border-t border-rule-hair pt-5">
           <input type="hidden" name="workId" value={workId} />
           <Field
             id="comment-body"

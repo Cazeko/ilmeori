@@ -34,7 +34,7 @@ export function TabNav({
   label: string;
 }) {
   return (
-    <nav aria-label={label} className="border-b border-gray-10">
+    <nav aria-label={label} className="border-b border-rule-hair">
       {/* 좁은 화면에서는 탭 다섯 개가 390px 에 들어가지 않는다.
           예전에는 옆으로 미는 줄(overflow-x-auto)이었는데, 그러면 이력이나
           참여자 탭에 들어와도 스크롤이 0 이라 **활성 탭이 화면 밖에 있다** —
@@ -62,7 +62,7 @@ export function TabNav({
                   "active:bg-primary-10 active:text-primary",
                   current
                     ? "bg-primary-5 text-primary sm:border-primary sm:bg-transparent"
-                    : "text-gray-60 hover:bg-gray-5 hover:text-gray-80 sm:border-transparent sm:bg-transparent sm:hover:border-gray-20",
+                    : "text-gray-60 hover:bg-gray-5 hover:text-gray-80 sm:border-transparent sm:bg-transparent sm:hover:border-rule-hair",
                 )}
               >
                 {Icon ? <Icon aria-hidden className="size-4" /> : null}
@@ -74,7 +74,7 @@ export function TabNav({
                 {typeof t.count === "number" ? (
                   <span
                     className={cn(
-                      "rounded-xs px-1.5 py-0.5 text-body-xs font-bold tabular-nums",
+                      "rounded-xs px-chip-x py-chip-y text-body-xs font-bold tabular-nums",
                       current
                         ? "bg-primary-5 text-primary"
                         : "bg-gray-5 text-gray-60",

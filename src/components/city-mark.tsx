@@ -75,7 +75,7 @@ export function CityMark({
         )}
       />
       {note ? (
-        <span className="mt-2.5 text-body-xs break-keep text-gray-60">
+        <span className="mt-3 text-body-xs break-keep text-gray-60">
           {note}
         </span>
       ) : null}

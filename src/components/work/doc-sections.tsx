@@ -151,17 +151,17 @@ export function DocSections({
               남는지를 누르기 **전에** 다 적는다. 접어 두지 않은 것도 뜻이 있다:
               지금 항목 문서를 쓰고 있는 사람에게 이 길이 있다는 사실 자체가
               정보이고, 접어 두면 아무도 못 찾는다. */}
-          <div className="rounded-md border border-primary-10 bg-primary-5 px-4 py-3.5">
+          <div className="rounded-sm border border-primary-10 bg-primary-5 px-4 py-4">
             <p className="flex items-center gap-2 text-body-sm font-bold text-primary">
               <Sparkles aria-hidden className="size-4" />
               서식 편집기로 옮길 수 있습니다
             </p>
-            <p className="mt-1.5 text-body-sm leading-relaxed break-keep text-gray-70">
+            <p className="mt-2 text-body-sm leading-relaxed break-keep text-gray-70">
               굵게·표·번호 매기기를 쓰고, 여럿이 <b className="font-bold">동시에</b>{" "}
               한 문서를 고칠 수 있게 됩니다. 항목 제목은 「큰 항목」으로, 「-」나
               「1.」로 시작하는 줄은 목록으로 바뀝니다.
             </p>
-            <p className="mt-1.5 text-body-xs leading-relaxed break-keep text-gray-60">
+            <p className="mt-2 text-body-xs leading-relaxed break-keep text-gray-60">
               지금 항목 {sections.length}개는 <b className="font-bold">지우지 않고</b>{" "}
               그대로 남습니다. 옮긴 결과가 원본과 다르면 그것으로 확인하실 수
               있습니다. 다만 화면은 서식 문서 하나만 보여 주므로,{" "}
@@ -177,14 +177,14 @@ export function DocSections({
             </form>
           </div>
 
-          <details className="rounded-md border border-gray-10 bg-surface">
+          <details className="rounded-sm border border-rule-frame bg-surface">
             <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-body-sm font-bold text-gray-70">
               <PenLine aria-hidden className="size-4 text-gray-40" />
               문서 이름 바꾸기
             </summary>
             <form
               action={renameDocument}
-              className="border-t border-gray-10 px-4 py-4"
+              className="border-t border-rule-hair px-4 py-4"
             >
               <input type="hidden" name="workId" value={workId} />
               <input type="hidden" name="documentId" value={doc.id} />
@@ -209,12 +209,12 @@ export function DocSections({
 
           {/* 되돌릴 수 없는 동작은 접어 둔다. 펼치는 손짓 한 번이 확인 절차를 대신한다. */}
           {canDelete ? (
-            <details className="rounded-md border border-gray-10 bg-surface">
+            <details className="rounded-sm border border-rule-frame bg-surface">
               <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-body-sm font-bold text-gray-70">
                 <Trash2 aria-hidden className="size-4 text-gray-40" />
                 문서 삭제
               </summary>
-              <div className="border-t border-gray-10 px-4 py-4">
+              <div className="border-t border-rule-hair px-4 py-4">
                 <Notice tone="danger" title="되돌릴 수 없습니다">
                   문서를 지우면 항목 {sections.length}개와 지금까지 저장한 이전
                   판이 함께 사라집니다. 삭제했다는 사실은 업무 이력에 남습니다.
@@ -247,22 +247,22 @@ export function DocSections({
               <li
                 key={s.id}
                 className={cn(
-                  "rounded-md border bg-surface",
+                  "rounded-sm border bg-surface",
                   heldByOther
                     ? "border-status-doing/40 bg-status-doing-bg/40"
                     : editing
                       ? "border-primary-30"
-                      : "border-gray-10",
+                      : "border-rule-frame",
                 )}
               >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-10 px-4 py-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rule-hair px-4 py-3">
                   <h3 className="text-body-sm font-bold break-keep text-gray-90">
                     {s.heading ?? "제목 없는 항목"}
                   </h3>
 
                   {heldByOther ? (
-                    <p className="flex flex-wrap items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1.5 rounded-xs bg-status-doing px-2 py-1 text-body-xs font-bold text-white">
+                    <p className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-2 rounded-xs bg-status-doing px-2 py-1 text-body-xs font-bold text-white">
                         <Lock aria-hidden className="size-3" />
                         {s.locked_by_profile?.name ?? "다른 사람"}님 편집 중
                       </span>
@@ -276,12 +276,12 @@ export function DocSections({
                       ) : null}
                     </p>
                   ) : mine ? (
-                    <p className="inline-flex items-center gap-1.5 rounded-xs bg-primary-5 px-2 py-1 text-body-xs font-bold text-primary">
+                    <p className="inline-flex items-center gap-2 rounded-xs bg-primary-5 px-2 py-1 text-body-xs font-bold text-primary">
                       <Lock aria-hidden className="size-3" />
                       <span>내가 편집 중</span>
                     </p>
                   ) : (
-                    <p className="inline-flex items-center gap-1.5 text-body-xs text-gray-60">
+                    <p className="inline-flex items-center gap-2 text-body-xs text-gray-60">
                       {s.updated_by_profile ? (
                         <>
                           <Avatar profile={s.updated_by_profile} size="sm" />
@@ -353,7 +353,7 @@ export function DocSections({
                       </div>
                     </form>
 
-                    <details className="mt-4 border-t border-gray-10 pt-3">
+                    <details className="mt-4 border-t border-rule-hair pt-3">
                       <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-body-sm font-bold text-gray-70">
                         <Trash2 aria-hidden className="size-4 text-gray-40" />
                         <span>이 항목 삭제</span>
@@ -375,17 +375,17 @@ export function DocSections({
                   <>
                     {/* 줄바꿈이 의미를 갖는 행정 문서라 whitespace를 살린다 */}
                     {s.body ? (
-                      <p className="px-4 py-3.5 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
+                      <p className="px-4 py-4 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
                         {s.body}
                       </p>
                     ) : (
-                      <p className="px-4 py-3.5 text-body-sm text-gray-60">
+                      <p className="px-4 py-4 text-body-sm text-gray-60">
                         아직 내용이 비어 있습니다.
                       </p>
                     )}
 
                     {canWrite && !heldByOther ? (
-                      <div className="flex flex-wrap gap-2 border-t border-gray-10 px-4 py-2.5">
+                      <div className="flex flex-wrap gap-2 border-t border-rule-hair px-4 py-3">
                         <form action={lockSection}>
                           <input type="hidden" name="workId" value={workId} />
                           <input type="hidden" name="sectionId" value={s.id} />
@@ -425,7 +425,7 @@ export function DocSections({
           })}
         </ol>
       ) : (
-        <p className="rounded-md border border-gray-10 bg-surface px-4 py-6 text-center text-body-sm text-gray-60">
+        <p className="rounded-sm border border-rule-frame bg-surface px-4 py-6 text-center text-body-sm text-gray-60">
           아직 항목이 없습니다.
           {canWrite ? " 아래에서 첫 항목을 추가해 주세요." : null}
         </p>
@@ -434,7 +434,7 @@ export function DocSections({
       {canWrite ? (
         <form
           action={addSection}
-          className="mt-5 rounded-md border border-gray-10 bg-surface px-4 py-4"
+          className="mt-5 rounded-sm border border-rule-frame bg-surface px-4 py-4"
         >
           <input type="hidden" name="workId" value={workId} />
           <input type="hidden" name="documentId" value={doc.id} />

@@ -113,8 +113,8 @@ export async function WorkForm({
       ) : null}
 
       {/* 소관 부서 — 입력 칸이 아니라 사실 고지다. 고를 수 없는 칸을 보여 주지 않는다. */}
-      <div className="rounded-sm border border-gray-10 bg-gray-5 px-4 py-3">
-        <p className="flex items-center gap-1.5 text-body-sm font-bold text-gray-80">
+      <div className="rounded-sm border border-rule-frame bg-gray-5 px-4 py-3">
+        <p className="flex items-center gap-2 text-body-sm font-bold text-gray-80">
           <Building2 aria-hidden className="size-4 text-gray-40" />
           소관 부서: {departmentName}
         </p>
@@ -203,7 +203,7 @@ export async function WorkForm({
         )}
       </Field>
 
-      <div className="flex flex-wrap gap-2 border-t border-gray-10 pt-5">
+      <div className="flex flex-wrap gap-2 border-t border-rule-hair pt-5">
         <SubmitButton size="lg">{submitLabel}</SubmitButton>
         <ButtonLink href={cancelHref} variant="secondary" size="lg">
           취소

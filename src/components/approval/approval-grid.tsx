@@ -78,7 +78,7 @@ function Cell({
   return (
     <div
       className={cn(
-        "flex h-full min-h-24 min-w-24 flex-col items-center justify-center gap-0.5 px-3 py-2.5 text-center",
+        "flex h-full min-h-24 min-w-24 flex-col items-center justify-center gap-1 px-3 py-3 text-center",
         highlight && "bg-primary-5",
       )}
     >
@@ -128,7 +128,7 @@ function Cell({
             </time>
           ) : null}
           {step.opinion ? (
-            <span className="mt-0.5 inline-flex items-center gap-1 text-body-xs font-bold text-accent-text">
+            <span className="mt-1 inline-flex items-center gap-1 text-body-xs font-bold text-accent-text">
               <MessageSquareQuote aria-hidden className="size-3" />
               의견 있음
             </span>
@@ -157,8 +157,8 @@ export function ApprovalGrid({
             것도 「직위 / 이름 / 날짜」 세 줄로 서로 다르다. 표로 만들면
             스크린리더가 행·열을 읽어 주지만 그 행·열에 뜻이 없다.
             대신 각 칸을 목록 항목으로 두고 읽을 말을 글자로 적는다. */}
-        <div className="flex border border-gray-20 bg-surface">
-          <div className="flex w-16 shrink-0 items-center justify-center border-r border-gray-20 bg-gray-5 text-body-sm font-bold text-gray-70">
+        <div className="flex border border-rule-hair bg-surface">
+          <div className="flex w-16 shrink-0 items-center justify-center border-r border-rule-hair bg-gray-5 text-body-sm font-bold text-gray-70">
             결재
           </div>
           <ul className="flex flex-1">
@@ -167,10 +167,10 @@ export function ApprovalGrid({
                 key={s.id}
                 className={cn(
                   "flex flex-1 flex-col",
-                  i > 0 && "border-l border-gray-20",
+                  i > 0 && "border-l border-rule-hair",
                 )}
               >
-                <span className="border-b border-gray-20 bg-gray-5 px-2 py-1 text-center text-body-xs font-bold text-gray-60">
+                <span className="border-b border-rule-hair bg-gray-5 px-2 py-1 text-center text-body-xs font-bold text-gray-60">
                   {s.position}
                 </span>
                 {/* 칸의 갈래는 화면에 글자로 없다(자리를 차지하면 결재란이
@@ -189,18 +189,18 @@ export function ApprovalGrid({
         </div>
 
         {concur.length > 0 ? (
-          <div className="flex border-x border-b border-gray-20 bg-surface">
-            <div className="flex w-16 shrink-0 items-center justify-center border-r border-gray-20 bg-gray-5 text-body-sm font-bold text-gray-70">
+          <div className="flex border-x border-b border-rule-hair bg-surface">
+            <div className="flex w-16 shrink-0 items-center justify-center border-r border-rule-hair bg-gray-5 text-body-sm font-bold text-gray-70">
               협조
             </div>
-            <ul className="flex flex-1 flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-3">
+            <ul className="flex flex-1 flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
               {concur.map((s) => {
                 const cs = cellState(s, steps, state);
                 return (
                   <li
                     key={s.id}
                     className={cn(
-                      "flex items-center gap-1.5 text-body-sm",
+                      "flex items-center gap-2 text-body-sm",
                       s.approver_id === viewerId && "font-bold",
                     )}
                   >
@@ -243,13 +243,13 @@ export function ApprovalGrid({
         ) : null}
 
         {post.length > 0 ? (
-          <div className="flex border-x border-b border-gray-20 bg-surface">
-            <div className="flex w-16 shrink-0 items-center justify-center border-r border-gray-20 bg-gray-5 text-body-sm font-bold text-gray-70">
+          <div className="flex border-x border-b border-rule-hair bg-surface">
+            <div className="flex w-16 shrink-0 items-center justify-center border-r border-rule-hair bg-gray-5 text-body-sm font-bold text-gray-70">
               사후
             </div>
-            <ul className="flex flex-1 flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-3">
+            <ul className="flex flex-1 flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
               {post.map((s) => (
-                <li key={s.id} className="flex items-center gap-1.5 text-body-sm">
+                <li key={s.id} className="flex items-center gap-2 text-body-sm">
                   <span className="text-gray-90">
                     {s.approver.name} {s.position}
                   </span>
@@ -288,17 +288,17 @@ export function ApprovalOpinions({
       >
         결재 의견
       </h3>
-      <ul className="flex flex-col gap-2.5">
+      <ul className="flex flex-col gap-3">
         {withOpinion.map((s) => {
           const at = s.rejected_at ?? s.signed_at;
           return (
             <li
               key={s.id}
               className={cn(
-                "rounded-md border px-4 py-3",
+                "rounded-sm border px-4 py-3",
                 s.rejected_at
                   ? "border-danger/25 bg-danger-bg"
-                  : "border-gray-10 bg-surface",
+                  : "border-rule-frame bg-surface",
               )}
             >
               <p className="text-body-xs font-bold text-gray-60">

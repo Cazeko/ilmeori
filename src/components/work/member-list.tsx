@@ -154,11 +154,11 @@ export function MemberList({
     <div className="flex flex-col gap-6">
       {/* ── 공개 범위 ─────────────────────────────────────────────────────── */}
       <section aria-labelledby="visibility-heading">
-        <h2 id="visibility-heading" className="mb-2.5 text-h3 font-bold text-gray-90">
+        <h2 id="visibility-heading" className="mb-3 text-h3 font-bold text-gray-90">
           공개 범위
         </h2>
-        <div className="flex items-start gap-3 rounded-md border border-gray-10 bg-surface px-4 py-3.5">
-          <VisIcon aria-hidden className="mt-0.5 size-5 shrink-0 text-gray-40" />
+        <div className="flex items-start gap-3 rounded-sm border border-rule-frame bg-surface px-4 py-4">
+          <VisIcon aria-hidden className="mt-1 size-5 shrink-0 text-gray-40" />
           <div>
             <p className="text-body-sm font-bold text-gray-90">
               {VISIBILITY_LABEL[visibility]}
@@ -168,7 +168,7 @@ export function MemberList({
                 </span>
               ) : null}
             </p>
-            <p className="mt-0.5 text-body-sm break-keep text-gray-60">
+            <p className="mt-1 text-body-sm break-keep text-gray-60">
               {VISIBILITY_HINT[visibility]}
             </p>
           </div>
@@ -177,7 +177,7 @@ export function MemberList({
         {canManage ? (
           <form
             action={changeVisibility}
-            className="mt-2 flex flex-wrap items-end gap-2 rounded-md border border-gray-10 bg-surface px-4 py-3.5"
+            className="mt-2 flex flex-wrap items-end gap-2 rounded-sm border border-rule-frame bg-surface px-4 py-4"
           >
             <input type="hidden" name="workId" value={workId} />
             <Field
@@ -209,10 +209,10 @@ export function MemberList({
 
       {/* ── 참여자 ───────────────────────────────────────────────────────── */}
       <section aria-labelledby="members-heading">
-        <h2 id="members-heading" className="mb-2.5 text-h3 font-bold text-gray-90">
+        <h2 id="members-heading" className="mb-3 text-h3 font-bold text-gray-90">
           참여자 {members.length}명
         </h2>
-        <ul className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-surface">
+        <ul className="divide-y divide-rule-hair rounded-sm border border-rule-frame bg-surface">
           {members.map((m) => {
             const style = ROLE_STYLE[m.role];
             const RoleIcon = style.icon;
@@ -228,23 +228,23 @@ export function MemberList({
                         {m.profile.position}
                       </span>
                       {isMe ? (
-                        <span className="ml-2 rounded-xs bg-primary-5 px-1.5 py-0.5 text-[11px] font-bold text-primary">
+                        <span className="ml-2 rounded-xs bg-primary-5 px-chip-x py-chip-y text-[11px] font-bold text-primary">
                           나
                         </span>
                       ) : null}
                       {m.profile_id === leadId ? (
-                        <span className="ml-2 rounded-xs bg-gray-90 px-1.5 py-0.5 text-[11px] font-bold text-white">
+                        <span className="ml-2 rounded-xs bg-gray-90 px-chip-x py-chip-y text-[11px] font-bold text-white">
                           주담당
                         </span>
                       ) : null}
                     </p>
-                    <p className="mt-0.5 text-body-xs text-gray-60">
+                    <p className="mt-1 text-body-xs text-gray-60">
                       {m.profile.department_name ?? NO_DEPARTMENT}
                     </p>
                   </div>
                   <span
                     className={cn(
-                      "inline-flex shrink-0 items-center gap-1.5 rounded-xs px-2 py-1 text-body-xs font-bold",
+                      "inline-flex shrink-0 items-center gap-2 rounded-xs px-2 py-1 text-body-xs font-bold",
                       style.chip,
                     )}
                   >
@@ -254,7 +254,7 @@ export function MemberList({
                 </div>
 
                 {canManage ? (
-                  <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-gray-5 pt-3">
+                  <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-rule-hair pt-3">
                     <form
                       action={changeMemberRole}
                       className="flex flex-1 flex-wrap items-end gap-2"
@@ -357,14 +357,14 @@ export function MemberList({
         <section aria-labelledby="add-member-heading">
           <h2
             id="add-member-heading"
-            className="mb-2.5 text-h3 font-bold text-gray-90"
+            className="mb-3 text-h3 font-bold text-gray-90"
           >
             참여자 추가
           </h2>
           {addableCount > 0 ? (
             <form
               action={addMember}
-              className="flex flex-wrap items-end gap-2 rounded-md border border-gray-10 bg-surface px-4 py-3.5"
+              className="flex flex-wrap items-end gap-2 rounded-sm border border-rule-frame bg-surface px-4 py-4"
             >
               <input type="hidden" name="workId" value={workId} />
               <Field
@@ -407,7 +407,7 @@ export function MemberList({
               </SubmitButton>
             </form>
           ) : (
-            <p className="rounded-md border border-gray-10 bg-surface px-4 py-6 text-center text-body-sm break-keep text-gray-60">
+            <p className="rounded-sm border border-rule-frame bg-surface px-4 py-6 text-center text-body-sm break-keep text-gray-60">
               더 부를 사람이 없습니다. 조회할 수 있는 직원이 모두 참여하고 있습니다.
             </p>
           )}
@@ -418,11 +418,11 @@ export function MemberList({
       <section aria-labelledby="role-guide-heading">
         <h2
           id="role-guide-heading"
-          className="mb-2.5 text-h3 font-bold text-gray-90"
+          className="mb-3 text-h3 font-bold text-gray-90"
         >
           권한이 뜻하는 것
         </h2>
-        <dl className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-surface">
+        <dl className="divide-y divide-rule-hair rounded-sm border border-rule-frame bg-surface">
           {ROLES.map((role) => {
             const style = ROLE_STYLE[role];
             const RoleIcon = style.icon;
@@ -431,7 +431,7 @@ export function MemberList({
                 <dt className="shrink-0">
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1.5 rounded-xs px-2 py-1 text-body-xs font-bold",
+                      "inline-flex items-center gap-2 rounded-xs px-2 py-1 text-body-xs font-bold",
                       style.chip,
                     )}
                   >

@@ -144,7 +144,7 @@ export default async function StartHandoverPage({
             />
             <fieldset>
               <legend className="sr-only">넘길 업무 고르기</legend>
-              <ul className="divide-y divide-gray-5">
+              <ul className="divide-y divide-rule-hair">
                 {owned.map((w) => (
                   <li key={w.id}>
                     {/* 줄 전체가 누르는 자리다. 작은 네모만 표적이면
@@ -161,7 +161,7 @@ export default async function StartHandoverPage({
                         <span className="block text-body-sm font-bold break-keep text-gray-90">
                           {w.title}
                         </span>
-                        <span className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <span className="mt-2 flex flex-wrap items-center gap-2">
                           <StatusBadge status={w.derived} size="sm" />
                           <span className="text-body-xs text-gray-60">
                             {w.due_date
@@ -169,7 +169,7 @@ export default async function StartHandoverPage({
                               : "마감 없음"}
                           </span>
                           {w.previous_year ? (
-                            <span className="inline-flex items-center gap-1 rounded-xs bg-accent-bg px-1.5 py-0.5 text-body-xs font-bold text-accent-text">
+                            <span className="inline-flex items-center gap-1 rounded-xs bg-accent-bg px-chip-x py-chip-y text-body-xs font-bold text-accent-text">
                               <RotateCcw aria-hidden className="size-3" />
                               연간 반복
                             </span>
@@ -188,7 +188,7 @@ export default async function StartHandoverPage({
             <p className="flex items-start gap-2 text-body-sm break-keep text-gray-60">
               <ShieldCheck
                 aria-hidden
-                className="mt-0.5 size-4 shrink-0 text-success"
+                className="mt-1 size-4 shrink-0 text-success"
               />
               지금은 초안을 만드는 단계입니다. 권한은 아직 옮겨 가지 않으며,
               내용을 확인한 뒤 다음 화면에서 인계를 실행합니다.

@@ -57,7 +57,7 @@ export function PageHeader({
             className={cn(
               "max-w-2xl text-body-sm text-gray-60",
               // sm 에서는 제목과 같은 줄 무게라 사이를 벌릴 이유가 없다.
-              size === "lg" ? "mt-2" : "mt-0.5",
+              size === "lg" ? "mt-2" : "mt-1",
             )}
           >
             {description}

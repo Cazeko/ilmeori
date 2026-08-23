@@ -61,11 +61,11 @@ export function Notice({
   const { box, icon: Icon, iconColor } = TONE[tone];
   return (
     <div
-      className={cn("flex gap-3 rounded-md border px-4 py-3.5", box, className)}
+      className={cn("flex gap-3 rounded-sm border px-4 py-4", box, className)}
       // 경고는 화면에 나타나는 순간 읽혀야 한다.
       role={tone === "danger" || tone === "warning" ? "alert" : undefined}
     >
-      <Icon aria-hidden className={cn("mt-0.5 size-5 shrink-0", iconColor)} />
+      <Icon aria-hidden className={cn("mt-1 size-5 shrink-0", iconColor)} />
       <div className="min-w-0 flex-1">
         {title ? (
           <p className="text-body-sm font-bold text-gray-90">{title}</p>

@@ -1,17 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, Filter, Plus } from "lucide-react";
+import {
+  AlertTriangle,
+  Archive,
+  ArchiveRestore,
+  Filter,
+  Lock,
+  Plus,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { KanbanBoard } from "@/components/work/kanban-board";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
+import { CARD_SURFACE } from "@/components/ui/card";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Field, Input, Select } from "@/components/ui/field";
 import { GetForm } from "@/components/ui/get-form";
 import { Notice } from "@/components/ui/notice";
 import { LinkPending } from "@/components/ui/link-pending";
-import { getApprovalSummaries, getDepartmentTree, listWorks } from "@/lib/data";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { archiveWorks, restoreWorks } from "@/lib/actions/works";
+import {
+  getApprovalSummaries,
+  getDepartmentTree,
+  listWorks,
+  roleIn,
+} from "@/lib/data";
 import { canMutate } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
 
@@ -36,6 +51,9 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
   const mine = sp.mine === "1";
   const overdueOnly = sp.overdue === "1";
   const archived = sp.archived === "1";
+  /* 정리 모드. 데모(읽기 전용)에서는 켜지 않는다 — 고를 수는 있는데 옮길 수
+     없는 화면이 되고, 그건 눌리지 않는 단추를 보여 주는 것과 같다. */
+  const selecting = sp.select === "1" && canMutate;
 
   // 부서 목록과 업무 목록은 서로를 기다릴 이유가 없다. 예전에는 트리를 받아
   // 「아는 부서인가」를 판정한 **뒤에** 업무를 물었는데, 그 검사는 값이 조직도에
@@ -93,6 +111,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
     if (mine) params.set("mine", "1");
     if (overdueOnly) params.set("overdue", "1");
     if (archived) params.set("archived", "1");
+    if (selecting) params.set("select", "1");
     for (const [k, v] of Object.entries(patch)) {
       if (v === null) params.delete(k);
       else params.set(k, v);
@@ -128,39 +147,78 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
 
   return (
     <PageContainer>
+      {/* 이름표는 물러난다. 「업무 보드」는 왼쪽 메뉴에서 이미 켜져 있고, 매번
+          같은 글자다 — 정보량이 0인 문장이 34px 로 화면의 1등이면 그 화면에는
+          1등이 없는 것과 같다. 이 화면의 1등은 아래 「기한이 지난 업무」다. */}
       <PageHeader
-        title="업무 보드"
-        /* 「내가 볼 수 있는 업무만 나타납니다…」 두 줄을 지웠다. 목록에 없는
-           것을 설명하는 말이라 목록을 봐도 확인할 수가 없고, 정작 그 답이
-           필요한 순간(찾던 업무가 안 보일 때)에는 빈 화면이 따로 말해 준다.
-           업무마다 붙는 「이 업무가 보이는 이유」 띠가 같은 말을 구체적으로 한다. */
+        size="sm"
+        title={
+          selecting ? (archived ? "보관함 정리" : "업무 보드 정리") : "업무 보드"
+        }
         action={
-          <>
-            {/* 「기한이 지난 업무」는 화면에서 가장 급한 사실이다. 조건 칩 줄
-                오른쪽 끝에 홀로 떠 있으면 그 급함이 여백에 묻힌다. 화면 머리의
-                동작 자리로 올려 「새 업무」 왼쪽에 둔다. */}
-            {overdueCount > 0 && !overdueOnly && !archived ? (
+          canMutate && !selecting ? (
+            <>
+              {/* 「정리」는 보관함에서 특히 필요하다 — 되돌릴 길이 여기 말고
+                  없다. 평소 보드에서는 새 업무 왼쪽에 조용히 둔다. */}
               <ButtonLink
-                href={linkWith({ overdue: "1", mine: null })}
+                href={linkWith({ select: "1" })}
                 variant="secondary"
-                /* secondary 의 active:bg-gray-10 을 덮는다 — 안 덮으면 붉은 판이
-                   눌린 순간 회색으로 튄다 */
-                className="border-status-overdue/40 bg-status-overdue-bg text-status-overdue-text hover:bg-status-overdue-bg active:bg-status-overdue/20"
               >
-                <AlertTriangle aria-hidden className="size-4" />
-                기한이 지난 업무 {overdueCount}건
+                <Archive aria-hidden className="size-4" />
+                정리
               </ButtonLink>
-            ) : null}
-            {canMutate ? (
               <ButtonLink href="/works/new">
                 <Plus aria-hidden className="size-4" />새 업무
               </ButtonLink>
-            ) : null}
-          </>
+            </>
+          ) : null
         }
       />
 
       <ActionFeedback msg={sp.msg} className="mb-4" />
+
+      {/* ── 이 화면의 「문서」 ──────────────────────────────────────────────
+          기한이 지난 업무가 있으면 그것이 이 화면에서 가장 급한 사실이다.
+          한동안 이 사실은 화면 머리 오른쪽의 작은 단추 하나였고, 옆의 「새
+          업무」와 같은 무게라 급함이 여백에 묻혔다.
+
+          문서 등급으로 올린다 — 흰 종이, 각진 모서리, 왼쪽 3px 경보선.
+          숫자는 --text-figure(46px), 이 화면에 하나뿐인 큰 숫자다.
+          지연이 없으면 이 판은 아예 없다. 그때 이 화면에는 1등이 없는 것이
+          맞다 — 급한 일이 없는 날에 억지로 뭔가를 크게 세울 이유가 없다.
+
+          정리 모드에서도 내린다. 그때 이 화면의 1등은 「무엇을 고를 것인가」이고,
+          화면에 1등이 둘이면 하나도 없는 것과 같다. */}
+      {overdueCount > 0 && !overdueOnly && !archived && !selecting ? (
+        <Link
+          href={linkWith({ overdue: "1", mine: null })}
+          data-variant="plain"
+          className={cn(
+            CARD_SURFACE.doc,
+            "mb-5 flex items-center gap-5 border-l-3 border-l-rule-alarm p-6",
+            // 테두리가 아니라 바탕으로 알린다 — hover:border-* 는 의사클래스라
+            // 네 변을 통째로 덮어 왼쪽 경보선까지 지운다(urgent-hero.tsx 주석).
+            "transition-colors duration-150 hover:bg-gray-5 active:bg-primary-5",
+          )}
+        >
+          <AlertTriangle
+            aria-hidden
+            className="size-8 shrink-0 text-status-overdue-text"
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block text-h3 font-bold text-gray-90">
+              기한이 지난 업무
+            </span>
+            <span className="mt-1 block text-body-sm text-gray-60">
+              눌러서 지연된 것만 봅니다
+            </span>
+          </span>
+          <span className="shrink-0 text-figure font-bold tabular-nums text-status-overdue-text">
+            {overdueCount}
+            <span className="ml-1 text-h3 font-normal text-gray-60">건</span>
+          </span>
+        </Link>
+      ) : null}
 
       {archived ? (
         <Notice tone="info" title="보관함을 보고 있습니다" className="mb-4">
@@ -178,13 +236,13 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
           이제 mine 의 주인은 칩 하나뿐이고, 폼은 그 값을 그대로 들고 간다. */}
       <details
         open={Boolean(q) || Boolean(departmentId)}
-        className="mb-4 rounded-md border border-gray-10 bg-surface"
+        className="mb-4 rounded-sm border border-rule-frame bg-surface"
       >
         <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-body-sm font-bold text-gray-70">
           <Filter aria-hidden className="size-4 text-gray-40" />
           검색어·부서로 좁히기
           {q || departmentId ? (
-            <span className="rounded-xs bg-primary-5 px-1.5 py-0.5 text-body-xs text-primary">
+            <span className="rounded-xs bg-primary-5 px-chip-x py-chip-y text-body-xs text-primary">
               걸림
             </span>
           ) : null}
@@ -192,7 +250,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
         {/* GetForm — 스크립트가 있으면 화면을 갈지 않고 옮긴다.
             평범한 GET 폼은 전체 페이지 로드라, 조건을 한 번 걸고 나면 그 뒤의
             앞으로·뒤로가 전부 bfcache 없이 서버까지 갔다 왔다. get-form.tsx 참고. */}
-        <GetForm action="/works" className="border-t border-gray-10 p-4">
+        <GetForm action="/works" className="border-t border-rule-hair p-4">
           {/* 칸으로 그리지 않은 조건은 제출할 때 사라진다.
               보관함에서 검색하면 보관함 밖으로 튕겨 나가고, 그건 고장으로 보인다. */}
           {overdueOnly ? (
@@ -268,7 +326,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
                 data-variant="plain"
                 aria-current={c.on ? "true" : undefined}
                 className={cn(
-                  "inline-flex min-h-11 items-center gap-1.5 rounded-sm border px-3 text-body-sm font-bold transition-colors duration-150",
+                  "inline-flex min-h-11 items-center gap-2 rounded-sm border px-3 text-body-sm font-bold transition-colors duration-150",
                   // 누르는 즉시 칠해진다(브라우저가 한다 — 자바스크립트 대기 없음)
                   "active:bg-primary-10 active:text-primary",
                   c.on
@@ -293,7 +351,73 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
         업무 {works.length}건이 표시되고 있습니다.
       </p>
 
-      <KanbanBoard works={works} approvals={approvals} />
+      {/* ── 정리 모드 ──────────────────────────────────────────────────────
+          보관은 원래 `/works/[id]/edit` 안에만 있었다. 업무 상세로 들어가서
+          「업무 고치기」를 누르고 맨 아래까지 내려가야 하는 자리라, 보관함에
+          쌓인 업무를 되돌리려면 **한 건마다 세 번씩** 눌러야 했다.
+
+          모드를 주소에 둔다(?select=1). 이 화면의 규약이 원래 그렇고
+          (파일 머리글의 「필터 상태는 전부 주소에 있다」), 그래야 스크립트
+          없이도 켜지고 뒤로가기로 꺼진다.
+
+          평소 보드에는 체크박스가 없다. 하루 여덟 시간 띄워 두는 화면에서
+          늘 켜져 있는 선택칸은 그 자체로 소음이다. */}
+      {selecting ? (
+        <form action={archived ? restoreWorks : archiveWorks}>
+          {/* 어디로 돌아갈지 폼이 들고 간다. 액션은 safeNext 로 한 번 더 거른다
+              — 서버 액션은 화면을 거치지 않고 POST 로 직접 부를 수 있다. */}
+          <input type="hidden" name="back" value={linkWith({ select: null })} />
+
+          <KanbanBoard
+            works={works}
+            approvals={approvals}
+            pickOf={(w) =>
+              roleIn(w, viewer) === "owner" ? "pick" : "locked"
+            }
+          />
+
+          {/* 화면 아래에 붙여 둔다. 칸반은 세로로 길어서, 위에 두면 아래쪽
+              카드를 고르는 동안 단추가 화면 밖으로 나간다. */}
+          <div className="sticky bottom-0 z-10 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-sm border border-rule-frame bg-surface px-4 py-3">
+            <p className="min-w-0 flex-1 text-body-sm break-keep text-gray-70">
+              {archived
+                ? "고른 업무를 보드로 되돌립니다."
+                : "고른 업무를 보관합니다. 삭제가 아니라 목록에서 내리는 것이고, 문서·대화·이력은 그대로 남습니다."}
+              {/* 자물쇠가 붙은 카드가 왜 잠겼는지는 **여기서 한 번만** 말한다.
+                  카드마다 적으면 남의 업무가 열한 장일 때 같은 문장이 열한 번
+                  반복된다(work-card.tsx 의 같은 주석). */}
+              <span className="mt-1 flex items-center gap-1 text-body-xs text-gray-60">
+                <Lock aria-hidden className="size-3 shrink-0" />
+                자물쇠가 붙은 업무는 내가 주담당이 아니라 고를 수 없습니다.
+              </span>
+            </p>
+            <div className="flex shrink-0 items-center gap-2">
+              <ButtonLink
+                href={linkWith({ select: null })}
+                variant="ghost"
+                size="sm"
+              >
+                그만두기
+              </ButtonLink>
+              <SubmitButton size="sm">
+                {archived ? (
+                  <>
+                    <ArchiveRestore aria-hidden className="size-4" />
+                    보드로 되돌리기
+                  </>
+                ) : (
+                  <>
+                    <Archive aria-hidden className="size-4" />
+                    보관하기
+                  </>
+                )}
+              </SubmitButton>
+            </div>
+          </div>
+        </form>
+      ) : (
+        <KanbanBoard works={works} approvals={approvals} />
+      )}
     </PageContainer>
   );
 }

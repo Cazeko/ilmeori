@@ -124,11 +124,11 @@ export function AvatarStack({
           key={p.name}
           profile={p}
           size="sm"
-          className="-ml-1.5 ring-2 ring-surface first:ml-0"
+          className="-ml-2 ring-2 ring-surface first:ml-0"
         />
       ))}
       {rest > 0 ? (
-        <span className="-ml-1.5 inline-flex size-6 items-center justify-center rounded-full bg-gray-10 text-[11px] font-bold text-gray-60 ring-2 ring-surface">
+        <span className="-ml-2 inline-flex size-6 items-center justify-center rounded-full bg-gray-10 text-[11px] font-bold text-gray-60 ring-2 ring-surface">
           +{rest}
         </span>
       ) : null}

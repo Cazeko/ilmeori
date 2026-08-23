@@ -265,7 +265,7 @@ function TableTools({
         <Trash2 aria-hidden className="size-3.5" />칸
       </button>
       <span className="ilm-tooldiv" aria-hidden />
-      <label className="inline-flex items-center gap-1.5 text-body-xs text-gray-70">
+      <label className="inline-flex items-center gap-2 text-body-xs text-gray-70">
         <input
           type="checkbox"
           checked={table.header}

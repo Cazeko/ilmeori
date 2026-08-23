@@ -77,13 +77,13 @@ export default async function AuditPage() {
             as="h2"
           />
           {logs.length > 0 ? (
-            <ul className="divide-y divide-gray-5">
+            <ul className="divide-y divide-rule-hair">
               {logs.map((l) => {
                 const Icon = KIND_ICON[l.kind];
                 return (
                   <li key={l.id} className="flex items-start gap-3 px-5 py-3">
                     {l.actor ? (
-                      <Avatar profile={l.actor} className="mt-0.5" />
+                      <Avatar profile={l.actor} className="mt-1" />
                     ) : null}
                     <div className="min-w-0 flex-1">
                       {/* 시각을 이 줄 안으로 들였다. 예전에는 <li> 의 flex
@@ -91,11 +91,11 @@ export default async function AuditPage() {
                           가져갔고, 390px 에서 본문 칸이 159px 만 남아 업무
                           제목이 거의 전부 잘렸다 — 「누가 무엇을 열어 봤는가」를
                           읽는 화면인데 그 「무엇」이 안 읽혔다. */}
-                      <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-body-sm text-gray-80">
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body-sm text-gray-80">
                         <span className="font-bold text-gray-90">
                           {l.actor?.name ?? "알 수 없음"}
                         </span>
-                        <span className="inline-flex items-center gap-1 rounded-xs bg-gray-5 px-1.5 py-0.5 text-body-xs font-bold text-gray-60">
+                        <span className="inline-flex items-center gap-1 rounded-xs bg-gray-5 px-chip-x py-chip-y text-body-xs font-bold text-gray-60">
                           <Icon aria-hidden className="size-3" />
                           {ACCESS_KIND_LABEL[l.kind]}
                         </span>
@@ -135,17 +135,17 @@ export default async function AuditPage() {
           <Card>
             <CardHeader title="기록되는 것" as="h2" />
             <CardBody>
-              <ul className="flex flex-col gap-3.5">
+              <ul className="flex flex-col gap-4">
                 {(Object.keys(ACCESS_KIND_LABEL) as AccessKind[]).map((kind) => {
                   const Icon = KIND_ICON[kind];
                   return (
-                    <li key={kind} className="flex gap-2.5">
-                      <Icon aria-hidden className="mt-0.5 size-4 shrink-0 text-gray-40" />
+                    <li key={kind} className="flex gap-3">
+                      <Icon aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
                       <div>
                         <p className="text-body-sm font-bold text-gray-90">
                           {ACCESS_KIND_LABEL[kind]}
                         </p>
-                        <p className="mt-0.5 text-body-xs break-keep text-gray-60">
+                        <p className="mt-1 text-body-xs break-keep text-gray-60">
                           {KIND_DESC[kind]}
                         </p>
                       </div>
@@ -154,8 +154,8 @@ export default async function AuditPage() {
                 })}
               </ul>
             </CardBody>
-            <div className="flex items-start gap-2 border-t border-gray-10 bg-gray-5 px-5 py-3.5">
-              <ShieldCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-gray-40" />
+            <div className="flex items-start gap-2 border-t border-rule-hair bg-gray-5 px-5 py-4">
+              <ShieldCheck aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
               <p className="text-body-xs leading-relaxed break-keep text-gray-60">
                 사람·시각·대상 업무만 남깁니다. 접속 IP 와 단말 정보는 모으지
                 않습니다 — 필요 이상으로 모으면 그 자체가 유출 대상이 됩니다.

@@ -48,7 +48,7 @@ function Columns({ current }: { current: WorkStatus }) {
   return (
     <div
       aria-busy={pending}
-      className="inline-flex overflow-hidden rounded-sm border border-gray-20"
+      className="inline-flex overflow-hidden rounded-sm border border-rule-hair"
     >
       {COLUMNS.map((s, i) => {
         const active = s === shown;
@@ -63,9 +63,9 @@ function Columns({ current }: { current: WorkStatus }) {
             // 아니라 요청이 겹쳐 서로 다른 결과가 오간다.
             disabled={pending}
             className={cn(
-              "min-h-11 cursor-pointer px-3.5 text-body-sm font-bold transition-colors duration-150",
+              "min-h-11 cursor-pointer px-4 text-body-sm font-bold transition-colors duration-150",
               "disabled:cursor-not-allowed",
-              i > 0 && "border-l border-gray-20",
+              i > 0 && "border-l border-rule-hair",
               active ? ON : "bg-surface text-gray-60 hover:bg-gray-5",
             )}
           >
@@ -88,7 +88,7 @@ export function StatusChanger({
     <form action={changeStatus}>
       <input type="hidden" name="workId" value={workId} />
       <fieldset>
-        <legend className="mb-1.5 text-body-xs font-bold text-gray-60">
+        <legend className="mb-2 text-body-xs font-bold text-gray-60">
           진행 상태
         </legend>
         <Columns current={current} />

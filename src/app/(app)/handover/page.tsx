@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/cn";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { CARD_SURFACE, Card, CardBody, CardHeader } from "@/components/ui/card";
 import { ButtonLink } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -103,22 +103,11 @@ export default async function HandoverPage({
 
   return (
     <PageContainer className="print:p-0">
-      {/* 종이에 나가는 문서. 화면에서는 숨어 있다. 아래 화면용 본문에는
-          print:hidden 이 붙어 있어, 인쇄하면 이 한 벌만 나온다. */}
-      <HandoverPrintSheet
-        draft={draft}
-        notesByBlock={notesByBlock}
-        from={from}
-        to={to}
-        fromDept={fromDept}
-        toDept={toDept}
-        generatedAt={handover.generated_at}
-        completedAt={handover.completed_at}
-        method={handover.ai_model ?? "rule-based/v1"}
-      />
-
       <div className="print:hidden">
+        {/* 이름표는 물러난다. 이 화면의 「문서」는 아래에 실제로 서 있는
+            별지 제12호서식 그 자체이지, 「업무인계·인수」라는 글자가 아니다. */}
         <PageHeader
+          size="sm"
           title="업무인계·인수"
           /* 법령 조문을 제목 밑에 통째로 인용해 두었었다. 근거를 밝히는 것은
              맞지만 제목 바로 아래는 「이 화면이 무엇인가」를 말하는 자리이지
@@ -164,8 +153,45 @@ export default async function HandoverPage({
           </Notice>
         ) : null}
 
+      </div>
+
+      {/* ── 이 화면의 「문서」 — 별지 제12호서식 그 자체 ──────────────────────
+          한동안 이 서식에는 `hidden print:block` 이 붙어 있었다. 이 제품에서
+          가장 강한 물건이 **Ctrl+P 를 눌러야만 보였다**는 뜻이고, 화면에서
+          사람이 보던 것은 아래의 회색 말풍선 초안이었다.
+
+          문서 등급으로 화면에 세운다 — 흰 종이, 각진 모서리, 위쪽 2px 먹선.
+          안의 표는 `.sheet` 가 먹색 괘선으로 그린다. 인쇄하면 같은 클래스가
+          pt 로 다시 그려지므로 화면과 종이가 어긋날 수 없다.
+
+          이 판만 print:hidden 밖에 있다 — 인쇄하면 이 한 벌만 나온다.
+          바깥 테두리와 여백은 종이에서 지운다(종이가 곧 테두리다).
+
+          항목마다 붙는 근거 꼬리표는 여기 없다. 그것은 아래 확인 구역의 일이고,
+          결재에 올라가는 종이에서 꼬리표는 서식을 어지럽힌다. */}
+      <div
+        className={cn(
+          CARD_SURFACE.doc,
+          "mb-6 p-6 sm:p-10",
+          "print:border-0 print:bg-white print:p-0",
+        )}
+      >
+        <HandoverPrintSheet
+          draft={draft}
+          notesByBlock={notesByBlock}
+          from={from}
+          to={to}
+          fromDept={fromDept}
+          toDept={toDept}
+          generatedAt={handover.generated_at}
+          completedAt={handover.completed_at}
+          method={handover.ai_model ?? "rule-based/v1"}
+        />
+      </div>
+
+      <div className="print:hidden">
         <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
-          {/* ── 초안 ────────────────────────────────────────────────────────── */}
+          {/* ── 항목별 근거 ────────────────────────────────────────────────── */}
           <div className="min-w-0">
             {/* 이 문구는 실제로 도는 방식과 정확히 같아야 한다.
               buildHandoverDraft()는 쌓인 기록을 서식 순서대로 조립하는 규칙 기반
@@ -202,7 +228,7 @@ export default async function HandoverPage({
                 <summary className="cursor-pointer text-body-xs font-bold text-gray-70">
                   어떻게 뽑았는지 더 보기
                 </summary>
-                <div className="mt-1.5 flex flex-col gap-1.5 text-body-sm leading-relaxed break-keep text-gray-70">
+                <div className="mt-2 flex flex-col gap-2 text-body-sm leading-relaxed break-keep text-gray-70">
                   <p>
                     아직 답이 없는 질문이나 서로 어긋난 일정은 문서에 정리되기
                     전이라 대화에만 남아 있고, 인계 때 가장 먼저 사라지는 것이
@@ -240,7 +266,7 @@ export default async function HandoverPage({
               "형식이 hwp냐"보다 "이걸 그대로 결재에 올릴 수 있느냐"가 먼저다.
               브라우저 인쇄로 A4 한 벌이 나오면 그 질문에 종이로 답할 수 있다.
               (버튼은 스크립트가 있을 때만 나타난다. 안내 문장은 늘 남는다) */}
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-gray-10 bg-surface px-4 py-3">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-sm border border-rule-frame bg-surface px-4 py-3">
               <p className="min-w-0 flex-1 text-body-sm break-keep text-gray-60">
                 {/* 「Ctrl+P」를 빼면 안 된다. 스크립트가 없는 브라우저에서는
                     옆의 인쇄 버튼이 아예 안 그려지고, 이 문장이 인쇄하는 법을
@@ -254,10 +280,14 @@ export default async function HandoverPage({
               <PrintButton />
             </div>
 
+            {/* 위 서식이 「문서」가 된 뒤로 이 판이 하는 일이 분명해졌다 —
+                서식을 다시 보여 주는 것이 아니라 **항목마다 근거가 맞는지
+                확인하고 빈 칸을 채우는 작업대**다. 제목을 그렇게 고친다.
+                (등급도 문서가 아니라 판이다 — 화면의 문서는 위 하나뿐이다) */}
             <Card>
               <CardHeader
-                title="업무인계·인수서 (초안)"
-                description={`인계자 ${from.name} ${from.position} → 인수자 ${to.name} ${to.position}`}
+                title="항목별 근거와 보충"
+                description="위 서식의 각 항목이 어느 기록에서 나왔는지 확인하고, 근거가 없어 비워 둔 칸을 직접 적습니다."
                 action={
                   <FileSignature aria-hidden className="size-5 text-gray-30" />
                 }
@@ -286,16 +316,16 @@ export default async function HandoverPage({
                     {block.needsHuman ? (
                       <p
                         className={cn(
-                          "mt-2 flex items-start gap-2 rounded-md border px-3.5 py-2.5 text-body-sm break-keep text-gray-70",
+                          "mt-2 flex items-start gap-2 rounded-sm border px-4 py-3 text-body-sm break-keep text-gray-70",
                           filledByHand
-                            ? "border-gray-10 bg-gray-5"
+                            ? "border-rule-frame bg-gray-5"
                             : "border-warning/30 bg-warning-bg",
                         )}
                       >
                         <PenLine
                           aria-hidden
                           className={cn(
-                            "mt-0.5 size-4 shrink-0",
+                            "mt-1 size-4 shrink-0",
                             filledByHand ? "text-gray-60" : "text-warning",
                           )}
                         />
@@ -311,11 +341,11 @@ export default async function HandoverPage({
                         </span>
                       </p>
                     ) : (
-                      <div className="mt-2 flex flex-col gap-2.5">
+                      <div className="mt-2 flex flex-col gap-3">
                         {block.paragraphs.map((p, i) => (
                           <p
                             key={i}
-                            className="rounded-md bg-gray-5 px-3.5 py-2.5 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80"
+                            className="rounded-sm bg-gray-5 px-4 py-3 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80"
                           >
                             {p}
                           </p>
@@ -327,7 +357,7 @@ export default async function HandoverPage({
                         글보다 앞에 둔다. 아래로 내리면 인계자가 손으로 적은
                         문장까지 "이 기록에서 나왔다"고 말하는 꼴이 된다. */}
                     {block.sources.length > 0 ? (
-                      <p className="mt-2 flex flex-wrap items-center gap-1.5 text-body-xs text-gray-60">
+                      <p className="mt-2 flex flex-wrap items-center gap-2 text-body-xs text-gray-60">
                         <Sparkles
                           aria-hidden
                           className="size-3 text-accent-text"
@@ -336,7 +366,7 @@ export default async function HandoverPage({
                         {block.sources.map((s) => (
                           <span
                             key={s}
-                            className="rounded-xs bg-accent-bg px-1.5 py-0.5 font-bold text-accent-text"
+                            className="rounded-xs bg-accent-bg px-chip-x py-chip-y font-bold text-accent-text"
                           >
                             {s}
                           </span>
@@ -357,7 +387,7 @@ export default async function HandoverPage({
                 })}
 
                 {/* 서식의 마지막 — 서명란 */}
-                <section className="border-t border-gray-10 pt-5">
+                <section className="border-t border-rule-hair pt-5">
                   <h3 className="text-body font-bold text-gray-90">확인</h3>
                   <ul className="mt-3 grid gap-3 sm:grid-cols-2">
                     {[
@@ -366,7 +396,7 @@ export default async function HandoverPage({
                     ].map(({ label, person, dept }) => (
                       <li
                         key={label}
-                        className="flex items-center gap-3 rounded-md border border-gray-10 px-4 py-3"
+                        className="flex items-center gap-3 rounded-sm border border-rule-frame px-4 py-3"
                       >
                         <Avatar profile={person} size="lg" />
                         <div className="min-w-0">
@@ -396,7 +426,7 @@ export default async function HandoverPage({
           <div className="flex flex-col gap-4">
             <Card>
               <CardHeader title={`인계 대상 업무 ${items.length}건`} as="h2" />
-              <ul className="divide-y divide-gray-5">
+              <ul className="divide-y divide-rule-hair">
                 {items.map(({ work, transferred }) => (
                   <li key={work.id} className="px-4 py-3">
                     <Link
@@ -408,16 +438,16 @@ export default async function HandoverPage({
                         {work.title}
                       </span>
                     </Link>
-                    <span className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <span className="mt-2 flex flex-wrap items-center gap-2">
                       <StatusBadge status={work.derived} size="sm" />
                       {transferred ? (
-                        <span className="inline-flex items-center gap-1 rounded-xs bg-success-bg px-1.5 py-0.5 text-body-xs font-bold text-success">
+                        <span className="inline-flex items-center gap-1 rounded-xs bg-success-bg px-chip-x py-chip-y text-body-xs font-bold text-success">
                           <CheckCircle2 aria-hidden className="size-3" />
                           인계 완료
                         </span>
                       ) : null}
                       {work.previous_year ? (
-                        <span className="inline-flex items-center gap-1 rounded-xs bg-accent-bg px-1.5 py-0.5 text-body-xs font-bold text-accent-text">
+                        <span className="inline-flex items-center gap-1 rounded-xs bg-accent-bg px-chip-x py-chip-y text-body-xs font-bold text-accent-text">
                           <RotateCcw aria-hidden className="size-3" />
                           연간 반복
                         </span>
@@ -509,11 +539,11 @@ export default async function HandoverPage({
                       바로 아래 「인계를 잘못 시작했다면」이 이미 같은 이유로
                       <details> 를 쓰고 있었다 — 규약이 한 화면 안에서 갈려 있었다.
                       펼치는 손짓 한 번이 확인 절차를 대신한다. */}
-                    <details className="rounded-md border border-danger/30 bg-danger-bg">
+                    <details className="rounded-sm border border-danger/30 bg-danger-bg">
                       <summary className="flex min-h-11 cursor-pointer list-none items-center px-4 text-body-sm font-bold text-danger">
                         인계 실행
                       </summary>
-                      <div className="border-t border-danger/20 px-4 py-3.5">
+                      <div className="border-t border-danger/20 px-4 py-4">
                         <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
                           아래 업무의 주담당이 {to.name} {to.position}
                           {josa(to.position ?? to.name, "으로", "로")} 바뀌고,{" "}
@@ -522,7 +552,7 @@ export default async function HandoverPage({
                           권한만 남습니다. 실행한 기록은 각 업무의 이력에 남으며
                           지울 수 없습니다.
                         </p>
-                        <ul className="mb-3 space-y-1.5 rounded-md border border-gray-10 bg-surface px-4 py-3">
+                        <ul className="mb-3 space-y-2 rounded-sm border border-rule-frame bg-surface px-4 py-3">
                           {items.map(({ work }) => (
                             <li
                               key={work.id}
@@ -548,7 +578,7 @@ export default async function HandoverPage({
                   >
                     <CheckCircle2
                       aria-hidden
-                      className="mt-0.5 size-4 shrink-0 text-success"
+                      className="mt-1 size-4 shrink-0 text-success"
                     />
                     인계가 완료되었습니다. 각 업무의 이력 탭에서 권한이 옮겨 간
                     기록을 확인할 수 있습니다.
@@ -563,12 +593,12 @@ export default async function HandoverPage({
               펼치는 손짓 한 번이 확인 절차를 대신한다 — <dialog>로 묻는 방식은
               "use client"라 스크립트가 없으면 버튼이 아무 일도 하지 않는다. */}
             {isSender && !done && canMutate ? (
-              <details className="rounded-md border border-gray-10 bg-surface">
+              <details className="rounded-sm border border-rule-frame bg-surface">
                 <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
                   <RotateCcw aria-hidden className="size-4 shrink-0 text-gray-40" />
                   인계를 잘못 시작했다면
                 </summary>
-                <div className="border-t border-gray-10 px-4 py-3.5">
+                <div className="border-t border-rule-hair px-4 py-4">
                   <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
                     아직 실행되지 않은 인계이므로 넘어간 업무는 없습니다.
                     취소하면 초안과 대상 목록이 사라지고 새로 시작할 수
@@ -716,11 +746,11 @@ async function HandoverStandby({
                       </dt>
                       <dd className="mt-1 text-h2 leading-none font-bold tabular-nums text-primary">
                         {value}
-                        <span className="ml-0.5 text-body-sm font-normal text-gray-60">
+                        <span className="ml-1 text-body-sm font-normal text-gray-60">
                           건
                         </span>
                       </dd>
-                      <p className="mt-1.5 text-body-xs break-keep text-gray-60">
+                      <p className="mt-2 text-body-xs break-keep text-gray-60">
                         {hint}
                       </p>
                     </div>
@@ -730,13 +760,13 @@ async function HandoverStandby({
               {/* 「빠뜨리면 비싼 것」을 따로 말한다. 인계에서 가장 먼저 사라지는
                   것이 지연 사유와 해마다 반복되는 일의 작년 맥락이기 때문이다. */}
               {overdue > 0 || repeating > 0 ? (
-                <div className="border-t border-gray-10 bg-gray-5 px-5 py-3.5">
-                  <ul className="flex flex-col gap-1.5">
+                <div className="border-t border-rule-hair bg-gray-5 px-5 py-4">
+                  <ul className="flex flex-col gap-2">
                     {overdue > 0 ? (
                       <li className="flex gap-2 text-body-sm break-keep text-gray-70">
                         <PenLine
                           aria-hidden
-                          className="mt-0.5 size-4 shrink-0 text-danger"
+                          className="mt-1 size-4 shrink-0 text-danger"
                         />
                         <span>
                           기한이 지난 업무 {overdue}건 — 왜 멈췄는지가 문서와
@@ -749,7 +779,7 @@ async function HandoverStandby({
                       <li className="flex gap-2 text-body-sm break-keep text-gray-70">
                         <RotateCcw
                           aria-hidden
-                          className="mt-0.5 size-4 shrink-0 text-accent-text"
+                          className="mt-1 size-4 shrink-0 text-accent-text"
                         />
                         <span>
                           해마다 반복되는 업무 {repeating}건 — 작년 판이 함께
@@ -768,16 +798,16 @@ async function HandoverStandby({
                 as="h2"
                 description={`${departments}개 부서 소관. 편집자·열람자로 참여만 한 업무는 주담당이 따로 있어 여기 없습니다.`}
               />
-              <ul className="divide-y divide-gray-5">
+              <ul className="divide-y divide-rule-hair">
                 {owned.map((w) => (
-                  <li key={w.id} className="px-5 py-3.5">
+                  <li key={w.id} className="px-5 py-4">
                     <Link
                       href={`/works/${w.id}`}
                       className="text-body-sm font-bold break-keep text-gray-90 hover:text-primary"
                     >
                       {w.title}
                     </Link>
-                    <span className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <span className="mt-2 flex flex-wrap items-center gap-2">
                       <StatusBadge status={w.derived} size="sm" />
                       <span className="text-body-xs text-gray-60">
                         {w.due_date
@@ -785,7 +815,7 @@ async function HandoverStandby({
                           : "마감 없음"}
                       </span>
                       {w.previous_year ? (
-                        <span className="inline-flex items-center gap-1 rounded-xs bg-accent-bg px-1.5 py-0.5 text-body-xs font-bold text-accent-text">
+                        <span className="inline-flex items-center gap-1 rounded-xs bg-accent-bg px-chip-x py-chip-y text-body-xs font-bold text-accent-text">
                           <RotateCcw aria-hidden className="size-3" />
                           연간 반복
                         </span>
@@ -802,7 +832,7 @@ async function HandoverStandby({
             <Card>
               <CardHeader title="인계를 시작하면" as="h2" />
               <CardBody>
-                <ol className="flex flex-col gap-3.5">
+                <ol className="flex flex-col gap-4">
                   {[
                     [
                       "대상 선정",
@@ -822,14 +852,14 @@ async function HandoverStandby({
                     ],
                   ].map(([term, desc], i) => (
                     <li key={term} className="flex gap-3">
-                      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-gray-10 text-body-xs font-bold tabular-nums text-gray-70">
+                      <span className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-gray-10 text-body-xs font-bold tabular-nums text-gray-70">
                         {i + 1}
                       </span>
                       <div>
                         <p className="text-body-sm font-bold text-gray-90">
                           {term}
                         </p>
-                        <p className="mt-0.5 text-body-xs leading-relaxed break-keep text-gray-60">
+                        <p className="mt-1 text-body-xs leading-relaxed break-keep text-gray-60">
                           {desc}
                         </p>
                       </div>
@@ -838,7 +868,7 @@ async function HandoverStandby({
                 </ol>
               </CardBody>
               {canMutate ? (
-                <div className="border-t border-gray-10 px-5 py-4">
+                <div className="border-t border-rule-hair px-5 py-4">
                   <ButtonLink href="/handover/new" block>
                     인계 시작하기
                     <ArrowRight aria-hidden className="size-4" />
@@ -861,7 +891,7 @@ async function HandoverStandby({
                   보입니다. 화면이 아니라 정책(handover_select)이 그렇게
                   정해 두었습니다.
                 </p>
-                <p className="mt-2.5 text-body-sm leading-relaxed break-keep text-gray-60">
+                <p className="mt-3 text-body-sm leading-relaxed break-keep text-gray-60">
                   시연용으로 준비된 인계 건은 자원순환과{" "}
                   <strong className="font-bold text-gray-80">박준호 → 이하람</strong>{" "}
                   입니다. 오른쪽 위 「계정 전환」에서 두 사람 중 하나로 들어가면

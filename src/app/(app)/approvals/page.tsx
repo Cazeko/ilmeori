@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FileCheck2, FilePlus2, Inbox } from "lucide-react";
+import { FileCheck2, FilePlus2, Hourglass, Inbox } from "lucide-react";
+import { CARD_SURFACE } from "@/components/ui/card";
 import { ApprovalRow } from "@/components/approval/approval-row";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -22,11 +23,15 @@ import { LinkPending } from "@/components/ui/link-pending";
 import { listApprovals } from "@/lib/data";
 import { canMutate } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
-import { APPROVAL_FORMS, APPROVAL_FORM_LABEL } from "@/lib/types";
+import {
+  APPROVAL_FORMS,
+  APPROVAL_FORM_DOC_LABEL,
+  APPROVAL_FORM_LABEL,
+} from "@/lib/types";
 
 export const metadata: Metadata = { title: "결재함" };
 
-/** 서식 그리드 — 자문의 「바빠 죽겠으니 빠바바밥」에 대한 답이 이 네 칸이다. */
+/** 문서종류 네 칸 — 자문의 「바빠 죽겠으니 빠바바밥」에 대한 답이 이 자리다. */
 const FORM_HINT: Record<(typeof APPROVAL_FORMS)[number], string> = {
   report: "끝난 일을 알린다",
   plan: "할 일을 정한다",
@@ -70,12 +75,11 @@ export default async function ApprovalsPage({
 
   return (
     <PageContainer>
+      {/* 이름표는 물러난다 — 「결재함」은 왼쪽 메뉴에서 이미 켜져 있다.
+          이 화면의 1등은 아래 「지금 내 차례」다. */}
       <PageHeader
+        size="sm"
         title="결재함"
-        /* 「내부결재문서를 올리고 처리하는 곳입니다」는 제목이 이미 한 말이고,
-           「발신문서는 온나라의 자리」는 이 화면에서 하려던 일을 막는 말이
-           아니라 제품 경계 설명이다. 아래 「결재 올리기」 화면에서 서식을 고를
-           때 같은 말이 그 자리에서 다시 나온다. */
         action={
           canMutate ? (
             <ButtonLink href="/approvals/new">
@@ -88,6 +92,43 @@ export default async function ApprovalsPage({
 
       <ActionFeedback msg={sp.msg} className="mb-4" />
 
+      {/* ── 이 화면의 「문서」 ──────────────────────────────────────────────
+          결재함에서 답해야 하는 물음은 하나다 — **지금 내가 서명할 것이
+          몇 건인가.** 한동안 그 답은 왼쪽 칸 목록의 「대기」 옆에 붙은 13px
+          짜리 숫자였고, 34px 이름표 「결재함」이 화면의 1등이었다.
+
+          문서 등급으로 올린다. 왼쪽 3px 은 주황(rule-alarm 이 아니다) —
+          이건 늦은 것이 아니라 **나를 기다리는 것**이고, 이 제품에서 그
+          뜻을 가진 색은 주황 하나다.
+          0건이면 이 판은 없다. 서명할 것이 없는 날은 조용한 것이 맞다. */}
+      {todoCount > 0 ? (
+        <Link
+          href="/approvals"
+          data-variant="plain"
+          className={cn(
+            CARD_SURFACE.doc,
+            "mb-5 flex items-center gap-5 border-l-3 border-l-accent p-6",
+            // 테두리가 아니라 바탕으로 알린다 — hover:border-* 는 의사클래스라
+            // 네 변을 통째로 덮어 왼쪽 경보선까지 지운다(urgent-hero.tsx 주석).
+            "transition-colors duration-150 hover:bg-gray-5 active:bg-primary-5",
+          )}
+        >
+          <Hourglass aria-hidden className="size-8 shrink-0 text-accent-text" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-h3 font-bold text-gray-90">
+              지금 내 차례
+            </span>
+            <span className="mt-1 block text-body-sm text-gray-60">
+              내가 서명하거나 반려해야 하는 문서입니다
+            </span>
+          </span>
+          <span className="shrink-0 text-figure font-bold tabular-nums text-accent-text">
+            {todoCount}
+            <span className="ml-1 text-h3 font-normal text-gray-60">건</span>
+          </span>
+        </Link>
+      ) : null}
+
       {!canMutate ? (
         <Notice tone="info" title="지금은 읽기 전용입니다" className="mb-4">
           데이터베이스에 연결되지 않은 상태에서는 결재를 올리거나 서명할 수
@@ -98,7 +139,7 @@ export default async function ApprovalsPage({
       <div className="grid gap-5 lg:grid-cols-[220px_1fr]">
         {/* ── 왼쪽: 칸 ─────────────────────────────────────────────────── */}
         <nav aria-label="결재함 분류">
-          <ul className="flex gap-1 overflow-x-auto lg:flex-col lg:gap-0.5 lg:overflow-visible">
+          <ul className="flex gap-1 overflow-x-auto lg:flex-col lg:gap-1 lg:overflow-visible">
             {APPROVAL_BOXES.map((b) => {
               const on = b === box;
               return (
@@ -130,7 +171,7 @@ export default async function ApprovalsPage({
                     {b === "todo" && todoCount > 0 ? (
                       <span
                         className={cn(
-                          "rounded-xs px-1.5 py-0.5 text-body-xs font-bold tabular-nums",
+                          "rounded-xs px-chip-x py-chip-y text-body-xs font-bold tabular-nums",
                           on
                             ? "bg-accent-text text-white"
                             : "bg-accent-bg text-accent-text",
@@ -164,7 +205,7 @@ export default async function ApprovalsPage({
 
           {list.length > 0 ? (
             <>
-              <ul className="divide-y divide-gray-10 overflow-hidden rounded-md border border-gray-10">
+              <ul className="divide-y divide-rule-hair overflow-hidden rounded-sm border border-rule-frame">
                 {list.map((a) => (
                   <ApprovalRow key={a.id} approval={a} viewerId={viewer.id} />
                 ))}
@@ -177,7 +218,7 @@ export default async function ApprovalsPage({
               ) : null}
             </>
           ) : (
-            <div className="rounded-md border border-gray-10 bg-surface">
+            <div className="rounded-sm border border-rule-frame bg-surface">
               {/* description 을 뺐다 — 바로 위 h2 밑에 같은 문장(APPROVAL_BOX_HINT)이
                   이미 있어서, 문서가 0건인 화면에서 글 세 줄 중 둘이 같은 말이었다.
                   그 자리에는 대신 다음에 할 수 있는 일을 둔다. */}
@@ -200,7 +241,24 @@ export default async function ApprovalsPage({
             </div>
           )}
 
-          {/* ── 서식 ──────────────────────────────────────────────────── */}
+          {/* ── 문서종류 ────────────────────────────────────────────────
+              한동안 이 자리가 「**서식**으로 시작하기」였고, 네 칸이 저마다
+              다른 출발점처럼 생겼다. 눌러 보면 넷 다 같은 빈 칸이 나온다 —
+              본문 틀도, 입력 칸도, 내보낸 문서의 짜임도 전부 같다. 실제로
+              달라지는 것은 **문서번호의 가운데 마디** 하나뿐이다.
+
+              그건 고장이 아니다. 시행규칙 제3조3항의 별지 제2호서식은
+              **하나**이고, 보고서·계획서·검토서·업무협조는 그 서식으로 만드는
+              문서의 성격 분류이지 별개 서식이 아니다. 틀린 것은 화면의 말이었다.
+
+              그래서 이름을 종이가 쓰는 말로 맞춘다 — 내보낸 문서의 표에 이미
+              「문서종류」라고 찍히고 있다(approval-export.ts). 그리고 각 칸에
+              실제로 달라지는 것(문서번호)을 보여 준다. 눌러 보기 전에 무엇이
+              같고 무엇이 다른지 알 수 있어야 한다.
+
+              ※ 성격마다 본문 뼈대를 다르게 주는 것(검토서 = 검토 배경/검토
+                의견/조치 계획 …)은 실제 공문 관행에 맞고 이 제품의 논지와도
+                맞지만, 서식별 문구를 새로 쓰는 일이라 따로 잡아야 한다. */}
           {canMutate ? (
             <section aria-labelledby="approval-forms" className="mt-6">
               {/* 조용 등급 — 결재함에서 먼저 읽혀야 하는 것은 목록이지
@@ -209,11 +267,13 @@ export default async function ApprovalsPage({
                 id="approval-forms"
                 className="mb-1 text-body-sm font-bold text-gray-60"
               >
-                서식으로 시작하기
+                문서종류 고르기
               </h2>
-              <p className="mb-3 text-body-xs text-gray-60">
-                네 가지 모두 별지 제2호서식(내부결재문서)입니다. 고른 서식이
-                문서번호에 그대로 들어갑니다 — HS-<b>협조</b>-20260808-0001.
+              <p className="mb-3 text-body-xs break-keep text-gray-60">
+                넷 다 <strong className="font-bold">같은 서식</strong>입니다 —
+                별지 제2호서식(내부결재문서). 고르는 것은 문서의 성격이고,
+                달라지는 것은 <strong className="font-bold">문서번호</strong>{" "}
+                하나입니다.
               </p>
               <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {APPROVAL_FORMS.map((f) => (
@@ -221,13 +281,22 @@ export default async function ApprovalsPage({
                     <Link
                       href={`/approvals/new?form=${f}`}
                       data-variant="plain"
-                      className="flex h-full flex-col justify-between gap-1 rounded-md border border-gray-10 bg-surface px-3.5 py-3 hover:border-primary-20 hover:bg-primary-5"
+                      className="flex h-full flex-col gap-1 rounded-sm border border-rule-frame bg-surface px-4 py-3 hover:border-primary-20 hover:bg-primary-5"
                     >
                       <span className="text-body-sm font-bold text-gray-90">
                         {APPROVAL_FORM_LABEL[f]}
                       </span>
                       <span className="text-body-xs text-gray-60">
                         {FORM_HINT[f]}
+                      </span>
+                      {/* 이 칸을 고르면 무엇이 달라지는가 — 그 답을 그대로 적는다.
+                          문서번호는 상신하는 순간 붙고 그 뒤로 움직이지 않는다. */}
+                      <span className="mt-auto pt-2 text-body-xs tabular-nums text-gray-60">
+                        HS-
+                        <strong className="font-bold text-gray-80">
+                          {APPROVAL_FORM_DOC_LABEL[f]}
+                        </strong>
+                        -…
                       </span>
                     </Link>
                   </li>

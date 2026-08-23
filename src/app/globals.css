@@ -18,10 +18,19 @@
    "망분리 환경에서 외부 호출 0건"이 비로소 사실이 되었고, proxy.ts 의
    CSP 에서도 CDN 허용을 걷어냈다. */
 @import "tailwindcss";
-@import "../styles/krds-tokens.css";
 /* 서식 편집기. 종이 크기·글자 크기를 pack.ts 의 내보내기와 같은 값으로 맞춘
    규칙들이라 한 파일로 떼어 두었다 — 그 파일을 고칠 때 함께 봐야 한다. */
 @import "../styles/editor.css";
+
+/* ── krds-tokens.css 를 걷어냈다 ──────────────────────────────────────────────
+   KRDS 원본 토큰 파일(49,939바이트, --krds-* 선언 700여 개)을 통째로 물고
+   있었는데, 그 이름을 **한 곳에서도 참조하지 않았다.** 아래 @theme 은 KRDS 를
+   보고 손으로 옮겨 적은 값이라(그 근거는 각 토큰 자리에 주석으로 있다) 원본
+   파일은 출처 노릇조차 하지 않고 있었다.
+
+   렌더를 막는 CSS 의 44% 가 그 파일이었다. 지우면 화면은 1픽셀도 안 바뀌고
+   첫 페인트만 빨라진다. 출처가 필요하면 이 저장소가 아니라 KRDS-uiux/krds-uiux
+   를 본다 — 사본을 들고 있으면 원본이 바뀔 때 조용히 어긋난다. */
 
 /* =============================================================================
    일머리(Ilmeori) — 디자인 토큰
@@ -45,28 +54,57 @@
     "Pretendard GOV", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI",
     Roboto, "Helvetica Neue", sans-serif;
 
-  --text-body-lg: 19px;
-  --text-body-lg--line-height: 1.5;
+  /* ── 사다리: 아래는 그대로, 위를 벌린다 ──────────────────────────────────
+     한동안 13 / 15 / 17 / 19 / 24 / 32 였고, 아래 네 칸의 비율이
+     1.15 · 1.13 · **1.12** 였다. 2px 차이는 눈이 등급으로 읽지 못한다 —
+     17px 본문 옆의 19px 제목은 제목이 아니라 그냥 굵은 본문이다.
+     「평평하다」는 심사평의 산술적 뿌리가 여기였다.
+
+     데이터를 나르는 아래 세 칸(13/15/17)은 전체 선언의 84%를 차지하고 잘
+     동작한다. **건드리지 않는다.** 위만 벌린다.
+
+       13 → 15 → 17 → 21 → 27 → 34 → 46
+       1.15  1.13  1.24  1.29  1.26  1.35
+
+     17 → 21 이 1.12 에서 **1.24** 로 바뀌는 것이 이 사다리에서 가장 중요한
+     한 칸이다. 아래는 촘촘하고 위로 갈수록 벌어진다 — 데이터는 빽빽하게,
+     제목은 확실하게. */
   --text-body: 17px; /* ← 본문 기본. KRDS body-medium. 16px 기준 충족 */
   --text-body--line-height: 1.5;
   --text-body-sm: 15px; /* 보조 텍스트 (본문 아님) */
   --text-body-sm--line-height: 1.5;
-  --text-body-xs: 13px; /* 캡션·메타 */
+  --text-body-xs: 13px; /* 캡션·메타. 이 아래는 없다 */
   --text-body-xs--line-height: 1.5;
 
-  --text-h1: 32px;
-  --text-h1--line-height: 1.4;
-  --text-h2: 24px;
-  --text-h2--line-height: 1.4;
-  --text-h3: 19px;
-  --text-h3--line-height: 1.5;
-  /* ⚠ 제목에 쓰지 않는다 — 본문(--text-body)과 **같은 17px** 이다.
-     한동안 판 제목이 전부 이 크기였다. 판 제목이 본문과 같으면 판이 몇 개든
-     동급으로 읽히고, 화면은 「전부 평평하다」는 인상이 된다(심사 피드백에서
-     지적된 자리다). 판 제목은 등급에 따라 h2(24) / h3(19) / body-sm(15) 를
-     쓴다 — 표는 components/ui/card.tsx 에 있다.
-     토큰은 지운다. 이름이 남아 있으면 반드시 다시 쓰이고, 그러면 같은 자리로
-     돌아온다. 크기 17px 이 필요하면 그것은 본문이므로 --text-body 를 쓴다. */
+  /* --text-body-lg(19px) 를 지웠다 — --text-h3 와 **값이 같았다.**
+     이름이 둘인데 값이 하나면 둘 다 뜻을 잃는다. 크던 본문이 필요하면
+     그건 본문이 아니라 소제목이므로 h3 를 쓴다. */
+
+  --text-h1: 34px; /* 문서 제목 — 화면에 하나 */
+  --text-h1--line-height: 1.3;
+  --text-h2: 27px; /* 1등 대상의 제목 */
+  --text-h2--line-height: 1.35;
+  --text-h3: 21px; /* 구역 제목 */
+  --text-h3--line-height: 1.45;
+
+  /* ── 숫자 한 개 ────────────────────────────────────────────────────────
+     예전에는 32px 이 두 가지 일을 겸했다 — 화면 이름표(「업무 보드」)와
+     히어로의 숫자(「26일 지남」). 그래서 **아무 뜻 없는 이름표가 화면에서
+     가장 큰 것**이 되는 화면이 생겼다. 숫자에 따로 등급을 주면 이름표는
+     자동으로 물러난다. 화면당 하나만 쓴다. */
+  --text-figure: 46px;
+  --text-figure--line-height: 1;
+
+  /* ── 지운 두 칸, 그리고 그 이유 ──────────────────────────────────────────
+     --text-h4(17px)   본문과 **같은 값**이었다. 한동안 판 제목이 전부 이
+                       크기였고, 판 제목이 본문과 같으면 판이 몇 개든 동급으로
+                       읽힌다. 「전부 평평하다」는 심사평의 한 뿌리가 여기였다.
+     --text-body-lg(19px)  --text-h3 와 **같은 값**이었다.
+
+     둘 다 이름은 있는데 자기 값이 없었다. 이름이 남아 있으면 반드시 다시
+     쓰이고, 그러면 같은 자리로 돌아온다. 17px 이 필요하면 그건 본문이므로
+     --text-body 를, 19~21px 짜리 제목이 필요하면 --text-h3 를 쓴다.
+     판 제목은 등급이 정한다 — 표는 components/ui/card.tsx 에 있다. */
 
   /* --- Primary: 화성특례시 BI 전용색상 --------------------------------------
      출처: 「화성특례시 상징물(BI) 기본 디자인 가이드라인」 BS 1-03 (2024-10-25 선포)
@@ -84,7 +122,7 @@
   --color-primary-10: #ccdaea;
   --color-primary-20: #99b5d5;
   --color-primary-30: #6690c0;
-  --color-primary-40: #336bab;
+  /* primary-40 은 지웠다 — 파생 규칙상 자리는 있지만 쓰는 곳이 0 이었다. */
   --color-primary: #004696; /* HS Blue */
   --color-primary-hover: #003c80; /* -15% */
   --color-primary-active: #003169; /* -30% */
@@ -137,7 +175,8 @@
   --color-gray-70: #464c53;
   --color-gray-80: #33363d;
   --color-gray-90: #1e2124;
-  --color-gray-95: #131416;
+  /* gray-95 는 지웠다 — KRDS 13단을 그대로 옮겨 적었지만 쓰는 곳이 0 이었다.
+     더 짙은 먹이 필요하면 gray-90(15.50:1)으로 이미 충분하다. */
   --color-gray-100: #000000;
 
   /* --- 시스템 색상 (KRDS 의미 체계 준수) --- */
@@ -171,21 +210,16 @@
      나머지 상태(대기·진행중·검토·완료)는 색이 아니라 **명도**로 나눈다.
      그래야 위계가 「무엇이 급한가」 축에 정렬된다(status-badge.tsx 참조).
 
-     doing/review/done/todo 토큰은 지우지 않고 남긴다 — 편집기의 「지금 편집
-     중」 표시처럼 상태 색 언어가 아닌 자리에서 아직 쓰이고, 뜻이 다른 자리에
-     같은 색을 재사용하려면 이름이 있어야 한다. 다만 **업무 상태 배지에는 다시
-     쓰지 않는다.** */
-  --color-status-todo: #6d7882; /* 대기   ← gray-50 */
-  /* 대기 배지의 바탕이었다. 지금 그 배지는 gray-5 를 직접 쓰므로 이 토큰을
-     보는 곳이 없다. 뜻이 「대기」에 묶인 이름이라 다른 자리에 함부로 재사용
-     하면 안 되고, 지우지 않는 이유는 위 ⚠ 문단과 같다. */
-  --color-status-todo-bg: #f0f1f2;
-  --color-status-doing: #0b78cb; /* 진행중 ← information */
+     남은 doing/review/done 토큰은 상태 배지가 아니라 **편집기의 실시간 표시**
+     (「지금 누가 편집 중」·「연결됨」)에서 쓰인다. 뜻이 다른 자리라 이름은
+     남기되, **업무 상태 배지에는 다시 쓰지 않는다.**
+
+     쓰이지 않게 된 여섯은 지웠다 — todo · todo-bg · todo-text · doing-text ·
+     review · done-bg. 이름이 남아 있으면 반드시 다시 쓰인다. */
+  --color-status-doing: #0b78cb; /* 편집 중 ← information */
   --color-status-doing-bg: #e7f4fe;
-  --color-status-review: #9e6a00; /* 검토   ← warning */
-  --color-status-review-bg: #fff3db;
-  --color-status-done: #228738; /* 완료   ← success */
-  --color-status-done-bg: #eaf6ec;
+  --color-status-review-text: #865a00; /* 편집기 경고 글자 */
+  --color-status-done: #228738; /* 연결됨 ← success */
   --color-status-overdue: #de3412; /* 지연   ← danger */
   --color-status-overdue-bg: #fdefec;
 
@@ -193,19 +227,69 @@
      (측정: doing 4.11 / done 4.12 / review 4.23 / overdue 4.07 — 모두 4.5:1 미달)
      배지·칩의 '글자'에는 아래 값을 쓰고, 원래 값은 채움·테두리·점에만 쓴다.
      명도만 15% 낮춘 값이라 색 언어는 그대로 유지된다. */
-  --color-status-todo-text: #58616a; /* gray-60 */
-  --color-status-doing-text: #0966ac;
-  --color-status-review-text: #865a00;
   --color-status-done-text: #1c722f;
   --color-status-overdue-text: #bc2c0f;
 
-  /* --- 둥글기 ---------------------------------------------------------------
-     체크리스트(스타일-형태-공통 1): 컨테이너가 커질수록 둥글기 값이 커질 것 */
-  --radius-xs: 2px; /* 배지·태그        */
-  --radius-sm: 4px; /* 버튼·입력필드    */
-  --radius-md: 6px; /* 업무 카드        */
-  --radius-lg: 10px; /* 패널·모달        */
-  --radius-xl: 12px; /* 전체화면 시트    */
+  /* ===========================================================================
+     선 굵기 — 이 시스템의 주력 위계 축
+     ===========================================================================
+
+     이 제품이 마지막에 내놓는 것은 화면이 아니라 **종이**다. 별지 제12호서식,
+     HWPX, 기안문. 그런데 한동안 앱의 껍데기는 그 종이와 아무 상관 없는 둥근
+     카드였다 — 한 제품 안에 언어가 둘이었다.
+
+     종이 쪽이 진짜다. 그리고 종이에서 위계를 만드는 것은 **그림자가 아니라
+     선**이다. 칸은 가는 선, 테두리는 굵은 선, 제목 아래는 검은 선.
+
+     이 앱에는 선 굵기가 **한 가지뿐이었다** — 1px `gray-10`, 판 대비 1.18:1 로
+     사실상 안 보이는 선. 34곳의 상자가 전부 그것 하나를 두르고 있었다.
+     그것이 「평평하다」의 정체이고, **그림자로는 건드려지지 않는다.**
+
+       hair   1px  gray-20  1.47:1   표 칸선 · 목록 구분선
+       frame  1px  gray-40  2.95:1   판·구역의 바깥 테두리
+       head   2px  gray-90  15.50:1  문서 제목 아래 검은 선
+       alarm  3px  overdue  4.03:1   유일한 경보 모서리
+
+     판 색(#fafafa)과 바탕(#f0f1f2)의 명도차 1.08 은 일부러 낮게 잡은 값이고
+     시험이 상한 1.2 로 지키고 있다. 그러므로 **대비는 채움이 아니라 선에서
+     벌어야 한다.** frame 하나로 판이 처음으로 바탕에서 모서리로 구분된다.
+
+     ── frame 의 2.95 는 3:1 바로 아래다. 숨기지 않고 적어 둔다 ───────────────
+     WCAG 1.4.11(비문자 3:1)은 「이해에 필요한」 요소에 걸리는 조항이다. 판의
+     바깥선은 거기 해당하지 않는다고 보고 gray-40 을 골랐다. 뜻을 나르는 선은
+     head(15.50)와 alarm(4.03)이고 둘 다 넉넉히 넘는다.
+     gray-50(4.32)으로 올리면 3:1 을 넘기지만 **입력칸 테두리와 같은 값**이 되어
+     「누를 수 있는 칸」과 「그냥 판」이 같은 굵기로 보인다. 그 혼동이 0.05 의
+     대비보다 비싸다고 판단했다.
+     이 판단은 tests/contrast.test.mjs 에 쌍으로 박아 두었다 — 값이 흔들리면
+     시험이 먼저 안다. */
+  --color-rule-hair: var(--color-gray-20);
+  --color-rule-frame: var(--color-gray-40);
+  --color-rule-head: var(--color-gray-90);
+  --color-rule-alarm: var(--color-status-overdue);
+
+  /* --- 둥글기: 5단 → 2단 ------------------------------------------------------
+     --radius-md(6px)를 두른 상자 58개가 「AI 가 만든 박스 레이아웃」이라는 말을
+     들은 그 물건이다. 서식에 둥근 모서리는 없다 — 문서·표·판은 각지게 둔다.
+     남기는 것은 손으로 누르는 것 둘뿐이다.
+
+     (--radius-md/lg/xl 을 지웠다. lg 는 3곳, xl 은 0곳이었다) */
+  --radius-xs: 2px; /* 배지·칩          */
+  --radius-sm: 4px; /* 단추·입력칸      */
+
+  /* --- 여백 사다리 ------------------------------------------------------------
+     4 · 8 · 12 · 16 · 24 · 32 · 48  (Tailwind: 1 2 3 4 6 8 12)
+
+     반단계(*-0.5 *-1.5 *-2.5 *-3.5 *-5.5)는 쓰지 않는다. 한동안 19가지 단계를
+     썼고 그중 2px 반단계가 136회였다 — work-card.tsx 는 주석에 「4·8·12만
+     쓴다」고 적어 놓고 자기 파일 안에서 이미 어기고 있었다.
+     사람은 숫자를 세지 못해도 「정돈이 안 됐다」를 느낀다.
+
+     예외는 배지 안쪽 하나뿐이고, 그것에는 이름을 준다 — 13px 글자에 4px 세로
+     여백을 주면 배지가 칸을 벌려 줄 높이가 어긋난다.
+     (tests/spacing.test.mjs 가 반단계 사용을 0건으로 지킨다) */
+  --spacing-chip-x: 6px;
+  --spacing-chip-y: 2px;
 
   /* --- 레이아웃 (업무도구형. KRDS 대국민 레이아웃 미적용) --- */
   --spacing-sidebar: 260px;
@@ -399,21 +483,94 @@
 }
 
 /* =============================================================================
-   인쇄 — 「업무인계·인수서」를 A4 한 벌로 뽑는다
+   서식(.sheet) — 화면에서도, 종이에서도 같은 문서
    =============================================================================
 
    심사에서 나오는 질문은 "파일 형식이 무엇이냐"가 아니라
    **"이걸 그대로 결재에 올릴 수 있느냐"** 다. 종이 한 장이면 답이 된다.
 
-   HWPX 내보내기는 2차예선으로 미뤘다. 이틀이 들고, 실제 한글에서 열리는지
-   검증이 끝나지 않으면 그 이틀이 통째로 날아간다. 브라우저 인쇄는 규칙 몇 줄로
-   되고, 어느 컴퓨터에서도 같은 결과가 나온다.
+   ── 한동안 이 문서는 화면에 없었다 ─────────────────────────────────────────
 
-   화면용 본문에는 print:hidden 을, 인쇄용 문서에는 hidden print:block 을 붙였다.
-   두 벌을 따로 그리는 이유는 print-sheet.tsx 의 주석에 적었다.
+   클래스 이름이 `.print-sheet` 였고, 붙는 자리에 `hidden print:block` 이
+   달려 있었다. 그래서 이 제품에서 **가장 강한 물건인 별지 제12호서식이
+   Ctrl+P 를 눌러야만 보였다.** 화면에는 같은 내용을 회색 말풍선 문단으로
+   따로 그리고 있었다 — 심사위원이 보는 것은 말풍선 쪽이었다.
 
-   ※ 이 블록은 @layer 밖에 둔다. Tailwind 유틸리티(layered)보다 뒤에 적용되어야
-     화면용 색·크기가 종이에서 그대로 새어 나오지 않는다. */
+   아래를 두 층으로 나눈다.
+
+     @layer components 의 .sheet   화면용. px 단위, 먹색 괘선
+     @media print 의 .sheet        종이용. pt 단위로 덮어쓴다
+
+   한 클래스를 두 매체가 나눠 쓰므로 **둘이 어긋날 수 없다.** 이 저장소가
+   내보내기에서 지키는 원칙과 같다 — 화면·종이·파일이 같은 모델에서 나온다.
+
+   ※ 인쇄 블록은 @layer 밖에 둔다. Tailwind 유틸리티(layered)보다 뒤에
+     적용되어야 화면용 색·크기가 종이에서 그대로 새어 나오지 않는다. */
+@layer components {
+  .sheet {
+    background: var(--color-gray-0);
+    color: var(--color-gray-90);
+    font-size: var(--text-body);
+    line-height: 1.7;
+  }
+
+  .sheet h1 {
+    font-size: var(--text-h1);
+  }
+  .sheet h2 {
+    font-size: var(--text-h3);
+  }
+
+  /* 서식의 괘선은 **먹색**이다(rule-head). 옅은 회색 표는 웹페이지처럼
+     보이고, 이 문서는 결재에 올라가는 종이처럼 보여야 한다. */
+  .sheet table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .sheet th,
+  .sheet td {
+    border: 1px solid var(--color-rule-head);
+    padding: 8px 12px;
+    font-size: var(--text-body-sm);
+    vertical-align: top;
+  }
+  .sheet th {
+    font-weight: 700;
+    /* 칸 이름 줄만 아주 옅게 깐다. 종이에서는 잉크를 아끼려고 안 깔지만
+       화면에서는 머리줄과 내용줄이 갈라져야 표가 읽힌다. */
+    background: var(--color-gray-5);
+  }
+  .sheet td {
+    font-weight: 400;
+  }
+
+  .sheet caption {
+    margin-top: 12px;
+    margin-bottom: 4px;
+    font-size: var(--text-body-sm);
+    font-weight: 700;
+    text-align: left;
+  }
+
+  /* 규칙이 뽑은 문단과 사람이 보탠 글은 화면에서도 구별돼야 한다. */
+  .sheet .note {
+    margin-top: 8px;
+    border-left: 2px solid var(--color-rule-head);
+    padding-left: 12px;
+  }
+  .sheet .note-label {
+    font-weight: 700;
+    font-size: var(--text-body-xs);
+  }
+
+  .sheet .source {
+    margin-top: 4px;
+    margin-left: 16px;
+    font-size: var(--text-body-xs);
+    color: var(--color-gray-60);
+  }
+}
+
 @media print {
   @page {
     size: A4;
@@ -433,27 +590,27 @@
     background: #fff !important;
   }
 
-  .print-sheet {
+  .sheet {
     font-size: 10.5pt;
     line-height: 1.6;
     color: #000;
   }
 
-  .print-sheet h1 {
+  .sheet h1 {
     font-size: 18pt;
   }
-  .print-sheet h2 {
+  .sheet h2 {
     font-size: 11.5pt;
     /* 제목만 페이지 아래에 남고 본문이 다음 장으로 넘어가면 읽는 사람이 헤맨다. */
     break-after: avoid;
   }
 
-  .print-sheet table {
+  .sheet table {
     width: 100%;
     border-collapse: collapse;
   }
-  .print-sheet th,
-  .print-sheet td {
+  .sheet th,
+  .sheet td {
     border: 1px solid #000;
     padding: 4pt 7pt;
     font-size: 10pt;
@@ -463,20 +620,20 @@
      print-sheet.tsx 의 font-bold 유틸리티가 이 규칙에 눌려 아무 일도 안 한다.
      (unlayered CSS가 layered utility를 이긴다 — 여기서 건드리는 속성은
       Tailwind 클래스로 못 바꾼다는 뜻이므로, 필요한 것은 여기에 적는다) */
-  .print-sheet th {
+  .sheet th {
     font-weight: 700;
   }
-  .print-sheet td {
+  .sheet td {
     font-weight: 400;
   }
 
   /* 표·서명란처럼 짧고 통째로 읽혀야 하는 것만 쪼개지지 않게 한다.
      본문 항목에까지 걸면 한 쪽을 넘는 항목에서 앞 페이지가 통째로 비어 버린다. */
-  .print-sheet .avoid-break {
+  .sheet .avoid-break {
     break-inside: avoid;
   }
 
-  .print-sheet p {
+  .sheet p {
     orphans: 2;
     widows: 2;
   }
@@ -486,12 +643,12 @@
      있어야 한다. 화면에서는 색으로 나누지만 종이에는 색이 없으므로
      왼쪽 선과 이름·날짜 한 줄로 나눈다.
      (@layer 밖이라 Tailwind 유틸리티로는 이 자리를 못 만든다 — 위 주석 참조) */
-  .print-sheet .note {
+  .sheet .note {
     margin-top: 4pt;
     border-left: 1.5pt solid #000;
     padding-left: 7pt;
   }
-  .print-sheet .note-label {
+  .sheet .note-label {
     font-weight: 700;
     font-size: 9.5pt;
   }
@@ -501,15 +658,15 @@
      아래에 한 번만 모아 적는다. 이 종이는 반대로 **근거를 보여 주려고** 뽑는
      것이라 꼬리표가 곧 본문이다. 본문보다 작게, 한 칸 들여서 둔다.
      (@layer 밖이라 Tailwind 유틸리티로는 이 자리를 못 만든다 — 위 주석 참조) */
-  .print-sheet .source {
+  .sheet .source {
     margin-top: 1pt;
     margin-left: 12pt;
     font-size: 9pt;
-    color: #333;
+    color: var(--color-gray-80);
   }
 
   /* 표 이름(결재·협조·사후보고). 기본값은 가운데 정렬이라 칸 이름처럼 보인다. */
-  .print-sheet caption {
+  .sheet caption {
     margin-top: 6pt;
     margin-bottom: 2pt;
     font-size: 10pt;
@@ -517,7 +674,7 @@
   }
 
   /* 종이에서 파란 밑줄은 누를 수 없는 장식일 뿐이다. */
-  .print-sheet a {
+  .sheet a {
     color: #000;
     text-decoration: none;
   }

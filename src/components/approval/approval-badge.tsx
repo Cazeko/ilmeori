@@ -35,8 +35,8 @@ export function ApprovalBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-xs font-bold whitespace-nowrap tabular-nums",
-        size === "sm" ? "px-1.5 py-0.5 text-body-xs" : "px-2 py-1 text-body-sm",
+        "inline-flex items-center gap-2 rounded-xs font-bold whitespace-nowrap tabular-nums",
+        size === "sm" ? "px-chip-x py-chip-y text-body-xs" : "px-2 py-1 text-body-sm",
         TONE[state],
       )}
     >

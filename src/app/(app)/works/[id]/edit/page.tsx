@@ -136,7 +136,7 @@ export default async function EditWorkPage({
               >
                 {/* 공개 범위는 참여자와 함께 봐야 판단이 된다.
                     "누가 참여자인지"를 모르는 채 범위만 넓히는 화면을 만들지 않는다. */}
-                <div className="rounded-sm border border-gray-10 bg-gray-5 px-4 py-3">
+                <div className="rounded-sm border border-rule-frame bg-gray-5 px-4 py-3">
                   <p className="text-body-sm font-bold text-gray-80">
                     공개 범위: {VISIBILITY_LABEL[work.visibility]}
                   </p>

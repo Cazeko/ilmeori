@@ -1,5 +1,5 @@
 import { Inbox } from "lucide-react";
-import { WorkCard } from "@/components/work/work-card";
+import { WorkCard, type CardPick } from "@/components/work/work-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ButtonLink } from "@/components/ui/button";
 import type { ApprovalSummary } from "@/lib/data/types";
@@ -19,14 +19,22 @@ const COLUMNS: WorkStatus[] = ["todo", "doing", "review", "done"];
 export function KanbanBoard({
   works,
   approvals,
+  pickOf,
 }: {
   works: WorkListItem[];
   /** 업무 id → 결재 진행률. 화면이 한 번에 가져와 내려 준다. */
   approvals?: ReadonlyMap<string, ApprovalSummary>;
+  /**
+   * 정리 모드일 때, 카드마다 고를 수 있는지 정한다. 없으면 평소의 보드다.
+   *
+   * 보드가 직접 판정하지 않고 화면에서 받는다 — 「누가 소유자인가」는 보는
+   * 사람에 따라 달라지는 값이고, 그 판단이 두 곳에 있으면 언젠가 갈라진다.
+   */
+  pickOf?: (work: WorkListItem) => CardPick;
 }) {
   if (works.length === 0) {
     return (
-      <div className="rounded-md border border-gray-10 bg-surface">
+      <div className="rounded-sm border border-rule-frame bg-surface">
         {/* 예전에는 「검색어를 줄이거나 부서 필터를 해제해 보세요」라고 적어
             두고 해제할 단추를 주지 않았다. 보관함에서도 같은 말을 해서, 조건을
             건 적 없는 사람에게 조건을 풀라고 시켰다. 말 대신 길을 준다. */}
@@ -61,7 +69,7 @@ export function KanbanBoard({
                색만 넷 늘었다. 칸반에서 튀어야 하는 것은 **지연된 카드 한 장**
                이지 열이 아니다. 띠는 남기되 넷 다 같은 회색으로 둔다 — 열의
                윗변을 긋는 일만 하게 한다. */
-            className="rounded-md border border-t-3 border-gray-10 border-t-gray-20 bg-gray-10"
+            className="rounded-sm border border-t-3 border-rule-hair bg-gray-10"
           >
             {/* 높이를 못박는다(min-h-12 = 48px).
                 「지연 N」 배지는 지연이 있는 열에만 붙는데, 배지에 위아래 여백이
@@ -79,7 +87,7 @@ export function KanbanBoard({
               {STATUS_LABEL[status]}
               <span className="tabular-nums text-gray-60">{items.length}</span>
               {overdue > 0 ? (
-                <span className="ml-auto rounded-xs bg-status-overdue-bg px-1.5 py-0.5 text-body-xs font-bold text-status-overdue-text">
+                <span className="ml-auto rounded-xs bg-status-overdue-bg px-chip-x py-chip-y text-body-xs font-bold text-status-overdue-text">
                   지연 {overdue}
                 </span>
               ) : null}
@@ -88,11 +96,15 @@ export function KanbanBoard({
             <ul className="flex flex-col gap-2 px-3 pb-3">
               {items.map((w) => (
                 <li key={w.id}>
-                  <WorkCard work={w} approval={approvals?.get(w.id)} />
+                  <WorkCard
+                    work={w}
+                    approval={approvals?.get(w.id)}
+                    pick={pickOf?.(w)}
+                  />
                 </li>
               ))}
               {items.length === 0 ? (
-                <li className="rounded-md border border-dashed border-gray-20 px-3 py-6 text-center text-body-xs text-gray-60">
+                <li className="rounded-sm border border-dashed border-rule-hair px-3 py-6 text-center text-body-xs text-gray-60">
                   없음
                 </li>
               ) : null}

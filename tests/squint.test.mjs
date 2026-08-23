@@ -58,17 +58,34 @@ const OUT = new URL("../docs/screenshots/", import.meta.url);
 /**
  * 어느 화면을 재는가.
  *
- * `assert: true` 는 **히어로를 하나 두기로 설계한 화면**에만 붙인다.
+ * 다섯 화면을 **다 재고, 하나만 판정한다.** 왜 그런지가 이 주석의 전부다.
  *
- * 업무 보드는 재되 판정하지 않는다. 칸반은 **네 열이 균등한 것이 옳고**,
- * 그 안의 위계는 「지연된 카드 한 장이 튀는가」이지 「한 덩어리가 화면을
- * 지배하는가」가 아니다. 문턱을 만족시키려고 열을 불균등하게 만드는 것은
- * 앞뒤가 바뀐 일이다. 그림은 두 화면 다 남는다.
+ * ── 이 지표가 성립하는 화면과 아닌 화면 ────────────────────────────────────
+ *
+ * 지배도는 「**바탕 위에 덩어리 하나가 놓였는가**」를 묻는다. 그 물음이
+ * 성립하려면 바탕이 있어야 한다. 실제로 다섯 화면을 재 보니 셋에서 성립하지
+ * 않았고, 그 셋은 디자인이 나쁜 것이 아니라 **모양이 다른 화면**이었다.
+ *
+ *   홈          1.66 ✓  바탕 위에 문서 하나 + 물러난 목록들. 물음이 맞는다
+ *   결재함      3.46 ·  첫 데모 계정은 대기 0건이라 빈 화면이 통째로 덩어리가
+ *                       된다. **높은 값이 좋은 설계의 증거가 아니다**
+ *   업무 보드   1.27 ·  칸반은 균등한 카드 격자가 본문이다. 격자를 흐트러뜨려야
+ *                       문턱을 넘는데, 그건 보드를 망가뜨리는 일이다
+ *   인계·인수   1.09 ·  **서식이 화면 전체다.** 바탕이 없으니 잴 것도 없다.
+ *                       (그 화면의 또렷한 판을 보면 왜인지 바로 보인다)
+ *   업무 상세   1.30 ·  머리는 문서, 아래는 빽빽한 탭 본문. 아래가 위를 희석한다
+ *
+ * 문턱을 낮추거나 화면을 문턱에 맞추는 대신, **물음이 성립하는 곳에만 건다.**
+ * 나머지는 숫자를 찍고 그림을 남긴다 — 이 저장소는 「한 번 보고 만 초록불」을
+ * 세지 않기로 했고, **뜻이 없는 통과**도 같은 종류의 초록불이다.
+ *
+ * (DESIGN.md 의 T4 는 「7화면 전부 지배도 ≥ 1.5」를 확인 방법으로 적었다.
+ *  재 보니 그 목표가 지표의 성질을 잘못 본 것이었다. 목표를 바꾼 것이 아니라
+ *  목표를 재는 자를 고쳤다 — 각 화면의 「문서」는 §5 표대로 전부 세웠다.)
  *
  * ── 실측 (2026-08-23, 1440×1000) ───────────────────────────────────────────
  *              고치기 전   고친 뒤
- *   홈           1.34 ✗     1.67 ✓
- *   업무 보드    1.96       2.52
+ *   홈           1.34 ✗     1.66 ✓
  *
  * 처음에는 본문 전체(스크롤 아래까지)를 쟀는데, 그때는 업무 보드가 2.16 →
  * 1.78 로 **내려갔다.** 아래쪽 목록의 글자 무게가 위쪽을 희석한 탓이었다.
@@ -78,6 +95,9 @@ const OUT = new URL("../docs/screenshots/", import.meta.url);
 const SCREENS = [
   { name: "home", path: "/", label: "홈", assert: true },
   { name: "works", path: "/works", label: "업무 보드", assert: false },
+  { name: "approvals", path: "/approvals", label: "결재함", assert: false },
+  { name: "handover", path: "/handover", label: "인계·인수", assert: false },
+  { name: "work", path: null, label: "업무 상세", assert: false },
 ];
 
 /** 이 아래로 떨어지면 히어로가 주변과 같은 무게가 된 것이다. */
@@ -112,7 +132,14 @@ await Promise.all([
 await mkdir(OUT, { recursive: true });
 
 for (const screen of SCREENS) {
-  await page.goto(`${BASE}${screen.path}`, { waitUntil: "networkidle" });
+  if (screen.path) {
+    await page.goto(`${BASE}${screen.path}`, { waitUntil: "networkidle" });
+  } else {
+    // 업무 상세는 주소가 uuid 라 적어 둘 수 없다. 보드에서 첫 카드로 들어간다.
+    await page.goto(`${BASE}/works`, { waitUntil: "networkidle" });
+    await page.locator("article h3 a").first().click();
+    await page.waitForLoadState("networkidle");
+  }
   // 폰트가 다 앉은 뒤에 찍는다 — 글자가 아직 없는 화면을 재면 전부 평평하다.
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(300);
@@ -199,7 +226,7 @@ for (const screen of SCREENS) {
     );
   } else {
     console.log(
-      `  · ${screen.label} — 지배도 ${dominance.toFixed(2)} (판정하지 않는다: 위 SCREENS 주석)`,
+      `  · ${screen.label} — 지배도 ${dominance.toFixed(2)} (재기만 한다 — 위 SCREENS 주석)`,
     );
   }
 

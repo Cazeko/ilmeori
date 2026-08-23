@@ -39,9 +39,9 @@ export function ApprovalLineEditor({
 
   return (
     <div className="flex flex-col gap-4">
-      <ol className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-surface">
+      <ol className="divide-y divide-rule-hair rounded-sm border border-rule-frame bg-surface">
         {approval.steps.map((s: ApprovalStepWithApprover) => (
-          <li key={s.id} className="flex items-center gap-3 px-4 py-2.5">
+          <li key={s.id} className="flex items-center gap-3 px-4 py-3">
             <span className="w-6 shrink-0 text-body-xs font-bold tabular-nums text-gray-40">
               {s.seq}
             </span>
@@ -85,7 +85,7 @@ export function ApprovalLineEditor({
       {/* ── 칸 더하기 ──────────────────────────────────────────────────── */}
       <form
         action={addApprovalStep}
-        className="flex flex-col gap-3 rounded-md border border-gray-10 bg-surface p-4 sm:flex-row sm:items-end"
+        className="flex flex-col gap-3 rounded-sm border border-rule-frame bg-surface p-4 sm:flex-row sm:items-end"
       >
         <input type="hidden" name="approvalId" value={approval.id} />
         <PeoplePicker
@@ -116,14 +116,14 @@ export function ApprovalLineEditor({
 
       {/* ── 결재선 가져오기 ────────────────────────────────────────────── */}
       {sources.length > 0 ? (
-        <details className="rounded-md border border-gray-10 bg-surface">
+        <details className="rounded-sm border border-rule-frame bg-surface">
           <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
             <Copy aria-hidden className="size-4 shrink-0 text-gray-40" />
             다른 결재의 결재선 그대로 쓰기
           </summary>
           <form
             action={copyApprovalLine}
-            className="flex flex-col gap-3 border-t border-gray-10 p-4 sm:flex-row sm:items-end"
+            className="flex flex-col gap-3 border-t border-rule-hair p-4 sm:flex-row sm:items-end"
           >
             <input type="hidden" name="approvalId" value={approval.id} />
             <Field
