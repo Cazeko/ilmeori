@@ -1,5 +1,5 @@
 import { Inbox } from "lucide-react";
-import { WorkCard } from "@/components/work/work-card";
+import { WorkCard, type CardPick } from "@/components/work/work-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ButtonLink } from "@/components/ui/button";
 import type { ApprovalSummary } from "@/lib/data/types";
@@ -19,10 +19,18 @@ const COLUMNS: WorkStatus[] = ["todo", "doing", "review", "done"];
 export function KanbanBoard({
   works,
   approvals,
+  pickOf,
 }: {
   works: WorkListItem[];
   /** 업무 id → 결재 진행률. 화면이 한 번에 가져와 내려 준다. */
   approvals?: ReadonlyMap<string, ApprovalSummary>;
+  /**
+   * 정리 모드일 때, 카드마다 고를 수 있는지 정한다. 없으면 평소의 보드다.
+   *
+   * 보드가 직접 판정하지 않고 화면에서 받는다 — 「누가 소유자인가」는 보는
+   * 사람에 따라 달라지는 값이고, 그 판단이 두 곳에 있으면 언젠가 갈라진다.
+   */
+  pickOf?: (work: WorkListItem) => CardPick;
 }) {
   if (works.length === 0) {
     return (
@@ -88,7 +96,11 @@ export function KanbanBoard({
             <ul className="flex flex-col gap-2 px-3 pb-3">
               {items.map((w) => (
                 <li key={w.id}>
-                  <WorkCard work={w} approval={approvals?.get(w.id)} />
+                  <WorkCard
+                    work={w}
+                    approval={approvals?.get(w.id)}
+                    pick={pickOf?.(w)}
+                  />
                 </li>
               ))}
               {items.length === 0 ? (

@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, Filter, Plus } from "lucide-react";
+import {
+  AlertTriangle,
+  Archive,
+  ArchiveRestore,
+  Filter,
+  Lock,
+  Plus,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { KanbanBoard } from "@/components/work/kanban-board";
 import { PageContainer } from "@/components/ui/page-container";
@@ -12,7 +19,14 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { GetForm } from "@/components/ui/get-form";
 import { Notice } from "@/components/ui/notice";
 import { LinkPending } from "@/components/ui/link-pending";
-import { getApprovalSummaries, getDepartmentTree, listWorks } from "@/lib/data";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { archiveWorks, restoreWorks } from "@/lib/actions/works";
+import {
+  getApprovalSummaries,
+  getDepartmentTree,
+  listWorks,
+  roleIn,
+} from "@/lib/data";
 import { canMutate } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
 
@@ -37,6 +51,9 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
   const mine = sp.mine === "1";
   const overdueOnly = sp.overdue === "1";
   const archived = sp.archived === "1";
+  /* 정리 모드. 데모(읽기 전용)에서는 켜지 않는다 — 고를 수는 있는데 옮길 수
+     없는 화면이 되고, 그건 눌리지 않는 단추를 보여 주는 것과 같다. */
+  const selecting = sp.select === "1" && canMutate;
 
   // 부서 목록과 업무 목록은 서로를 기다릴 이유가 없다. 예전에는 트리를 받아
   // 「아는 부서인가」를 판정한 **뒤에** 업무를 물었는데, 그 검사는 값이 조직도에
@@ -94,6 +111,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
     if (mine) params.set("mine", "1");
     if (overdueOnly) params.set("overdue", "1");
     if (archived) params.set("archived", "1");
+    if (selecting) params.set("select", "1");
     for (const [k, v] of Object.entries(patch)) {
       if (v === null) params.delete(k);
       else params.set(k, v);
@@ -134,12 +152,25 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
           1등이 없는 것과 같다. 이 화면의 1등은 아래 「기한이 지난 업무」다. */}
       <PageHeader
         size="sm"
-        title="업무 보드"
+        title={
+          selecting ? (archived ? "보관함 정리" : "업무 보드 정리") : "업무 보드"
+        }
         action={
-          canMutate ? (
-            <ButtonLink href="/works/new">
-              <Plus aria-hidden className="size-4" />새 업무
-            </ButtonLink>
+          canMutate && !selecting ? (
+            <>
+              {/* 「정리」는 보관함에서 특히 필요하다 — 되돌릴 길이 여기 말고
+                  없다. 평소 보드에서는 새 업무 왼쪽에 조용히 둔다. */}
+              <ButtonLink
+                href={linkWith({ select: "1" })}
+                variant="secondary"
+              >
+                <Archive aria-hidden className="size-4" />
+                정리
+              </ButtonLink>
+              <ButtonLink href="/works/new">
+                <Plus aria-hidden className="size-4" />새 업무
+              </ButtonLink>
+            </>
           ) : null
         }
       />
@@ -154,8 +185,11 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
           문서 등급으로 올린다 — 흰 종이, 각진 모서리, 왼쪽 3px 경보선.
           숫자는 --text-figure(46px), 이 화면에 하나뿐인 큰 숫자다.
           지연이 없으면 이 판은 아예 없다. 그때 이 화면에는 1등이 없는 것이
-          맞다 — 급한 일이 없는 날에 억지로 뭔가를 크게 세울 이유가 없다. */}
-      {overdueCount > 0 && !overdueOnly && !archived ? (
+          맞다 — 급한 일이 없는 날에 억지로 뭔가를 크게 세울 이유가 없다.
+
+          정리 모드에서도 내린다. 그때 이 화면의 1등은 「무엇을 고를 것인가」이고,
+          화면에 1등이 둘이면 하나도 없는 것과 같다. */}
+      {overdueCount > 0 && !overdueOnly && !archived && !selecting ? (
         <Link
           href={linkWith({ overdue: "1", mine: null })}
           data-variant="plain"
@@ -317,7 +351,73 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
         업무 {works.length}건이 표시되고 있습니다.
       </p>
 
-      <KanbanBoard works={works} approvals={approvals} />
+      {/* ── 정리 모드 ──────────────────────────────────────────────────────
+          보관은 원래 `/works/[id]/edit` 안에만 있었다. 업무 상세로 들어가서
+          「업무 고치기」를 누르고 맨 아래까지 내려가야 하는 자리라, 보관함에
+          쌓인 업무를 되돌리려면 **한 건마다 세 번씩** 눌러야 했다.
+
+          모드를 주소에 둔다(?select=1). 이 화면의 규약이 원래 그렇고
+          (파일 머리글의 「필터 상태는 전부 주소에 있다」), 그래야 스크립트
+          없이도 켜지고 뒤로가기로 꺼진다.
+
+          평소 보드에는 체크박스가 없다. 하루 여덟 시간 띄워 두는 화면에서
+          늘 켜져 있는 선택칸은 그 자체로 소음이다. */}
+      {selecting ? (
+        <form action={archived ? restoreWorks : archiveWorks}>
+          {/* 어디로 돌아갈지 폼이 들고 간다. 액션은 safeNext 로 한 번 더 거른다
+              — 서버 액션은 화면을 거치지 않고 POST 로 직접 부를 수 있다. */}
+          <input type="hidden" name="back" value={linkWith({ select: null })} />
+
+          <KanbanBoard
+            works={works}
+            approvals={approvals}
+            pickOf={(w) =>
+              roleIn(w, viewer) === "owner" ? "pick" : "locked"
+            }
+          />
+
+          {/* 화면 아래에 붙여 둔다. 칸반은 세로로 길어서, 위에 두면 아래쪽
+              카드를 고르는 동안 단추가 화면 밖으로 나간다. */}
+          <div className="sticky bottom-0 z-10 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-sm border border-rule-frame bg-surface px-4 py-3">
+            <p className="min-w-0 flex-1 text-body-sm break-keep text-gray-70">
+              {archived
+                ? "고른 업무를 보드로 되돌립니다."
+                : "고른 업무를 보관합니다. 삭제가 아니라 목록에서 내리는 것이고, 문서·대화·이력은 그대로 남습니다."}
+              {/* 자물쇠가 붙은 카드가 왜 잠겼는지는 **여기서 한 번만** 말한다.
+                  카드마다 적으면 남의 업무가 열한 장일 때 같은 문장이 열한 번
+                  반복된다(work-card.tsx 의 같은 주석). */}
+              <span className="mt-1 flex items-center gap-1 text-body-xs text-gray-60">
+                <Lock aria-hidden className="size-3 shrink-0" />
+                자물쇠가 붙은 업무는 내가 주담당이 아니라 고를 수 없습니다.
+              </span>
+            </p>
+            <div className="flex shrink-0 items-center gap-2">
+              <ButtonLink
+                href={linkWith({ select: null })}
+                variant="ghost"
+                size="sm"
+              >
+                그만두기
+              </ButtonLink>
+              <SubmitButton size="sm">
+                {archived ? (
+                  <>
+                    <ArchiveRestore aria-hidden className="size-4" />
+                    보드로 되돌리기
+                  </>
+                ) : (
+                  <>
+                    <Archive aria-hidden className="size-4" />
+                    보관하기
+                  </>
+                )}
+              </SubmitButton>
+            </div>
+          </div>
+        </form>
+      ) : (
+        <KanbanBoard works={works} approvals={approvals} />
+      )}
     </PageContainer>
   );
 }

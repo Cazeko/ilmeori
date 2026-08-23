@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getWork, roleIn } from "@/lib/data";
 import { getDemoState, setDemoState } from "@/lib/demo-state";
 import { isSupabaseConfigured } from "@/lib/env";
+import { safeNext } from "@/lib/safe-next";
 import { requireViewer } from "@/lib/session";
 import type { Profile, WorkVisibility } from "@/lib/types";
 import { classifyError } from "./feedback";
@@ -293,4 +294,95 @@ export async function restoreWork(formData: FormData) {
   revalidatePath("/works");
   revalidatePath("/");
   finish(`/works/${work.id}`, "work.restored");
+}
+
+/* ===========================================================================
+   여러 건을 한 번에 보관하거나 꺼낸다 — 업무 보드의 「정리」 모드
+   ===========================================================================
+
+   한동안 보관은 `/works/[id]/edit` 안에만 있었다. 업무 상세로 들어가서
+   「업무 고치기」를 누르고 맨 아래까지 내려가야 하는 자리라, 보관함에 쌓인
+   업무를 되돌리려면 **한 건마다 세 번씩 눌러야 했다.**
+
+   ── 왜 아이디를 그대로 UPDATE 에 넣지 않는가 ────────────────────────────
+
+   `archived_at` 을 바꾸는 것은 소유자만 할 수 있고, 그 규칙을 DB 트리거가
+   **예외를 던져서** 막는다(0011_work_field_guard.sql). RLS 정책처럼 조용히
+   0행을 돌려주는 것이 아니라 statement 를 통째로 실패시킨다.
+
+   그래서 고른 것을 그대로 `.in("id", ids)` 로 보내면, **남의 업무가 하나만
+   섞여 있어도 내 업무 열 건이 함께 안 옮겨진다.** 화면은 체크박스를 내 것에만
+   그리지만 폼 값은 믿지 않는다 — 서버 액션은 화면을 거치지 않고 POST 로
+   직접 부를 수 있다.
+
+   먼저 「이 중에 내가 소유자인 것」을 한 번의 질의로 고르고, 그것만 보낸다.
+   질의 하나가 늘지만 이 배치가 통째로 실패할 자리가 없어진다. */
+
+/**
+ * 한 번에 옮길 수 있는 상한.
+ *
+ * 화면에서 고를 수 있는 수는 보드에 뜬 만큼이지만, 서버 액션은 화면을 거치지
+ * 않고 POST 로 직접 부를 수 있다. 아이디 만 개를 실어 보내면 그대로 `.in()`
+ * 한 줄에 들어가고, 그 질의는 아무도 기다려 주지 않는다.
+ */
+const MOVE_MAX = 200;
+
+/** 폼에서 온 업무 아이디들. 값은 하나도 믿지 않고 모양만 먼저 거른다. */
+function readWorkIds(formData: FormData): string[] {
+  const seen = new Set<string>();
+  for (const v of formData.getAll("workIds")) {
+    if (typeof v === "string" && UUID.test(v)) seen.add(v);
+  }
+  return [...seen];
+}
+
+/** 조건이 걸린 보드로 돌아간다. 밖으로 나가는 주소는 통과시키지 않는다. */
+function backToBoard(formData: FormData): string {
+  const raw = safeNext(formData.get("back"));
+  return raw.startsWith("/works") ? raw : "/works";
+}
+
+async function moveWorks(formData: FormData, to: "archive" | "restore") {
+  const { viewer, supabase } = await openSession();
+  const back = backToBoard(formData);
+
+  const ids = readWorkIds(formData);
+  if (ids.length === 0) return finish(back, "work.none_selected");
+  if (ids.length > MOVE_MAX) return finish(back, "work.too_many");
+
+  // 고른 것 중에 **내가 소유자인 것**만 남긴다.
+  const { data: owned, error: ownError } = await supabase
+    .from("work_member")
+    .select("work_id")
+    .eq("profile_id", viewer.id)
+    .eq("role", "owner")
+    .in("work_id", ids);
+
+  if (ownError) return finish(back, classifyError(ownError));
+
+  const mine = (owned ?? []).map((r) => r.work_id as string);
+  if (mine.length === 0) return finish(back, "work.not_owner_only");
+
+  const { data, error } = await supabase
+    .from("work")
+    .update({ archived_at: to === "archive" ? new Date().toISOString() : null })
+    .in("id", mine)
+    .select("id");
+
+  if (error) return finish(back, classifyError(error));
+  if (!changed(data)) return finish(back, "denied");
+
+  // 옮긴 업무의 상세도 함께 무른다. 보관 표시가 그 화면 머리에 뜬다.
+  for (const id of mine) revalidatePath(`/works/${id}`);
+  revalidatePath("/works");
+  revalidatePath("/");
+  finish(back, to === "archive" ? "work.archived_many" : "work.restored_many");
+}
+
+export async function archiveWorks(formData: FormData) {
+  return moveWorks(formData, "archive");
+}
+
+export async function restoreWorks(formData: FormData) {
+  return moveWorks(formData, "restore");
 }
