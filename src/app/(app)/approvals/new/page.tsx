@@ -148,26 +148,26 @@ export default async function NewApprovalPage({
             <CardBody className="flex flex-col gap-4">
               {approvers.length > 0 ? (
                 <ol className="flex flex-wrap items-center gap-2">
-                  <li className="rounded-sm border border-gray-20 bg-gray-5 px-3 py-1.5 text-body-sm">
+                  <li className="rounded-sm border border-rule-hair bg-gray-5 px-3 py-2 text-body-sm">
                     <span className="font-bold text-gray-90">
                       {viewer.name} {viewer.position}
                     </span>
-                    <span className="ml-1.5 text-body-xs text-gray-60">기안</span>
+                    <span className="ml-2 text-body-xs text-gray-60">기안</span>
                   </li>
                   {approvers.map((s) => {
                     const p = people.find((x) => x.id === s.approver_id);
                     return (
                       <li
                         key={s.approver_id}
-                        className="rounded-sm border border-gray-20 bg-surface px-3 py-1.5 text-body-sm"
+                        className="rounded-sm border border-rule-hair bg-surface px-3 py-2 text-body-sm"
                       >
-                        <span aria-hidden className="mr-1.5 text-gray-30">
+                        <span aria-hidden className="mr-2 text-gray-30">
                           →
                         </span>
                         <span className="font-bold text-gray-90">
                           {p?.name} {s.position}
                         </span>
-                        <span className="ml-1.5 text-body-xs text-gray-60">
+                        <span className="ml-2 text-body-xs text-gray-60">
                           {APPROVAL_KIND_LABEL[s.kind]}
                         </span>
                       </li>

@@ -2,79 +2,93 @@ import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * 판.
+ * 판 — 세 등급.
  *
- * ── 왜 등급이 셋인가 ────────────────────────────────────────────────────────
+ * ── 이 제품은 자기가 뽑아내는 문서처럼 생긴다 ──────────────────────────────
  *
- * 예전에는 판이 한 종류였다 — `rounded-md border border-gray-10 bg-surface`.
- * 홈에 판이 넷 놓이면 넷이 **완전히 같은 스펙**이었고, 그러면 무엇이 먼저
- * 읽혀야 하는지를 화면이 말하지 않는다. 위계를 만드는 축은 여섯인데
- * (크기·굵기·대비·여백·위치·깊이) 그중 실제로 쓰는 것이 **위치 하나**뿐이었다.
- * 「위에 있으면 중요하다」가 전부이니, 심사에서 「전부 평평하다」는 말이 나온다.
+ * 일머리가 마지막에 내놓는 것은 화면이 아니라 **종이**다. 별지 제12호서식,
+ * HWPX, 기안문. 그런데 한동안 앱의 껍데기는 그 종이와 아무 상관 없는 둥근
+ * 카드였다 — 한 제품 안에 언어가 둘이었고, 종이 쪽이 진짜다.
  *
- * 굵기 축은 못 쓴다 — 접근성 체크리스트가 400/700 두 가지로 묶어 두었다
- * (globals.css 의 body 규칙). 대비 축은 색을 넷으로 줄이면서 「지연」 하나에
- * 몰아 줬다. 남는 것이 **크기·여백·깊이**이고, 이 셋을 판 등급에 싣는다.
+ *   종이  흰 바탕 · 검은 괘선 · 각진 모서리   editor.css · print-sheet · approval-grid
+ *   카드  #fafafa · 6px 둥글기 · 1px 옅은 선   나머지 전부 (34곳 / 16파일)
  *
- *   hero    화면당 **하나**. 지금 손대야 하는 것.
- *           짙은 테두리 + 그림자 한 단계 + 제목 24px + 안쪽 여백 24px
- *   default 지금까지의 판. 화면에 두셋.
- *           옅은 테두리 + 제목 19px + 안쪽 여백 20px
- *   quiet   참고로 곁에 두는 것. **테두리가 없다.**
- *           제목 15px/gray-60 + 안쪽 여백 없음
+ * 34곳이 `rounded-md border border-gray-10 bg-surface` 하나였다. 크기만
+ * 다르고 **종속(subordination)이 없는** 상자들이다. 「AI 가 만든 티가 난다」는
+ * 말은 요란해서가 아니라 **고르게 무난해서** 나온다 — 모든 요소가 저마다
+ * 정당한데 어떤 요소도 다른 요소에 종속되어 있지 않다.
  *
- * quiet 가 이 셋에서 제일 중요하다. 「다가오는 마감」과 「내 업무에서 일어난
- * 일」이 히어로와 똑같은 테두리를 두르고 있으면 셋이 동급으로 읽힌다.
- * 테두리를 지우면 그 영역이 바탕으로 물러나고, 그제야 히어로가 혼자 선다.
+ * ── 세 등급 ────────────────────────────────────────────────────────────────
  *
- * ── 그림자에 대하여 ─────────────────────────────────────────────────────────
+ *   문서 doc    흰 종이 · 각진 모서리 · 위쪽 2px 먹선(rule-head)
+ *               제목 34px · 안쪽 24px            **화면당 최대 하나**
+ *   판  panel   surface · 1px rule-frame · 4px 둥글기
+ *               제목 21px · 안쪽 16px            여러 개
+ *   여백 quiet  상자 없음
+ *               제목 15px gray-60 · 안쪽 0       여러 개
  *
- * 원래 이 파일에는 "그림자를 거의 쓰지 않는다 — 업무 화면에는 판이 수십 개
- * 놓이는데 전부 떠 있으면 무엇이 중요한지 사라진다"고 적혀 있었다. 그 원칙은
- * 그대로다. hero 는 **화면당 하나**로 못박혀 있으므로, 떠 있는 판이 하나뿐이면
- * 그것이 곧 위계다. 원칙을 깬 것이 아니라 원칙을 실행한 것이다.
+ * **규칙: 한 화면에 「문서」는 하나다.** 이 한 줄이 실눈 시험(test:squint)이
+ * 재는 것과 같은 말이다. 화면을 흐리게 만들었을 때 덩어리 하나가 서면 통과다.
+ *
+ * quiet 이 셋 중 제일 중요하다. 곁에 두는 참고 정보가 문서와 똑같은 테두리를
+ * 두르고 있으면 둘이 동급으로 읽힌다. 테두리를 지우면 바탕으로 물러나고,
+ * 그제야 문서가 혼자 선다.
+ *
+ * ── 그림자는 없다 ──────────────────────────────────────────────────────────
+ *
+ * 예전 hero 등급에는 그림자가 한 단 있었다. 지웠다. 종이는 뜨지 않는다.
+ * 위계는 **크기 + 여백 + 선 굵기**로 낸다 — 서식이 평평하지 않은 이유는
+ * 깊이가 아니라 선 굵기이고, 이 앱에 없던 축이 그것이었다(globals.css 의
+ * --color-rule-* 참조). `--shadow-*` 토큰은 만들지 않는다. 만들면 쓰인다.
  */
 
-type CardVariant = "hero" | "default" | "quiet";
+export type CardVariant = "doc" | "panel" | "quiet";
 
 /**
- * 판의 겉모양. `<div>` 가 아닌 태그로 히어로를 그리는 곳(work/urgent-hero.tsx 의
- * `<article>`)이 이 표를 가져다 쓴다 — 그림자 값을 두 군데에 적어 두면 한쪽만
- * 고치는 날이 반드시 오고, 그러면 「화면에 떠 있는 판은 하나」라는 전제가 조용히
- * 깨진다.
+ * 판의 겉모양. `<div>` 가 아닌 태그로 문서를 그리는 곳(work/urgent-hero.tsx 의
+ * `<article>`)이 이 표를 가져다 쓴다 — 두 군데에 적어 두면 한쪽만 고치는 날이
+ * 반드시 오고, 그러면 「화면에 문서는 하나」라는 전제가 조용히 깨진다.
  */
 export const CARD_SURFACE: Record<CardVariant, string> = {
-  hero: "rounded-lg border border-gray-20 bg-surface shadow-[0_1px_3px_rgb(0_0_0/0.08),0_1px_2px_-1px_rgb(0_0_0/0.06)]",
-  default: "rounded-md border border-gray-10 bg-surface",
+  // 종이는 순백이다. bg-white 가 아니라 gray-0 을 쓰는 이유는 globals.css 에 —
+  // Tailwind 의 bg-white 와 text-white 가 같은 토큰을 보기 때문이다.
+  doc: "border border-rule-frame border-t-2 border-t-rule-head bg-gray-0",
+  panel: "rounded-sm border border-rule-frame bg-surface",
   quiet: "",
 };
 
+/** 등급이 안쪽 여백을 정한다. 한동안 123개 상자가 31가지 조합을 쓰고 있었다. */
+const PAD: Record<CardVariant, string> = {
+  doc: "p-6", //   24
+  panel: "p-4", // 16
+  quiet: "", //     0
+};
+
 export function Card({
-  variant = "default",
+  variant = "panel",
   className,
   ...props
 }: ComponentProps<"div"> & { variant?: CardVariant }) {
   return <div className={cn(CARD_SURFACE[variant], className)} {...props} />;
 }
 
-/** 등급별 제목 크기·여백. CardHeader 와 CardBody 가 같은 표를 본다. */
 const HEADER: Record<CardVariant, string> = {
-  hero: "border-b border-gray-10 px-6 py-5",
-  default: "border-b border-gray-10 px-5 py-4",
+  // 문서에는 아래 구분선을 긋지 않는다 — 위쪽 먹선이 이미 「여기서 문서가
+  // 시작한다」고 말했다. 선을 위아래로 두 번 그으면 제목이 띠처럼 갇힌다.
+  doc: "px-6 pt-6 pb-4",
+  panel: "border-b border-rule-hair px-4 py-4",
   quiet: "pb-2",
 };
 
 const TITLE: Record<CardVariant, string> = {
-  // 24px. 예전에는 등급 없이 전부 text-h4(17px)였는데, 그건 본문(17px)과
-  // **같은 크기**다. 판 제목이 본문과 같으면 판이 몇 개든 동급으로 보인다.
-  hero: "text-h2 font-bold tracking-tight text-gray-90",
-  default: "text-h3 font-bold text-gray-90", // 19px
-  quiet: "text-body-sm font-bold text-gray-60", // 15px — 물러난다
+  doc: "text-h1 font-bold tracking-tight break-keep text-gray-90",
+  panel: "text-h3 font-bold text-gray-90",
+  quiet: "text-body-sm font-bold text-gray-60", // 물러난다
 };
 
 const BODY: Record<CardVariant, string> = {
-  hero: "px-6 py-5",
-  default: "px-5 py-4",
+  doc: "px-6 pb-6",
+  panel: "px-4 py-4",
   quiet: "",
 };
 
@@ -83,13 +97,14 @@ export function CardHeader({
   description,
   action,
   as: Heading = "h2",
-  variant = "default",
+  variant = "panel",
   className,
 }: {
   title: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
-  as?: "h2" | "h3";
+  /** 문서 등급은 대개 그 화면의 h1 이다 — 화면마다 h1 은 정확히 하나다. */
+  as?: "h1" | "h2" | "h3";
   variant?: CardVariant;
   className?: string;
 }) {
@@ -104,7 +119,7 @@ export function CardHeader({
       <div className="min-w-0">
         <Heading className={TITLE[variant]}>{title}</Heading>
         {description ? (
-          <p className="mt-1 text-body-sm text-gray-60">{description}</p>
+          <p className="mt-2 text-body-sm text-gray-60">{description}</p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -113,9 +128,23 @@ export function CardHeader({
 }
 
 export function CardBody({
-  variant = "default",
+  variant = "panel",
   className,
   ...props
 }: ComponentProps<"div"> & { variant?: CardVariant }) {
   return <div className={cn(BODY[variant], className)} {...props} />;
+}
+
+/**
+ * 머리 없이 통째로 쓰는 판. `<Card>` 안에 `<CardBody>` 만 넣던 자리를 한 겹
+ * 줄인다 — 판 안에 판이 들어가는 모양이 34개 상자를 만든 원인 중 하나였다.
+ */
+export function CardPad({
+  variant = "panel",
+  className,
+  ...props
+}: ComponentProps<"div"> & { variant?: CardVariant }) {
+  return (
+    <div className={cn(CARD_SURFACE[variant], PAD[variant], className)} {...props} />
+  );
 }

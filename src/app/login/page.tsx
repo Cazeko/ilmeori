@@ -6,6 +6,8 @@ import { Avatar } from "@/components/ui/avatar";
 import { BrandMark } from "@/components/brand-mark";
 import { CityMark } from "@/components/city-mark";
 import { Notice } from "@/components/ui/notice";
+import { CARD_SURFACE } from "@/components/ui/card";
+import { cn } from "@/lib/cn";
 import { demoAccounts } from "@/lib/mock/org";
 import { safeNext } from "@/lib/safe-next";
 import { getViewer } from "@/lib/session";
@@ -56,7 +58,14 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             <CityMark size="lg" />
           </div>
 
-          <h1 className="mt-7 text-h1 leading-tight font-bold break-keep text-gray-90">
+          {/* 34px 에서 27px 로 내렸다. 이 화면에서 사람이 하러 온 일은
+              「들어가기」이고, 슬로건은 그 옆에 서는 맥락이다.
+
+              내렸다고 밀리지 않는다 — 오른쪽 계정 판이 **문서 등급**(흰 종이 +
+              위쪽 2px 먹선)이라, 글자를 더 키우지 않고도 그쪽이 1등이 된다.
+              이 시스템이 위계를 크기가 아니라 선 굵기로 낸다는 말이 실제로
+              쓰이는 첫 자리다. */}
+          <h1 className="mt-7 text-h2 leading-tight font-bold break-keep text-gray-90">
             파일은 넘겨받는데,
             <br />
             일머리는 못 넘겨받습니다.
@@ -71,7 +80,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
               그래서 문제 다음 자리에 **하는 일 한 문장**을 둔다. 이 문장은
               로그인·홈·README·발표 대본 네 곳에서 **토씨까지 같아야 한다.**
               자리마다 다르게 적으면 그건 한 줄 소개가 아니라 네 개의 설명이다. */}
-          <p className="mt-5 max-w-lg text-body-lg leading-relaxed font-bold break-keep text-gray-90">
+          <p className="mt-5 max-w-lg text-h3 leading-relaxed font-bold break-keep text-gray-90">
             평소 결재와 대화가 쌓이면, 근거가 붙은 한/글 결재문서와 법정 인계서가
             저절로 나옵니다.
           </p>
@@ -82,7 +91,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
           {/* 어느 공모전의 무슨 과제인지. 본문 문단 안에 섞여 있으면 읽고
               지나가는데, 심사위원에게는 이게 첫 번째 확인 사항이다. */}
-          <p className="mt-4 inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-sm border border-gray-20 bg-surface px-3 py-2 text-body-xs text-gray-70">
+          <p className="mt-4 inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-sm border border-rule-hair bg-surface px-3 py-2 text-body-xs text-gray-70">
             <span className="font-bold text-gray-90">
               2026 화성시 AI·DATA 공모전
             </span>
@@ -94,7 +103,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
           {/* dl로 두면 dt·dd가 감싸는 div 두 겹 아래로 내려가 정의 목록으로 읽히지 않는다.
               설명 목록이라기보다 기능 나열이므로 ul이 맞다. */}
-          <ul className="mt-8 space-y-3.5 border-t border-gray-10 pt-6">
+          <ul className="mt-8 space-y-4 border-t border-rule-hair pt-6">
             {[
               [
                 "협업이 쌓입니다",
@@ -116,7 +125,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
                 />
                 <div>
                   <p className="text-body-sm font-bold text-gray-90">{term}</p>
-                  <p className="mt-0.5 text-body-sm break-keep text-gray-60">
+                  <p className="mt-1 text-body-sm break-keep text-gray-60">
                     {desc}
                   </p>
                 </div>
@@ -133,7 +142,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
               우리가 추정한 수치가 아니다. 출처를 함께 적는 이유가 그것이다. */}
           <section
             aria-labelledby="why-heading"
-            className="mt-8 border-t border-gray-10 pt-6"
+            className="mt-8 border-t border-rule-hair pt-6"
           >
             <h2
               id="why-heading"
@@ -151,7 +160,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
                   <dt className="text-h3 leading-none font-bold tabular-nums text-primary">
                     {figure}
                   </dt>
-                  <dd className="mt-1.5 text-body-xs leading-snug break-keep text-gray-60">
+                  <dd className="mt-2 text-body-xs leading-snug break-keep text-gray-60">
                     {label}
                   </dd>
                 </div>
@@ -165,9 +174,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           </section>
         </div>
 
-        {/* ── 계정 선택 ─────────────────────────────────────────────────── */}
+        {/* ── 계정 선택 — 이 화면의 「문서」 ─────────────────────────────
+            사람이 이 화면에 온 이유는 들어가기 위해서다. 문서 등급으로 올린다 —
+            흰 종이, 각진 모서리, 위쪽 2px 먹선. */}
         <div>
-          <div className="rounded-lg border border-gray-10 bg-surface p-6 sm:p-7">
+          <div className={cn(CARD_SURFACE.doc, "p-6 sm:p-7")}>
             <h2 className="text-h3 font-bold text-gray-90">
               데모 계정으로 들어가기
             </h2>
@@ -207,13 +218,13 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
               </Notice>
             ) : null}
 
-            <ul className="mt-5 space-y-2.5">
+            <ul className="mt-5 space-y-3">
               {demoAccounts.map(({ profile, department, role }) => (
                 <li key={profile.id}>
                   <form action={enterAsDemo}>
                     <input type="hidden" name="profileId" value={profile.id} />
                     <input type="hidden" name="next" value={next} />
-                    <PendingCardButton className="group flex w-full cursor-pointer items-start gap-3.5 rounded-md border border-gray-20 bg-surface p-4 text-left transition-colors duration-150 hover:border-primary hover:bg-primary-5">
+                    <PendingCardButton className="group flex w-full cursor-pointer items-start gap-4 rounded-sm border border-rule-hair bg-surface p-4 text-left transition-colors duration-150 hover:border-primary hover:bg-primary-5">
                       <Avatar profile={profile} size="lg" />
                       <span className="min-w-0 flex-1">
                         <span className="block text-body font-bold text-gray-90">
@@ -248,7 +259,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           </Notice>
 
           <p className="mt-4 flex items-start gap-2 px-1 text-body-xs leading-relaxed text-gray-60">
-            <ShieldCheck aria-hidden className="mt-0.5 size-4 shrink-0" />
+            <ShieldCheck aria-hidden className="mt-1 size-4 shrink-0" />
             <span>
               실 서비스에서는 행정전자서명(GPKI) 연계와 부서 단위 접근제어를 전제로
               설계했습니다. 시제품에서는 계정 선택으로 대신합니다.

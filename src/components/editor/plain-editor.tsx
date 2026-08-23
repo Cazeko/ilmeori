@@ -87,7 +87,7 @@ export function PlainEditor({
         스크립트가 켜지면 서식 편집기가 저절로 나타납니다.
       </Notice>
 
-      <ol className="flex flex-col gap-1.5">
+      <ol className="flex flex-col gap-2">
         {doc.blocks.map((b, i) => {
           const meta = BLOCK_META[b.kind];
           const editing = canWrite && editingId === b.id;
@@ -102,18 +102,18 @@ export function PlainEditor({
             <li
               key={b.id}
               className={cn(
-                "rounded-md border bg-surface",
-                editing ? "border-primary-30" : "border-gray-10",
+                "rounded-sm border bg-surface",
+                editing ? "border-primary-30" : "border-rule-frame",
               )}
             >
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-10 px-3 py-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rule-hair px-3 py-2">
                 <span className="inline-flex items-center gap-2 text-body-xs font-bold text-gray-60">
                   {meta.label}
                   {b.indent ? (
                     <span className="font-normal">{clampIndent(b.indent)}단 들여씀</span>
                   ) : null}
                   {notes > 0 ? (
-                    <span className="rounded-xs bg-accent-bg px-1.5 py-0.5 text-accent-text">
+                    <span className="rounded-xs bg-accent-bg px-chip-x py-chip-y text-accent-text">
                       의견 {notes}
                     </span>
                   ) : null}
@@ -276,7 +276,7 @@ export function PlainEditor({
                   </form>
 
                   {doc.blocks.length > 1 ? (
-                    <details className="mt-3 border-t border-gray-10 pt-2">
+                    <details className="mt-3 border-t border-rule-hair pt-2">
                       <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-body-sm font-bold text-gray-70">
                         <Trash2 aria-hidden className="size-4 text-gray-40" />이 문단 지우기
                       </summary>
@@ -312,7 +312,7 @@ export function PlainEditor({
       {canWrite ? (
         <form
           action={addPlainBlock}
-          className="mt-4 flex flex-wrap items-end gap-2 rounded-md border border-gray-10 bg-surface px-3 py-3"
+          className="mt-4 flex flex-wrap items-end gap-2 rounded-sm border border-rule-frame bg-surface px-3 py-3"
         >
           <input type="hidden" name="workId" value={workId} />
           <input type="hidden" name="documentId" value={documentId} />
@@ -363,7 +363,7 @@ function BlockPreview({
 }) {
   if (kind === "table" && table) {
     return (
-      <div className="px-3 py-2.5">
+      <div className="px-3 py-3">
         <table className="w-full border-collapse text-body-sm">
           <tbody>
             {table.rows.map((row, r) => (
@@ -388,7 +388,7 @@ function BlockPreview({
           </tbody>
         </table>
         {/* 표 안의 글자는 이 화면에서 못 고친다. 감추지 않고 그 자리에 적는다. */}
-        <p className="mt-1.5 text-body-xs text-gray-60">
+        <p className="mt-2 text-body-xs text-gray-60">
           표 안의 글자는 서식 편집기에서 고칠 수 있습니다.
         </p>
       </div>
@@ -411,7 +411,7 @@ function BlockPreview({
     <p
       className={cn(
         "px-3 py-2 leading-relaxed break-keep whitespace-pre-line",
-        kind === "title" && "text-center text-body-lg font-bold text-gray-90",
+        kind === "title" && "text-center text-h3 font-bold text-gray-90",
         kind === "heading" && "text-body font-bold text-gray-90",
         kind === "subheading" && "text-body-sm font-bold text-gray-90",
         (kind === "source" || kind === "note") && "text-body-xs text-gray-60",
@@ -421,7 +421,7 @@ function BlockPreview({
       )}
       style={indent ? { paddingInlineStart: `${12 + indent * 16}px` } : undefined}
     >
-      {marker ? <span className="mr-1.5 text-gray-60">{marker}</span> : null}
+      {marker ? <span className="mr-2 text-gray-60">{marker}</span> : null}
       {text || <span className="text-gray-50">(빈 문단)</span>}
     </p>
   );

@@ -15,7 +15,6 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/cn";
 import { formatDateTime } from "@/lib/format";
 import {
@@ -26,7 +25,7 @@ import {
   type DocComment,
   type RichDoc,
 } from "@/lib/editor/model";
-import type { Peer } from "./use-collab";
+import { CURSOR_TONES, type Peer } from "./use-collab";
 
 /**
  * 편집기 둘레의 판들 — 개요·머리띠·의견·상태줄.
@@ -72,8 +71,8 @@ export function TopBar({
   return (
     <div className="ilm-top">
       <div className="min-w-0 flex-1">
-        <h2 className="truncate text-body-lg font-bold text-gray-90">{title}</h2>
-        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-xs text-gray-60">
+        <h2 className="truncate text-h3 font-bold text-gray-90">{title}</h2>
+        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-xs text-gray-60">
           {readOnly ? (
             <span className="font-bold text-gray-70">읽기 전용</span>
           ) : (
@@ -123,8 +122,8 @@ export function TopBar({
               {peers.slice(0, 4).map((p) => (
                 <span
                   key={p.from}
-                  className="ilm-peer -ml-1.5 first:ml-0"
-                  data-tone={p.tone % 6}
+                  className="ilm-peer -ml-2 first:ml-0"
+                  data-tone={p.tone % CURSOR_TONES}
                   title={p.name}
                 >
                   {p.name.slice(-2)}
@@ -143,7 +142,7 @@ export function TopBar({
         </div>
       ) : null}
 
-      <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         <a href={`${exportBase}/hwpx`} className="ilm-xbtn" data-variant="button">
           <FileDown aria-hidden className="size-4" />
           한/글 (.hwpx)
@@ -374,7 +373,7 @@ function CommentCard({
         aria-label="이 의견이 달린 문단으로 이동"
       >
         {excerpt ? (
-          <p className="mb-1.5 truncate border-l-2 border-accent pl-2 text-body-xs text-gray-60">
+          <p className="mb-2 truncate border-l-2 border-accent pl-2 text-body-xs text-gray-60">
             {excerpt}
           </p>
         ) : null}
@@ -385,28 +384,28 @@ function CommentCard({
           <p className="text-body-xs font-bold text-gray-80">
             {comment.authorName}
             {comment.at ? (
-              <time dateTime={comment.at} className="ml-1.5 font-normal text-gray-60">
+              <time dateTime={comment.at} className="ml-2 font-normal text-gray-60">
                 {formatDateTime(comment.at)}
               </time>
             ) : null}
           </p>
-          <p className="mt-0.5 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
+          <p className="mt-1 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
             {comment.body}
           </p>
         </>
       ) : null}
 
       {comment.replies?.map((r) => (
-        <div key={r.id} className="mt-2 border-t border-gray-10 pt-2">
+        <div key={r.id} className="mt-2 border-t border-rule-hair pt-2">
           <p className="text-body-xs font-bold text-gray-80">
             {r.authorName}
             {r.at ? (
-              <time dateTime={r.at} className="ml-1.5 font-normal text-gray-60">
+              <time dateTime={r.at} className="ml-2 font-normal text-gray-60">
                 {formatDateTime(r.at)}
               </time>
             ) : null}
           </p>
-          <p className="mt-0.5 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
+          <p className="mt-1 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
             {r.body}
           </p>
         </div>
@@ -431,7 +430,7 @@ function CommentCard({
               }
             }}
             placeholder={fresh ? "왜 이렇게 정했는지 적어 주세요" : "답글"}
-            className="w-full resize-none rounded-sm border border-gray-50 bg-surface px-2 py-1.5 text-body-sm text-gray-90 placeholder:text-gray-60"
+            className="w-full resize-none rounded-sm border border-gray-50 bg-surface px-2 py-2 text-body-sm text-gray-90 placeholder:text-gray-60"
           />
           <div className="mt-1 flex flex-wrap items-center gap-1">
             <button
@@ -529,7 +528,7 @@ export function StatusBar({
 
       <span className="ilm-tooldiv" aria-hidden />
 
-      <label className="inline-flex items-center gap-1.5">
+      <label className="inline-flex items-center gap-2">
         <input
           type="checkbox"
           checked={showGutter}
@@ -552,12 +551,12 @@ export function StatusBar({
 
       <span className="ilm-tooldiv" aria-hidden />
 
-      <label className="inline-flex items-center gap-1.5">
+      <label className="inline-flex items-center gap-2">
         <span className="sr-only">화면 배율</span>
         <select
           value={zoom}
           onChange={(e) => onZoom(Number(e.target.value))}
-          className="rounded-xs border border-gray-30 bg-surface px-1 py-0.5 text-body-xs"
+          className="rounded-xs border border-gray-30 bg-surface px-1 py-1 text-body-xs"
         >
           {[75, 90, 100, 125, 150].map((z) => (
             <option key={z} value={z}>

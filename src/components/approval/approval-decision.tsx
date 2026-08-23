@@ -32,7 +32,7 @@ export function ApprovalDecision({
   step: ApprovalStepWithApprover;
 }) {
   return (
-    <div className="rounded-md border border-primary/30 bg-primary-5 px-5 py-4">
+    <div className="rounded-sm border border-primary/30 bg-primary-5 px-5 py-4">
       <p className="text-body-sm font-bold text-gray-90">
         지금 내 차례입니다 — {APPROVAL_KIND_LABEL[step.kind]}란
       </p>
@@ -111,12 +111,12 @@ export function ApprovalDecision({
  */
 export function ApprovalWithdraw({ approvalId }: { approvalId: string }) {
   return (
-    <details className="rounded-md border border-gray-10 bg-surface">
+    <details className="rounded-sm border border-rule-frame bg-surface">
       <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
         <RotateCcw aria-hidden className="size-4 shrink-0 text-gray-40" />
         잘못 올렸다면
       </summary>
-      <div className="border-t border-gray-10 px-4 py-3.5">
+      <div className="border-t border-rule-hair px-4 py-4">
         <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
           아직 아무도 서명하지 않았다면 되가져올 수 있습니다. 회수한 사실은 업무
           이력에 남고, 문서는 사라지지 않습니다 — 결재는 증빙이고 증빙은 지워지면

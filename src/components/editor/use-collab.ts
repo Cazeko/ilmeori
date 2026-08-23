@@ -80,11 +80,20 @@ export type Peer = {
 
 export type Link = "off" | "connecting" | "live" | "lost";
 
+/**
+ * 커서 색은 넷이다.
+ *
+ * 여섯이던 때가 있었는데 그중 둘(보라·자홍)이 팔레트 밖 색이라 문서 화면의
+ * 색 갈래를 7개까지 밀어 올렸다. 팔레트 안의 넷으로 줄였다 —
+ * 이 숫자를 고치려면 editor.css 의 --cursor-* 도 함께 봐야 한다.
+ */
+export const CURSOR_TONES = 4;
+
 /** 자리 이름 → 색 번호. 같은 사람은 언제나 같은 색이어야 눈이 따라간다. */
 function toneOf(site: string): number {
   let h = 0;
   for (let i = 0; i < site.length; i += 1) h = (h * 31 + site.charCodeAt(i)) >>> 0;
-  return h % 6;
+  return h % CURSOR_TONES;
 }
 
 export function useCollab({

@@ -114,7 +114,7 @@ export function AttachmentPanel({
       />
 
       {groups.length > 0 ? (
-        <ul className="divide-y divide-gray-5">
+        <ul className="divide-y divide-rule-hair">
           {groups.map(({ fileName, versions }) => {
             const latest = versions[0];
             const older = versions.slice(1);
@@ -138,7 +138,7 @@ export function AttachmentPanel({
                   <span className="min-w-0">{fileName}</span>
                 </a>
 
-                <p className="pl-5.5 text-body-xs text-gray-60">
+                <p className="pl-6 text-body-xs text-gray-60">
                   {versions.length > 1 ? (
                     <>
                       <span className="font-bold text-gray-70">
@@ -158,12 +158,12 @@ export function AttachmentPanel({
 
                 {/* ── 이전 판 ──────────────────────────────────────────── */}
                 {older.length > 0 ? (
-                  <details className="pl-5.5">
+                  <details className="pl-6">
                     <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-body-xs font-bold text-gray-70">
                       <History aria-hidden className="size-3.5 text-gray-40" />
                       이전 판 {older.length}개
                     </summary>
-                    <ol className="mb-2 border-l-2 border-gray-10 pl-3">
+                    <ol className="mb-2 border-l-2 border-rule-hair pl-3">
                       {older.map((v, i) => {
                         // 가장 오래된 판이 1판. 최신은 versions.length 판이다.
                         const no = older.length - i;
@@ -173,7 +173,7 @@ export function AttachmentPanel({
                               href={`/works/${workId}/files/${v.id}`}
                               data-download=""
                               aria-label={`${fileName} ${no}판 내려받기`}
-                              className="flex min-h-11 items-center gap-1.5 text-body-xs font-bold text-primary underline-offset-2 hover:underline"
+                              className="flex min-h-11 items-center gap-2 text-body-xs font-bold text-primary underline-offset-2 hover:underline"
                             >
                               <Download aria-hidden className="size-3.5" />
                               {no}판 내려받기
@@ -196,7 +196,7 @@ export function AttachmentPanel({
 
                 {/* ── 새 판 올리기 · 삭제 ──────────────────────────────── */}
                 {canWrite ? (
-                  <details className="pl-5.5">
+                  <details className="pl-6">
                     <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-body-xs font-bold text-gray-70">
                       <FileUp aria-hidden className="size-3.5 text-gray-40" />새
                       판 올리기 · 삭제
@@ -205,7 +205,7 @@ export function AttachmentPanel({
                     <form
                       action={uploadAttachment}
                       encType="multipart/form-data"
-                      className="border-t border-gray-5 py-3"
+                      className="border-t border-rule-hair py-3"
                     >
                       <input type="hidden" name="workId" value={workId} />
                       <input
@@ -241,7 +241,7 @@ export function AttachmentPanel({
                       </div>
                     </form>
 
-                    <div className="border-t border-gray-5 py-3">
+                    <div className="border-t border-rule-hair py-3">
                       <Notice tone="danger" title="되돌릴 수 없습니다">
                         {versions.length > 1
                           ? `최신 판(${versions.length}판) 파일만 저장소에서 사라지고 이전 판은 그대로 남습니다.`
@@ -290,7 +290,7 @@ export function AttachmentPanel({
         <form
           action={uploadAttachment}
           encType="multipart/form-data"
-          className="border-t border-gray-10 px-5 py-4"
+          className="border-t border-rule-hair px-5 py-4"
         >
           <input type="hidden" name="workId" value={workId} />
           <Field
@@ -325,7 +325,7 @@ export function AttachmentPanel({
       {/* 파일이 한 건도 없을 때는 보관 방식을 말할 것이 없다. 예전에는 0건인
           패널에도 이 3줄이 늘 붙어, 빈 화면에서 가장 긴 글이 정책 설명이었다. */}
       {attachments.length > 0 ? (
-        <div className="border-t border-gray-10 bg-gray-5 px-5 py-2.5">
+        <div className="border-t border-rule-hair bg-gray-5 px-5 py-3">
           <p className="text-body-xs leading-relaxed text-gray-60">
             공개 URL 이 없는 비공개 저장소에 있습니다. 내려받을 때마다 권한을
             확인합니다.

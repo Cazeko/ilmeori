@@ -141,7 +141,7 @@ export default function MethodPage() {
         제품이 내세우는 것은 문장의 매끄러움이 아니라 근거의 확인 가능성이라,
         그 둘 중에서는 후자를 골랐습니다.
         <br />
-        생성 방식은 만들어질 때마다 <code className="rounded-xs bg-gray-10 px-1 py-0.5 font-mono text-body-xs">rule-based/v1</code>{" "}
+        생성 방식은 만들어질 때마다 <code className="rounded-xs bg-gray-10 px-1 py-1 font-mono text-body-xs">rule-based/v1</code>{" "}
         로 기록에 남습니다. 나중에 모델을 붙이더라도 그 사실이 문서마다 남아,
         어느 문서가 무엇으로 만들어졌는지 뒤에서 구분할 수 있습니다.
       </Notice>
@@ -164,7 +164,7 @@ export default function MethodPage() {
               description={g.form}
             />
             <CardBody>
-              <dl className="flex flex-col gap-3.5">
+              <dl className="flex flex-col gap-4">
                 {[
                   ["재료", g.material],
                   ["규칙이 하는 일", g.rule],
@@ -174,14 +174,14 @@ export default function MethodPage() {
                     <dt className="text-body-xs font-bold text-gray-60">
                       {term}
                     </dt>
-                    <dd className="mt-0.5 text-body-sm leading-relaxed break-keep text-gray-80">
+                    <dd className="mt-1 text-body-sm leading-relaxed break-keep text-gray-80">
                       {desc}
                     </dd>
                   </div>
                 ))}
               </dl>
             </CardBody>
-            <div className="border-t border-gray-10 px-5 py-3">
+            <div className="border-t border-rule-hair px-5 py-3">
               <Link href={g.href} className="text-body-sm font-bold">
                 {g.where} 화면에서 보기
               </Link>
@@ -198,19 +198,19 @@ export default function MethodPage() {
           as="h3"
           description="아래 숫자는 npm run check 가 실제로 돌리는 시험의 결과입니다."
         />
-        <ul className="divide-y divide-gray-5">
+        <ul className="divide-y divide-rule-hair">
           {CHECKS.map((c) => (
             <li key={c.what} className="flex gap-3 px-5 py-4">
               {/* 색만으로 갈리지 않게 아이콘 모양도 다르다(체크 / 빈 원). */}
               {c.verified ? (
                 <Check
                   aria-hidden
-                  className="mt-0.5 size-4.5 shrink-0 text-success"
+                  className="mt-1 size-4.5 shrink-0 text-success"
                 />
               ) : (
                 <CircleDashed
                   aria-hidden
-                  className="mt-0.5 size-4.5 shrink-0 text-warning"
+                  className="mt-1 size-4.5 shrink-0 text-warning"
                 />
               )}
               <div className="min-w-0 flex-1">
@@ -223,14 +223,14 @@ export default function MethodPage() {
                   <span
                     className={
                       c.verified
-                        ? "rounded-xs bg-success-bg px-1.5 py-0.5 text-body-xs font-bold text-success"
-                        : "rounded-xs bg-warning-bg px-1.5 py-0.5 text-body-xs font-bold text-warning"
+                        ? "rounded-xs bg-success-bg px-chip-x py-chip-y text-body-xs font-bold text-success"
+                        : "rounded-xs bg-warning-bg px-chip-x py-chip-y text-body-xs font-bold text-warning"
                     }
                   >
                     {c.result}
                   </span>
                   {c.cmd ? (
-                    <code className="rounded-xs bg-gray-5 px-1.5 py-0.5 font-mono text-body-xs text-gray-60">
+                    <code className="rounded-xs bg-gray-5 px-chip-x py-chip-y font-mono text-body-xs text-gray-60">
                       {c.cmd}
                     </code>
                   ) : null}
@@ -242,7 +242,7 @@ export default function MethodPage() {
             </li>
           ))}
         </ul>
-        <div className="border-t border-gray-10 bg-gray-5 px-5 py-3.5">
+        <div className="border-t border-rule-hair bg-gray-5 px-5 py-4">
           <p className="text-body-sm leading-relaxed break-keep text-gray-70">
             <strong className="font-bold text-gray-90">
               한/글이 없는 자리에서도 같은 내용의 종이가 나옵니다.

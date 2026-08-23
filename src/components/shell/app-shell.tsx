@@ -89,7 +89,7 @@ function NavList({ pathname }: { pathname: string }) {
           <p className="mb-2 px-3 text-body-xs font-bold tracking-wide text-gray-60">
             {group.heading}
           </p>
-          <ul className="flex flex-col gap-0.5">
+          <ul className="flex flex-col gap-1">
             {group.items.map(({ href, label, icon: Icon }) => {
               const active = isActive(pathname, href);
               return (
@@ -104,7 +104,7 @@ function NavList({ pathname }: { pathname: string }) {
                     data-variant="plain"
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "flex min-h-11 items-center gap-3 rounded-sm border-l-3 pr-3 pl-2.5 text-body-sm font-bold transition-colors duration-150",
+                      "flex min-h-11 items-center gap-3 rounded-sm border-l-3 pr-3 pl-3 text-body-sm font-bold transition-colors duration-150",
                       // 누르는 즉시 칠해진다. :active 는 브라우저가 칠하므로
                       // 자바스크립트를 기다리지 않는다(0ms). 그 뒤를
                       // LinkPending 의 표시가 이어받는다.
@@ -144,12 +144,12 @@ function NavList({ pathname }: { pathname: string }) {
  */
 function DemoNotice() {
   return (
-    <details className="mx-3 mb-4 rounded-md border border-gray-10 bg-gray-5 px-3 py-2">
+    <details className="mx-3 mb-4 rounded-sm border border-rule-frame bg-gray-5 px-3 py-2">
       <summary className="flex cursor-pointer list-none items-center text-body-xs font-bold text-gray-90 pointer-coarse:min-h-11 [&::-webkit-details-marker]:hidden">
         시연용 가상 데이터
         <span className="ml-1 font-normal text-gray-60">자세히</span>
       </summary>
-      <p className="mt-1.5 text-body-xs leading-relaxed text-gray-60">
+      <p className="mt-2 text-body-xs leading-relaxed text-gray-60">
         부서명만 화성특례시 실제 조직도를 따랐습니다. 인물·업무·문서는 전부
         지어낸 것이며 실제 공문서는 한 건도 들어 있지 않습니다.
       </p>
@@ -169,7 +169,7 @@ function DemoNotice() {
  */
 function SidebarCityMark() {
   return (
-    <div className="mt-2 border-t border-gray-10 px-5 pt-5 pb-6">
+    <div className="mt-2 border-t border-rule-hair px-5 pt-5 pb-6">
       <CityMark size="block" />
     </div>
   );
@@ -252,7 +252,7 @@ export function AppShell({
       {/* ── 상단 바 ─────────────────────────────────────────────────────── */}
       {/* 상단 바와 왼쪽 메뉴는 종이에 나올 이유가 없다. 인쇄물은 결재에 올라가는
           문서 한 벌이지 화면의 사진이 아니다. */}
-      <header className="sticky top-0 z-20 flex h-header shrink-0 items-center gap-3 border-b border-gray-10 bg-surface px-3 sm:px-4 print:hidden">
+      <header className="sticky top-0 z-20 flex h-header shrink-0 items-center gap-3 border-b border-rule-hair bg-surface px-3 sm:px-4 print:hidden">
         {/* ── 좁은 화면의 서랍 ──────────────────────────────────────────
             <details> 라서 스크립트 없이 열린다. summary 가 곧 햄버거다. */}
         <details ref={drawerRef} data-drawer className="lg:hidden">
@@ -281,7 +281,7 @@ export function AppShell({
 
           <div
             data-drawer-panel
-            className="fixed top-0 bottom-0 left-0 z-40 flex w-sidebar flex-col overflow-y-auto border-r border-gray-10 bg-surface"
+            className="fixed top-0 bottom-0 left-0 z-40 flex w-sidebar flex-col overflow-y-auto border-r border-rule-hair bg-surface"
           >
             <div className="flex h-header shrink-0 items-center justify-between px-4">
               <span className="text-body font-bold text-gray-90">메뉴</span>
@@ -321,7 +321,7 @@ export function AppShell({
               md 미만에서는 접는다. 390px 머리 줄에는 검색칸이 먼저 서야 한다. */}
           <span
             aria-hidden
-            className="ml-0.5 hidden h-6 w-px shrink-0 bg-gray-20 md:block"
+            className="ml-1 hidden h-6 w-px shrink-0 bg-gray-20 md:block"
           />
           <CityMark className="hidden md:flex" />
         </Link>
@@ -392,7 +392,7 @@ export function AppShell({
             <SubmitButton
               variant="ghost"
               title="세션을 끊고 다른 데모 계정으로 들어갑니다"
-              className="relative h-8 min-h-8 min-w-8 gap-1.5 border border-gray-50 px-1.5 text-body-xs font-bold text-gray-60 after:absolute after:top-1/2 after:left-1/2 after:size-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] sm:px-2"
+              className="relative h-8 min-h-8 min-w-8 gap-2 border border-gray-50 px-2 text-body-xs font-bold text-gray-60 after:absolute after:top-1/2 after:left-1/2 after:size-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] sm:px-2"
             >
               <Repeat aria-hidden className="size-3.5" />
               {/* 좁은 화면에서는 아이콘만. 글자까지 두면 검색칸이 눌려 버린다. */}
@@ -406,7 +406,7 @@ export function AppShell({
       <div className="flex min-h-0 flex-1">
         {/* ── 왼쪽 ──────────────────────────────────────────────────────────
             넓은 화면 전용. 좁은 화면의 같은 메뉴는 위 <details> 서랍 안에 있다. */}
-        <aside className="sticky top-header hidden h-[calc(100dvh-var(--spacing-header))] w-sidebar shrink-0 flex-col self-start overflow-y-auto border-r border-gray-10 bg-surface lg:flex print:hidden">
+        <aside className="sticky top-header hidden h-[calc(100dvh-var(--spacing-header))] w-sidebar shrink-0 flex-col self-start overflow-y-auto border-r border-rule-hair bg-surface lg:flex print:hidden">
           <div className="flex-1">
             <NavList pathname={pathname} />
           </div>

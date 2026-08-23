@@ -27,31 +27,42 @@ import type { WorkListItem } from "@/lib/types";
  *
  * ── 크기를 어디에 쓰는가 ────────────────────────────────────────────────────
  *
- * 이 판에서 가장 큰 글자는 **「9일 지남」(32px)** 이다. 제목이 아니다.
- * 예전에는 그 자리가 13px 였고, 화면에서 가장 큰 32px 는 「○○○ 님,
- * 안녕하세요」가 가져가고 있었다 — 매일 똑같아서 정보량이 0인 문장이다.
+ * 이 판에서 가장 큰 글자는 **「26일 지남」(46px, --text-figure)** 이다.
+ * 제목이 아니다. 예전에는 그 자리가 13px 였고, 화면에서 가장 큰 글자는
+ * 「○○○ 님, 안녕하세요」가 가져가고 있었다 — 매일 똑같아서 정보량이 0이다.
  *
- * 기한은 이 화면에서 유일하게 **다음 행동을 정하는 숫자**다. 9일 지났으면
+ * 기한은 이 화면에서 유일하게 **다음 행동을 정하는 숫자**다. 26일 지났으면
  * 지금 열고, 5일 남았으면 오늘은 안 열어도 된다. 그 판단을 곁눈질 한 번에
- * 하도록 크기를 몰아 준다.
+ * 하도록 크기를 몰아 준다. `--text-figure` 는 화면당 하나만 쓰는 등급이고,
+ * 홈에서 그 하나가 여기다.
  *
  * 색은 셋뿐이다(globals.css 의 4색 체계).
  *   지났다      빨강   status-overdue-text   5.74:1
  *   오늘·내일   주황   accent-text           5.25:1
  *   그 밖       먹색   gray-70               8.32:1
- * 32px 은 큰 글자라 요구 대비가 3:1 인데 셋 다 4.5:1 을 넘긴다.
+ * 46px 은 큰 글자라 요구 대비가 3:1 인데 셋 다 4.5:1 을 넘긴다.
  * (tests/contrast.test.mjs 가 잰다)
+ *
+ * ── 모서리 두 개 ────────────────────────────────────────────────────────────
+ *
+ * 겉모양은 card.tsx 의 **문서(doc) 등급**이다 — 흰 종이, 각진 모서리, 위쪽
+ * 2px 먹선. 여기에 왼쪽 선이 하나 더 붙는데 그 둘은 다른 말을 한다.
+ *
+ *   위 2px 먹선(rule-head)   「여기서부터 문서다」
+ *   왼 3px 붉은선(rule-alarm) 「이건 늦었다」
+ *
+ * 종이가 원래 그렇게 한다. 굵기와 자리가 다르면 뜻도 다르다.
  */
 
 function toneOf(work: WorkListItem) {
   if (work.derived === "overdue") {
-    return { text: "text-status-overdue-text", edge: "border-l-status-overdue" };
+    return { text: "text-status-overdue-text", edge: "border-l-rule-alarm" };
   }
   const d = work.due_date ? daysUntil(work.due_date) : null;
   if (d !== null && d >= 0 && d <= 1) {
     return { text: "text-accent-text", edge: "border-l-accent" };
   }
-  return { text: "text-gray-70", edge: "border-l-gray-20" };
+  return { text: "text-gray-70", edge: "border-l-rule-frame" };
 }
 
 export function UrgentHero({
@@ -67,12 +78,16 @@ export function UrgentHero({
   return (
     <article
       className={cn(
-        // 화면에서 유일하게 떠 있는 판이다. 겉모양은 card.tsx 의 hero 등급을
-        // 그대로 가져다 쓴다(<article> 이라 Card 컴포넌트를 못 쓴다).
-        CARD_SURFACE.hero,
-        "relative border-l-4 p-6",
-        "transition-colors duration-150 hover:border-primary-30",
-        "active:border-primary active:bg-primary-5",
+        // 이 화면의 「문서」다. 겉모양은 card.tsx 의 doc 등급을 그대로 가져다
+        // 쓴다(<article> 이라 Card 컴포넌트를 못 쓴다).
+        CARD_SURFACE.doc,
+        "relative border-l-3 p-6",
+        // 손이 닿았다는 표시는 **바탕**으로 한다. 예전에는 hover:border-primary-30
+        // 이었는데, 그건 의사클래스라 특이도가 한 칸 높아 **네 변을 통째로**
+        // 덮는다 — 지연된 판에 마우스를 올리는 순간 왼쪽 붉은 경보선도 위쪽
+        // 먹선도 파랗게 지워졌다. 이 재설계 전체가 그 두 선 위에 서 있는데,
+        // 사람이 가리키는 바로 그 순간에 신호가 사라지는 셈이었다.
+        "transition-colors duration-150 hover:bg-gray-5 active:bg-primary-5",
         // 눌린 판은 흐려진다 — 안쪽 LinkPendingMark 가 심는 표식을 여기서 받는다.
         "has-[[data-link-pending]]:opacity-55 has-[[data-link-pending]]:transition-opacity",
         tone.edge,
@@ -83,7 +98,7 @@ export function UrgentHero({
         {work.due_date ? (
           <span
             className={cn(
-              "shrink-0 text-h1 leading-none font-bold tabular-nums",
+              "shrink-0 text-figure font-bold tabular-nums",
               tone.text,
             )}
           >
@@ -92,7 +107,8 @@ export function UrgentHero({
         ) : null}
       </div>
 
-      {/* 24px. 판 전체가 눌리도록 링크를 확장한다(after:absolute inset-0). */}
+      {/* 27px. 판 전체가 눌리도록 링크를 확장한다(after:absolute inset-0).
+          이 판에서 제목은 2등이다 — 1등은 위의 기한 숫자다. */}
       <h3 className="mt-4 text-h2 leading-snug font-bold break-keep text-gray-90">
         <Link
           href={`/works/${work.id}`}
@@ -104,30 +120,30 @@ export function UrgentHero({
         </Link>
       </h3>
 
-      <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-body-sm text-gray-60">
-        <span className="inline-flex items-center gap-1.5">
+      <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-body-sm text-gray-60">
+        <span className="inline-flex items-center gap-2">
           <Building2 aria-hidden className="size-4" />
           {work.department.name}
         </span>
         {cross ? (
-          <span className="inline-flex items-center gap-1.5 font-bold text-gray-70">
+          <span className="inline-flex items-center gap-2 font-bold text-gray-70">
             <Users aria-hidden className="size-4" />
             {work.department_count}개 부서
           </span>
         ) : null}
         {approval ? (
-          <span className="inline-flex items-center gap-1.5 font-bold text-gray-70">
+          <span className="inline-flex items-center gap-2 font-bold text-gray-70">
             <Stamp aria-hidden className="size-4" />
             결재 {approvalStateLine(approval.latest.state, approval.latest)}
           </span>
         ) : null}
       </p>
 
-      <div className="mt-5 flex items-center justify-between gap-3 border-t border-gray-10 pt-4">
+      <div className="mt-5 flex items-center justify-between gap-3 border-t border-rule-hair pt-4">
         <AvatarStack people={work.members.map((m) => m.profile)} max={6} />
         <span className="flex items-center gap-4 text-body-sm text-gray-60">
           {work.comment_count > 0 ? (
-            <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-2">
               <MessageSquare aria-hidden className="size-4" />
               <span className="sr-only">대화 </span>
               <span className="tabular-nums">{work.comment_count}</span>
@@ -135,7 +151,7 @@ export function UrgentHero({
             </span>
           ) : null}
           {work.attachment_count > 0 ? (
-            <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-2">
               <Paperclip aria-hidden className="size-4" />
               <span className="sr-only">첨부 </span>
               <span className="tabular-nums">{work.attachment_count}</span>
@@ -161,7 +177,7 @@ export function UrgentRow({ work }: { work: WorkListItem }) {
     <Link
       href={`/works/${work.id}`}
       data-variant="plain"
-      className="flex items-center gap-3 rounded-sm px-2 py-2.5 hover:bg-gray-10 active:bg-primary-5"
+      className="flex items-center gap-3 rounded-sm px-2 py-3 hover:bg-gray-10 active:bg-primary-5"
     >
       <span className="line-clamp-1 min-w-0 flex-1 text-body-sm font-bold text-gray-90">
         {work.title}

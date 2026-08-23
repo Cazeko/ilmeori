@@ -82,7 +82,7 @@ export function ApprovalPrintSheet({ ex }: { ex: ApprovalExport }) {
   const { main, concur, post } = splitSteps(a.steps);
 
   return (
-    <article className="print-sheet hidden print:block">
+    <article className="sheet hidden print:block">
       <h1 className="text-center font-bold tracking-[0.3em]">내부결재문서</h1>
       <p className="mt-1 text-center">
         행정업무의 운영 및 혁신에 관한 규정 시행규칙 별지 제2호서식

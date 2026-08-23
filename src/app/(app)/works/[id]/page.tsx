@@ -19,7 +19,7 @@ import { cn } from "@/lib/cn";
 import { PageContainer } from "@/components/ui/page-container";
 import { StatusBadge } from "@/components/status-badge";
 import { ApprovalRow } from "@/components/approval/approval-row";
-import { Card, CardHeader } from "@/components/ui/card";
+import { CARD_SURFACE, Card, CardHeader } from "@/components/ui/card";
 import { PersonChip } from "@/components/ui/avatar";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -234,22 +234,30 @@ export default async function WorkDetailPage({
         </Notice>
       ) : null}
 
-      {/* ── 머리 ─────────────────────────────────────────────────────────── */}
-      <header className="mb-5">
+      {/* ── 머리 — 이 화면의 「문서」 ────────────────────────────────────────
+          업무 상세에서 먼저 읽혀야 하는 것은 **이 업무가 무엇이고 지금 어느
+          단계인가**다. 제목은 원래도 34px 였는데 그 아래 상태·주담당·마감·
+          상태 바꾸기가 전부 15px 로 흩어져 있어서, 「제목 하나만 크고 나머지는
+          평평한」 모양이었다.
+
+          이 덩어리를 통째로 문서 등급으로 감싼다 — 흰 종이, 각진 모서리,
+          위쪽 2px 먹선. 아래의 탭 본문과 옆칸은 판 등급이므로, 화면에 문서는
+          여기 하나뿐이다. */}
+      <header className={cn(CARD_SURFACE.doc, "mb-5 p-6")}>
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={work.derived} />
           <span className="text-body-xs text-gray-60">
             {work.fiscal_year}년도 · {VISIBILITY_LABEL[work.visibility]}
           </span>
           {work.archived_at ? (
-            <span className="inline-flex items-center gap-1 rounded-xs bg-gray-5 px-1.5 py-0.5 text-body-xs font-bold text-gray-60">
+            <span className="inline-flex items-center gap-1 rounded-xs bg-gray-5 px-chip-x py-chip-y text-body-xs font-bold text-gray-60">
               <Archive aria-hidden className="size-3" />
               보관됨
             </span>
           ) : null}
         </div>
 
-        <div className="mt-2.5 flex flex-wrap items-start justify-between gap-3">
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
           {/* 목록 화면의 h1 은 PageHeader 를 통해 text-h2 sm:text-h1 이다.
               여기만 24px 고정이라 보드에서 상세로 넘어가면 제목이 작아졌다.
               같은 「여기가 어디인가」 역할은 같은 무게로 선다.
@@ -276,8 +284,8 @@ export default async function WorkDetailPage({
           </p>
         ) : null}
 
-        <dl className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2.5">
-          <div className="flex items-center gap-1.5">
+        <dl className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="flex items-center gap-2">
             <dt className="sr-only">소관 부서</dt>
             <Building2 aria-hidden className="size-4 text-gray-40" />
             <dd className="text-body-sm text-gray-70">
@@ -293,7 +301,7 @@ export default async function WorkDetailPage({
           </div>
 
           {work.due_date ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <dt className="sr-only">마감</dt>
               <CalendarClock
                 aria-hidden
@@ -464,7 +472,7 @@ export default async function WorkDetailPage({
                 </div>
 
                 {approvals.length > 0 ? (
-                  <ul className="divide-y divide-gray-10 overflow-hidden rounded-md border border-gray-10">
+                  <ul className="divide-y divide-rule-hair overflow-hidden rounded-sm border border-rule-frame">
                     {approvals.map((a) => (
                       <ApprovalRow
                         key={a.id}
@@ -475,7 +483,7 @@ export default async function WorkDetailPage({
                     ))}
                   </ul>
                 ) : (
-                  <div className="rounded-md border border-gray-10 bg-surface">
+                  <div className="rounded-sm border border-rule-frame bg-surface">
                     <EmptyState
                       icon={Stamp}
                       title="아직 올린 결재가 없습니다"
@@ -547,11 +555,11 @@ export default async function WorkDetailPage({
                     본인에게만 보입니다.
                   </p>
                   {accessLogs.length > 0 ? (
-                    <ul className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-surface">
+                    <ul className="divide-y divide-rule-hair rounded-sm border border-rule-frame bg-surface">
                       {accessLogs.map((l) => (
                         <li
                           key={l.id}
-                          className="flex items-center gap-3 px-4 py-2.5"
+                          className="flex items-center gap-3 px-4 py-3"
                         >
                           <Eye
                             aria-hidden
@@ -571,7 +579,7 @@ export default async function WorkDetailPage({
                       ))}
                     </ul>
                   ) : (
-                    <p className="rounded-md border border-gray-10 bg-surface px-4 py-6 text-center text-body-sm text-gray-60">
+                    <p className="rounded-sm border border-rule-frame bg-surface px-4 py-6 text-center text-body-sm text-gray-60">
                       이 업무를 연 기록이 아직 없습니다.
                     </p>
                   )}
@@ -618,9 +626,9 @@ export default async function WorkDetailPage({
           {tab !== "people" ? (
             <Card>
               <CardHeader title="참여자" as="h2" />
-              <ul className="divide-y divide-gray-5">
+              <ul className="divide-y divide-rule-hair">
                 {work.members.slice(0, 6).map((m) => (
-                  <li key={m.profile_id} className="px-5 py-2.5">
+                  <li key={m.profile_id} className="px-5 py-3">
                     <PersonChip
                       profile={m.profile}
                       size="sm"
@@ -636,7 +644,7 @@ export default async function WorkDetailPage({
                 ))}
               </ul>
               {work.members.length > 6 ? (
-                <div className="border-t border-gray-10 px-5 py-2.5">
+                <div className="border-t border-rule-hair px-5 py-3">
                   <Link
                     href={`/works/${work.id}?tab=people`}
                     className="inline-flex items-center text-body-sm font-bold text-primary pointer-coarse:min-h-11"

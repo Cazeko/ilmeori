@@ -22,7 +22,7 @@ export default function NotFound() {
       tabIndex={-1}
       className="flex min-h-dvh items-center justify-center bg-gray-5 px-5 py-10"
     >
-      <div className="w-full max-w-md rounded-lg border border-gray-10 bg-surface p-7">
+      <div className="w-full max-w-md rounded-sm border border-rule-frame bg-surface p-7">
         <p className="text-body-sm font-bold text-gray-60">404</p>
         <h1 className="mt-1 text-h2 font-bold break-keep text-gray-90">
           이 주소에는 아무것도 없습니다

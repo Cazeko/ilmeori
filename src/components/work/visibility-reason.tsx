@@ -32,8 +32,8 @@ export function VisibilityReason({
   const reason = whyVisible(work, viewer, role);
 
   return (
-    <details className="mt-5 rounded-md border border-gray-10 bg-surface">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-2.5 text-body-sm text-gray-70 hover:text-gray-90">
+    <details className="mt-5 rounded-sm border border-rule-frame bg-surface">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm text-gray-70 hover:text-gray-90">
         <Eye aria-hidden className="size-4 shrink-0 text-gray-40" />
         <span className="break-keep">
           <span className="font-bold">이 업무가 보이는 이유</span> —{" "}
@@ -41,7 +41,7 @@ export function VisibilityReason({
         </span>
       </summary>
 
-      <div className="border-t border-gray-10 px-4 py-3.5">
+      <div className="border-t border-rule-hair px-4 py-4">
         <p className="text-body-sm leading-relaxed break-keep text-gray-70">
           {reason.long}
         </p>
@@ -71,7 +71,7 @@ export function VisibilityReason({
         </p>
 
         {/* 직접 확인해 보게 한다. 말로만 하는 접근제어는 확인할 수 없다. */}
-        <form action={leaveDemo} className="mt-3.5">
+        <form action={leaveDemo} className="mt-4">
           <input type="hidden" name="next" value={`/works/${work.id}`} />
           <SubmitButton variant="secondary" size="sm">
             <Repeat aria-hidden className="size-4" />이 주소를 다른 계정으로 열어

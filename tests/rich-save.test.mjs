@@ -159,7 +159,12 @@ console.log("\n[4] 무JS 문단 폼이 끼어들어도 (같은 사람, 다른 �
 // ---------------------------------------------------------------------------
 console.log("\n[5] 부르는 자리 (원본을 읽어 확인한다)");
 {
-  const flush = cut("const flushSave = useCallback(", "[engine, onSave],");
+  /* 끝 표식이 한동안 `[engine, onSave],` 였다. 그 뒤 flushSave 에 retry
+     의존성이 붙어 `[engine, onSave, retry],` 가 되었고, **시험이 조용히
+     터진 채로 있었다** — npm run check 가 이 자리에서 멈춰 있었다.
+     의존성 배열은 앞으로도 늘어날 수 있으므로, 안 흔들리는 것을 표식으로
+     삼는다. 바로 다음 줄의 flushRef 대입은 이 함수의 존재 이유다. */
+  const flush = cut("const flushSave = useCallback(", "flushRef.current = flushSave");
   const at = flush.indexOf("revRef.current = nextRev(");
   const okBranch = flush.indexOf("if (result.ok)");
   ok("flushSave 가 nextRev 로 판을 받는다", at >= 0);

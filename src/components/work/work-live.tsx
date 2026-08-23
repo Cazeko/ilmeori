@@ -348,7 +348,7 @@ export function WorkLive({
     // 말하는 것이 된다(tests/browser.test.mjs [6] 가 이 규칙을 지킨다).
     return (
       <div className="mt-4 print:hidden">
-        <p className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 text-body-xs text-gray-60">
+        <p className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-body-xs text-gray-60">
           <Wifi
             aria-hidden
             className={cn(
@@ -380,10 +380,10 @@ export function WorkLive({
       {/* 이 판은 **소식이 있을 때만** 나타난다(quiet 이면 위에서 돌아갔다).
           나타나는 것 자체가 정보이므로 밀려 올라오게 한다 — 조용히 끼어들면
           읽던 자리가 밀리기만 하고 무엇이 늘었는지는 안 보인다. */}
-      <div className="animate-rise-in flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-gray-10 bg-surface px-4 py-2.5">
+      <div className="animate-rise-in flex flex-wrap items-center gap-x-4 gap-y-2 rounded-sm border border-rule-frame bg-surface px-4 py-3">
         <p
           className={cn(
-            "inline-flex items-center gap-1.5 text-body-xs font-bold",
+            "inline-flex items-center gap-2 text-body-xs font-bold",
             link === "live" ? "text-status-done-text" : "text-gray-60",
           )}
         >
@@ -413,7 +413,7 @@ export function WorkLive({
                       key={p.id}
                       profile={p}
                       size="sm"
-                      className="-ml-1.5 ring-2 ring-surface first:ml-0"
+                      className="-ml-2 ring-2 ring-surface first:ml-0"
                     />
                   ))}
                 </span>
@@ -431,7 +431,7 @@ export function WorkLive({
 
       {/* 편집 중에 쌓인 변경. 반영할지는 쓰고 있는 사람이 정한다. */}
       {waiting > 0 ? (
-        <div className="animate-rise-in mt-2 flex flex-wrap items-center gap-3 rounded-md border border-status-doing/40 bg-status-doing-bg px-4 py-2.5">
+        <div className="animate-rise-in mt-2 flex flex-wrap items-center gap-3 rounded-sm border border-status-doing/40 bg-status-doing-bg px-4 py-3">
           <p className="min-w-0 flex-1 text-body-sm text-gray-80">
             <span className="font-bold">
               다른 사람이 {waitingLabel}

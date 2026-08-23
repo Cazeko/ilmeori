@@ -95,7 +95,7 @@ export function ApprovalFields({
         <Field
           id="approval-retention"
           label="보존연한"
-          className="sm:row-span-3 sm:grid sm:grid-rows-subgrid sm:gap-y-1.5"
+          className="sm:row-span-3 sm:grid sm:grid-rows-subgrid sm:gap-y-2"
           hint="「공공기록물 관리에 관한 법률 시행령」 제26조"
         >
           {(p) => (
@@ -117,7 +117,7 @@ export function ApprovalFields({
         <Field
           id="approval-security"
           label="공개 구분"
-          className="sm:row-span-3 sm:grid sm:grid-rows-subgrid sm:gap-y-1.5"
+          className="sm:row-span-3 sm:grid sm:grid-rows-subgrid sm:gap-y-2"
           hint="「비밀」은 이 시스템에 담지 않습니다."
         >
           {(p) => (

@@ -116,15 +116,15 @@ export function ActivityTimeline({
     <div className="flex flex-col gap-5">
       {groups.map((group) => (
         <section key={group.day}>
-          <h3 className="mb-2.5 text-body-xs font-bold text-gray-60">
+          <h3 className="mb-3 text-body-xs font-bold text-gray-60">
             {group.day}
           </h3>
-          <ol className="relative border-l border-gray-10 pl-0">
+          <ol className="relative border-l border-rule-hair pl-0">
             {group.items.map((a) => {
               const tone = ACTIVITY_TONE[a.kind];
               const Icon = ICON[a.kind];
               return (
-                <li key={a.id} className="relative flex gap-3 pb-3.5 pl-5 last:pb-0">
+                <li key={a.id} className="relative flex gap-3 pb-4 pl-5 last:pb-0">
                   {/* 세로줄 위의 점 */}
                   <span
                     aria-hidden
@@ -137,7 +137,7 @@ export function ActivityTimeline({
                   </span>
 
                   <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                       <span className="text-body-sm font-bold text-gray-90">
                         {a.actor?.name ?? "시스템"}
                       </span>
@@ -151,7 +151,7 @@ export function ActivityTimeline({
                       {showTone ? (
                         <span
                           className={cn(
-                            "rounded-xs px-1.5 py-0.5 text-[11px] font-bold",
+                            "rounded-xs px-chip-x py-chip-y text-[11px] font-bold",
                             TONE[tone].chip,
                           )}
                         >
@@ -159,7 +159,7 @@ export function ActivityTimeline({
                         </span>
                       ) : null}
                     </p>
-                    <p className="mt-0.5 text-body-sm break-keep text-gray-70">
+                    <p className="mt-1 text-body-sm break-keep text-gray-70">
                       {a.summary}
                     </p>
                   </div>
@@ -180,19 +180,19 @@ export function ActivityFeed({
   items: Array<ActivityWithActor & { work: { id: string; title: string } }>;
 }) {
   return (
-    <ul className="divide-y divide-gray-5">
+    <ul className="divide-y divide-rule-hair">
       {items.map((a) => {
         const Icon = ICON[a.kind];
         const tone = ACTIVITY_TONE[a.kind];
         return (
           <li key={a.id} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
             {a.actor ? (
-              <Avatar profile={a.actor} size="sm" className="mt-0.5" />
+              <Avatar profile={a.actor} size="sm" className="mt-1" />
             ) : (
               <span
                 aria-hidden
                 className={cn(
-                  "mt-0.5 flex size-6 items-center justify-center rounded-full",
+                  "mt-1 flex size-6 items-center justify-center rounded-full",
                   TONE[tone].dot,
                 )}
               >
@@ -206,7 +206,7 @@ export function ActivityFeed({
                 </span>{" "}
                 {a.summary}
               </p>
-              <p className="mt-0.5 flex items-center gap-2 text-body-xs text-gray-60">
+              <p className="mt-1 flex items-center gap-2 text-body-xs text-gray-60">
                 {/* data-variant를 붙이지 않아 전역 밑줄 규칙이 그대로 적용된다.
                     링크를 색상만으로 구분하지 않기 위해서다. */}
                 {/* 소식 8줄이 잇달아 서는 자리라 44px 를 주면 목록이 화면 두 배로

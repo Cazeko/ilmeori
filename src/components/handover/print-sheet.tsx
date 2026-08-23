@@ -7,22 +7,28 @@ import type { HandoverDraft } from "@/lib/handover-draft";
 import { formatDate, formatFullDateTime, todayKST } from "@/lib/format";
 
 /**
- * 인쇄용 「업무인계·인수서」.
+ * 「업무인계·인수서」 — 별지 제12호서식 그 자체.
  *
- * 화면용 카드에 인쇄 규칙을 덧씌우지 않고 **따로 그린다.**
- * 화면은 확인하는 도구이고 종이는 결재에 올리는 문서라, 필요한 것이 서로 다르다.
- * 화면에는 근거 꼬리표가 항목마다 붙어야 하고, 종이에는 그것이 서식을 어지럽힌다.
- * 한쪽에 맞추면 반드시 다른 쪽이 어색해진다.
+ * ── 한동안 이 문서는 화면에 없었다 ─────────────────────────────────────────
  *
- * 화면에서는 숨어 있고(hidden) 인쇄할 때만 나타난다(print:block).
- * 반대로 화면용 본문에는 print:hidden 이 붙어 있다.
+ * `hidden print:block` 이 붙어 있어서 **Ctrl+P 를 눌러야만 보였다.** 화면에는
+ * 같은 내용을 회색 말풍선 문단으로 따로 그렸고, 심사위원이 보는 것은 그쪽
+ * 이었다. 이 제품에서 가장 강한 물건이 화면에 없었다는 뜻이다.
+ *
+ * 지금은 화면에도 선다(handover/page.tsx 의 「문서」). `.sheet` 클래스가
+ * 화면에서는 px·먹색 괘선으로, 종이에서는 pt 로 그려진다 — **한 클래스를 두
+ * 매체가 나눠 쓰므로 둘이 어긋날 수 없다**(globals.css 의 .sheet 참조).
+ *
+ * 화면과 종이가 다르게 가져가는 것은 하나뿐이다. 항목마다 붙는 **근거 꼬리표**는
+ * 화면의 확인 구역(아래 「항목별 근거」)에만 있고 이 서식에는 없다 —
+ * 결재에 올라가는 종이에서 꼬리표는 서식을 어지럽힌다.
  *
  * 서식 근거
  *   「행정업무의 운영 및 혁신에 관한 규정」 제61조
  *   같은 규정 시행규칙 제45조, 별지 제12호서식
  *
  * 실제 별지 서식과 다른 점을 숨기지 않는다. 전자서명 연계가 없으므로
- * 서명란은 손으로 적는 빈칸으로 두고, 물품·예산 항목도 빈칸으로 인쇄한다.
+ * 서명란은 손으로 적는 빈칸으로 두고, 물품·예산 항목도 빈칸으로 둔다.
  */
 
 function who(p: Pick<Profile, "name" | "position">) {
@@ -67,7 +73,7 @@ export function HandoverPrintSheet({
   );
 
   return (
-    <article className="print-sheet hidden print:block">
+    <article className="sheet">
       <h1 className="text-center font-bold tracking-[0.3em]">업무인계·인수서</h1>
 
       <table className="avoid-break mt-6">

@@ -11,6 +11,7 @@ import {
 } from "@/lib/editor/model";
 import { cn } from "@/lib/cn";
 import { domToCp, placeCaret, readText, renderInner, type Overlay } from "./dom";
+import { CURSOR_TONES } from "./use-collab";
 
 /**
  * 블록 한 줄.
@@ -225,7 +226,7 @@ function RemoteCaret({ flag }: { flag: CaretFlag }) {
   return (
     <span
       className="ilm-remote"
-      data-tone={flag.tone % 6}
+      data-tone={flag.tone % CURSOR_TONES}
       data-at={flag.at}
       data-to={flag.to ?? ""}
       aria-hidden

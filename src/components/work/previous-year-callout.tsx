@@ -64,11 +64,11 @@ export function PreviousYearCard({
        데는 그것으로 족하고, 면을 칠하면 무게가 생긴다. */
     <section
       aria-labelledby="prev-year-heading"
-      className="rounded-md border border-gray-10 border-l-3 border-l-accent/60 bg-surface p-4"
+      className="rounded-sm border border-rule-frame border-l-3 border-l-accent/60 bg-surface p-4"
     >
       <p
         id="prev-year-heading"
-        className="flex items-center gap-1.5 text-body-xs font-bold text-accent-text"
+        className="flex items-center gap-2 text-body-xs font-bold text-accent-text"
       >
         <RotateCcw aria-hidden className="size-3.5" />
         작년 이맘때
@@ -94,13 +94,13 @@ export function PreviousYearCard({
       </p>
 
       {brief.headings.length > 0 ? (
-        <ul className="mt-3 space-y-1 border-t border-gray-10 pt-3">
+        <ul className="mt-3 space-y-1 border-t border-rule-hair pt-3">
           {brief.headings.map((h) => (
             <li
               key={h}
-              className="flex items-start gap-1.5 text-body-xs text-gray-70"
+              className="flex items-start gap-2 text-body-xs text-gray-70"
             >
-              <FileText aria-hidden className="mt-0.5 size-3 shrink-0 text-gray-40" />
+              <FileText aria-hidden className="mt-1 size-3 shrink-0 text-gray-40" />
               <span className="break-keep">{h}</span>
             </li>
           ))}
@@ -108,7 +108,7 @@ export function PreviousYearCard({
       ) : null}
 
       {brief.attachmentCount > 0 ? (
-        <p className="mt-2 flex items-center gap-1.5 text-body-xs text-gray-60">
+        <p className="mt-2 flex items-center gap-2 text-body-xs text-gray-60">
           <Paperclip aria-hidden className="size-3 shrink-0" />첨부{" "}
           {brief.attachmentCount}건
         </p>
@@ -117,7 +117,7 @@ export function PreviousYearCard({
       <Link
         href={`/works/${brief.work.id}`}
         data-variant="plain"
-        className="mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-sm bg-surface px-3 text-body-sm font-bold text-gray-70 ring-1 ring-gray-20 hover:bg-gray-5 hover:text-gray-90 hover:ring-gray-30 pointer-coarse:min-h-11"
+        className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-sm bg-surface px-3 text-body-sm font-bold text-gray-70 ring-1 ring-gray-20 hover:bg-gray-5 hover:text-gray-90 hover:ring-gray-30 pointer-coarse:min-h-11"
       >
         작년 판 열어 보기
         <ArrowRight aria-hidden className="size-4" />

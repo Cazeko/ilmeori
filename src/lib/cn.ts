@@ -25,9 +25,10 @@ const twMerge = extendTailwindMerge({
     classGroups: {
       "font-size": [
         {
-          // h4 는 없앴다 — 본문과 같은 17px 이라 제목 자리에 쓰이면 위계가
-          // 무너졌다(globals.css 의 그 자리 주석 참조).
-          text: ["body", "body-sm", "body-xs", "body-lg", "h1", "h2", "h3"],
+          // h4(17px) 는 본문과 같은 값이라, body-lg(19px) 는 h3 와 같은 값이라
+          // 없앴다. 이름 둘에 값 하나면 둘 다 뜻을 잃는다.
+          // figure 는 화면당 하나 쓰는 큰 숫자다(globals.css 참조).
+          text: ["body", "body-sm", "body-xs", "h1", "h2", "h3", "figure"],
         },
       ],
     },

@@ -21,7 +21,8 @@ import { ApprovalLineEditor } from "@/components/approval/approval-line-editor";
 import { ApprovalDraftForm } from "@/components/approval/approval-draft-form";
 import { ButtonLink } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { CARD_SURFACE, Card, CardBody, CardHeader } from "@/components/ui/card";
+import { cn } from "@/lib/cn";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Notice } from "@/components/ui/notice";
 import { PageContainer } from "@/components/ui/page-container";
@@ -130,13 +131,13 @@ export default async function ApprovalDetailPage({
       <header className="mb-5">
         <div className="flex flex-wrap items-center gap-2">
           <ApprovalBadge state={approval.state} steps={approval.steps} />
-          <span className="rounded-xs bg-gray-5 px-1.5 py-0.5 text-body-xs font-bold text-gray-60">
+          <span className="rounded-xs bg-gray-5 px-chip-x py-chip-y text-body-xs font-bold text-gray-60">
             {APPROVAL_FORM_LABEL[approval.form]}
           </span>
           {/* 결재함 목록(approval-row.tsx)의 같은 칩과 **같은 모양이어야 한다.**
               목록에서 짙게 뒤집힌 칩이 상세에서 황토색이면 같은 표시로 안 읽힌다. */}
           {approval.security === "confidential" ? (
-            <span className="rounded-xs bg-gray-90 px-1.5 py-0.5 text-body-xs font-bold text-gray-0">
+            <span className="rounded-xs bg-gray-90 px-chip-x py-chip-y text-body-xs font-bold text-gray-0">
               대외비
             </span>
           ) : null}
@@ -151,8 +152,12 @@ export default async function ApprovalDetailPage({
           )}
         </div>
 
-        <div className="mt-2.5 flex flex-wrap items-start justify-between gap-3">
-          <h1 className="min-w-0 text-h1 leading-snug font-bold break-keep text-gray-90">
+        {/* 좁은 화면에서는 한 단 내린다. page-header.tsx 는 처음부터
+            `text-h2 sm:text-h1` 인데 이 화면만 h1 고정이라, 320px 에서 제목이
+            두 줄이 되고 그만큼 결재란이 아래로 밀렸다. 화면마다 제목이 다른
+            규칙으로 줄어들면 그건 규칙이 아니다. */}
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+          <h1 className="min-w-0 text-h2 leading-snug font-bold break-keep text-gray-90 sm:text-h1">
             {approval.title}
           </h1>
           {/* 「온나라로 넘기기」는 상신된 뒤에만 열린다. 기안 중인 문서에는
@@ -216,20 +221,32 @@ export default async function ApprovalDetailPage({
         </dl>
       </header>
 
-      {/* ── 결재란 ─────────────────────────────────────────────────────── */}
+      {/* ── 결재란 — 이 화면의 「문서」 ──────────────────────────────────
+          결재 문서를 열었을 때 먼저 답해야 하는 물음은 「무엇을 결재하는가」가
+          아니라 **「누가 어디까지 봤고 지금 누구 차례인가」**다. 종이 결재에서
+          사람이 제일 먼저 보는 것도 오른쪽 위의 결재란이다.
+
+          문서 등급으로 감싼다 — 흰 종이에 위쪽 2px 먹선. 안의 ApprovalGrid 는
+          원래부터 종이 언어(검은 괘선·각진 칸)로 그려져 있었으므로, 껍데기가
+          그제야 안쪽과 같은 말을 하게 된다. */}
       <section aria-labelledby="approval-grid-heading" className="mb-6">
-        <h2 id="approval-grid-heading" className="mb-2 text-h3 font-bold text-gray-90">
-          결재란
-        </h2>
-        <ApprovalGrid
-          steps={approval.steps}
-          state={approval.state}
-          viewerId={viewer.id}
-        />
-        <p className="mt-2 text-body-xs break-keep text-gray-60">
-          직위는 <strong className="font-bold">서명 당시의 것</strong>이 그대로
-          남습니다. 인사이동이 있어도 옛 문서의 결재란은 바뀌지 않습니다.
-        </p>
+        <div className={cn(CARD_SURFACE.doc, "p-6")}>
+          <h2
+            id="approval-grid-heading"
+            className="mb-4 text-h3 font-bold text-gray-90"
+          >
+            결재란
+          </h2>
+          <ApprovalGrid
+            steps={approval.steps}
+            state={approval.state}
+            viewerId={viewer.id}
+          />
+          <p className="mt-3 text-body-xs break-keep text-gray-60">
+            직위는 <strong className="font-bold">서명 당시의 것</strong>이 그대로
+            남습니다. 인사이동이 있어도 옛 문서의 결재란은 바뀌지 않습니다.
+          </p>
+        </div>
       </section>
 
       {/* ── 본문 ───────────────────────────────────────────────────────── */}
@@ -251,7 +268,7 @@ export default async function ApprovalDetailPage({
           >
             본문
           </h2>
-          <div className="rounded-md border border-gray-10 bg-surface px-5 py-4">
+          <div className="rounded-sm border border-rule-frame bg-surface px-5 py-4">
             {approval.body ? (
               <p className="text-body leading-relaxed break-keep whitespace-pre-wrap text-gray-80">
                 {approval.body}
@@ -300,7 +317,7 @@ export default async function ApprovalDetailPage({
               </CardBody>
             </Card>
 
-            <div className="rounded-md border border-primary/30 bg-primary-5 px-5 py-4">
+            <div className="rounded-sm border border-primary/30 bg-primary-5 px-5 py-4">
               <p className="text-body-sm font-bold text-gray-90">상신</p>
               <p className="mt-1 mb-3 text-body-sm break-keep text-gray-70">
                 상신하면 문서번호가 붙고 기안란에 서명이 찍힙니다. 그때부터
@@ -315,12 +332,12 @@ export default async function ApprovalDetailPage({
               </form>
             </div>
 
-            <details className="rounded-md border border-gray-10 bg-surface">
+            <details className="rounded-sm border border-rule-frame bg-surface">
               <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
                 <Trash2 aria-hidden className="size-4 shrink-0 text-gray-40" />
                 이 초안을 지우려면
               </summary>
-              <div className="border-t border-gray-10 px-4 py-3.5">
+              <div className="border-t border-rule-hair px-4 py-4">
                 <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
                   아직 상신되지 않았으므로 아무 기록도 남기지 않고 지울 수
                   있습니다. 상신한 뒤에는 지울 수 없습니다 — 결재는 증빙이고,

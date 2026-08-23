@@ -30,13 +30,37 @@ import { readFile } from "node:fs/promises";
 
 const CSS = await readFile(new URL("../src/app/globals.css", import.meta.url), "utf8");
 
-/** globals.css 의 @theme 에서 --color-* 를 긁어 온다. */
+/**
+ * globals.css 의 @theme 에서 --color-* 를 긁어 온다.
+ *
+ * 값이 헥사인 것과 **다른 토큰을 가리키는 것**(--color-rule-hair:
+ * var(--color-gray-20)) 두 종류가 있다. 뒤엣것을 못 읽으면 선 굵기 네 단이
+ * 통째로 시험 밖으로 빠지므로, 가리킨 곳을 따라간다.
+ */
 function readTokens(css) {
-  const tokens = new Map();
-  for (const m of css.matchAll(/--color-([a-z0-9-]+):\s*(#[0-9a-fA-F]{3,8})\s*;/g)) {
-    tokens.set(m[1], m[2]);
+  const direct = new Map();
+  const alias = new Map();
+  for (const m of css.matchAll(/--color-([a-z0-9-]+):\s*([^;]+);/g)) {
+    const [, name, raw] = m;
+    const value = raw.trim();
+    if (/^#[0-9a-fA-F]{3,8}$/.test(value)) direct.set(name, value);
+    else {
+      const ref = value.match(/^var\(\s*--color-([a-z0-9-]+)\s*\)$/);
+      if (ref) alias.set(name, ref[1]);
+    }
   }
-  return tokens;
+  // 가리키기가 겹쳐 있어도 풀리도록 몇 번 돈다. 고리가 있으면 안 풀린 채로
+  // 남고, 그 이름을 쓰는 검사가 「globals.css 에 없다」로 터진다 — 조용히
+  // 통과하는 것보다 낫다.
+  for (let pass = 0; pass < 4 && alias.size > 0; pass += 1) {
+    for (const [name, target] of [...alias]) {
+      if (direct.has(target)) {
+        direct.set(name, direct.get(target));
+        alias.delete(name);
+      }
+    }
+  }
+  return direct;
 }
 
 const TOKENS = readTokens(CSS);
@@ -91,6 +115,27 @@ function contrast(fg, bg, min, where) {
   } else {
     fails.push(`${name} — ${got.toFixed(2)}:1, ${min}:1 에 미달`);
     console.log(`  ✗ ${name}  ${got.toFixed(2)}:1 — 요구 ${min}:1 미달`);
+  }
+}
+
+/**
+ * 세 색이 판 위에서 **점점 세지는 순서**인가.
+ *
+ * 절대값 문턱만으로는 축이 무너지는 것을 못 잡는다. 네 단을 만들어 놓고
+ * 두 단의 값이 서로 붙어 버리면 문턱은 통과하면서 축은 하나로 줄어든다.
+ * 순서를 직접 잰다.
+ */
+function ordered(...args) {
+  const label = args.pop();
+  const values = args.map((n) => ({ name: n, r: ratio(resolve(n), resolve("surface")) }));
+  const rising = values.every((v, i) => i === 0 || v.r > values[i - 1].r);
+  const shown = values.map((v) => `${v.name} ${v.r.toFixed(2)}`).join(" < ");
+  if (rising) {
+    pass += 1;
+    console.log(`  ✓ ${label} — ${shown}`);
+  } else {
+    fails.push(`${label} — 순서가 어긋났다: ${shown}`);
+    console.log(`  ✗ ${label} — 순서가 어긋났다: ${shown}`);
   }
 }
 
@@ -153,16 +198,34 @@ console.log("\n아바타 — 사람 얼굴 자리는 화면에서 채도가 가�
 contrast("gray-70", "gray-10", 4.5, "아바타 글자");
 contrast("gray-60", "gray-10", 4.5, "아바타 겹침의 +N");
 
+console.log("\n선 굵기 네 단 — 이 시스템의 주력 위계 축");
+// 네 단이 **서로 구별되는지**가 요점이다. 값이 하나라도 이웃과 붙으면 축이
+// 도로 하나가 되고, 그때가 화면이 다시 평평해지는 순간이다.
+contrast("rule-hair", "surface", 1.3, "hair — 표 칸선");
+contrast("rule-frame", "surface", 2.5, "frame — 판의 바깥선");
+contrast("rule-head", "surface", 10, "head — 문서 제목 아래 검은 선");
+contrast("rule-alarm", "surface", 3, "alarm — 유일한 경보 모서리");
+
+// frame(2.95) 은 WCAG 1.4.11 의 3:1 **바로 아래**다. 문턱을 2.5 로 둔 것은
+// 봐주기가 아니라 판단이고, 그 판단을 여기 적어 둔다.
+//
+//   · 1.4.11 은 「이해에 필요한」 요소에 걸린다. 판의 바깥선은 거기 없다 —
+//     뜻을 나르는 선은 head(15.50)와 alarm(4.03)이고 둘 다 넉넉히 넘는다.
+//   · gray-50(4.32)으로 올리면 3:1 은 넘지만 **입력칸 테두리와 같은 값**이 되어
+//     「누를 수 있는 칸」과 「그냥 판」이 같은 굵기로 보인다.
+//
+// 아래 두 줄이 그 판단을 잠근다: frame 은 hair 보다 확실히 세고, 입력칸보다는
+// 확실히 약하다. 셋 중 하나라도 뒤집히면 시험이 먼저 안다.
+ordered("rule-hair", "rule-frame", "gray-50", "칸선 < 판선 < 입력칸");
+
 console.log("\n물러나 있어야 하는 것");
 // 판과 바탕은 층이 나뉘되 경계가 도드라지면 안 된다. 1.2 를 넘으면 판이
 // 「떠 있는 것」이 아니라 「다른 색 칸」으로 읽힌다.
+// 이 상한이 있기 때문에 **대비는 채움이 아니라 선에서 벌어야 한다.**
 atMost("surface", "gray-5", 1.2, "판과 바탕의 층");
-// 테두리는 보이되 글자보다 세면 안 된다.
-contrast("gray-10", "surface", 1.05, "판 테두리(보이기는 해야 한다)");
 
-console.log("\n입력칸·테두리 (비문자 3:1)");
+console.log("\n입력칸 (비문자 3:1)");
 contrast("gray-50", "surface", 3, "입력칸 테두리");
-contrast("gray-20", "surface", 1.3, "옅은 구분선");
 
 console.log("\n큰 글자 (24px 이상은 3:1)");
 contrast("status-overdue-text", "surface", 3, "히어로의 「N일 지남」");

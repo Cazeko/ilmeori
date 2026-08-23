@@ -24,14 +24,14 @@ export function ExportBlocks({ blocks }: { blocks: readonly ExportBlock[] }) {
             {block.heading}
           </h3>
 
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-3">
             {block.lines.map((line, i) => (
               <div key={i}>
                 <p
                   className={cn(
                     "text-body leading-relaxed break-keep whitespace-pre-line",
                     line.quote
-                      ? "border-l-2 border-gray-20 pl-3 text-gray-70 italic"
+                      ? "border-l-2 border-rule-hair pl-3 text-gray-70 italic"
                       : block.empty
                         ? "text-gray-60"
                         : "text-gray-80",
@@ -40,10 +40,10 @@ export function ExportBlocks({ blocks }: { blocks: readonly ExportBlock[] }) {
                   {line.quote ? `“${line.text}”` : line.text}
                 </p>
                 {line.source ? (
-                  <p className="mt-1 flex items-start gap-1.5 text-body-xs leading-relaxed break-keep text-gray-60">
+                  <p className="mt-1 flex items-start gap-2 text-body-xs leading-relaxed break-keep text-gray-60">
                     <Sparkles
                       aria-hidden
-                      className="mt-0.5 size-3 shrink-0 text-accent-text"
+                      className="mt-1 size-3 shrink-0 text-accent-text"
                     />
                     <span>
                       <span className="font-bold">근거:</span> {line.source}

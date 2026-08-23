@@ -31,12 +31,12 @@ export function ProgressSteps({ current }: { current: HandoverStatus }) {
             key={step}
             aria-current={now ? "step" : undefined}
             className={cn(
-              "rounded-md border px-4 py-3",
+              "rounded-sm border px-4 py-3",
               now
                 ? "border-accent bg-accent-bg"
                 : done
-                  ? "border-gray-10 bg-surface"
-                  : "border-dashed border-gray-20 bg-surface",
+                  ? "border-rule-frame bg-surface"
+                  : "border-dashed border-rule-hair bg-surface",
             )}
           >
             <p className="flex items-center gap-2">

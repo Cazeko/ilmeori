@@ -136,7 +136,7 @@ export default async function HomePage() {
         <Link
           href="/handover"
           data-variant="plain"
-          className="mb-3 flex items-center gap-4 rounded-md border border-gray-10 border-l-3 border-l-accent bg-surface px-5 py-4 transition-colors duration-150 hover:border-gray-20 hover:border-l-accent active:bg-accent-bg"
+          className="mb-3 flex items-center gap-4 rounded-sm border border-rule-frame border-l-3 border-l-accent bg-surface px-5 py-4 transition-colors duration-150 hover:bg-gray-5 active:bg-accent-bg"
         >
           <ArrowLeftRight aria-hidden className="size-5 shrink-0 text-accent-text" />
           <span className="min-w-0 flex-1">
@@ -145,7 +145,7 @@ export default async function HomePage() {
                 ? `${handover.to.name} ${handover.to.position}에게 넘길 업무 ${handover.items.length}건이 있습니다`
                 : `${handover.from.name} ${handover.from.position}에게서 넘겨받을 업무 ${handover.items.length}건이 있습니다`}
             </span>
-            <span className="mt-0.5 block text-body-xs text-gray-60">
+            <span className="mt-1 block text-body-xs text-gray-60">
               현재 단계: {HANDOVER_STATUS_LABEL[handover.handover.status]}
             </span>
           </span>
@@ -160,14 +160,14 @@ export default async function HomePage() {
         <Link
           href="/approvals"
           data-variant="plain"
-          className="mb-3 flex items-center gap-4 rounded-md border border-gray-10 border-l-3 border-l-primary bg-surface px-5 py-4 transition-colors duration-150 hover:border-gray-20 hover:border-l-primary active:bg-primary-5"
+          className="mb-3 flex items-center gap-4 rounded-sm border border-rule-frame border-l-3 border-l-primary bg-surface px-5 py-4 transition-colors duration-150 hover:bg-gray-5 active:bg-primary-5"
         >
           <Stamp aria-hidden className="size-5 shrink-0 text-primary" />
           <span className="min-w-0 flex-1">
             <span className="block text-body-sm font-bold text-gray-90">
               내 차례인 결재가 {myTurnCount}건 있습니다
             </span>
-            <span className="mt-0.5 block text-body-xs text-gray-60">
+            <span className="mt-1 block text-body-xs text-gray-60">
               {awaiting.length > myTurnCount
                 ? `내 칸이 있는 문서 ${awaiting.length}건 가운데 ${myTurnCount}건이 지금 차례입니다. 나머지는 앞 순서를 기다리는 중입니다.`
                 : "서명하거나 반려할 문서입니다."}
@@ -198,7 +198,7 @@ export default async function HomePage() {
               }
               data-variant="plain"
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-xs px-2 py-1 text-body-xs font-bold tabular-nums",
+                "inline-flex items-center gap-2 rounded-xs px-2 py-1 text-body-xs font-bold tabular-nums",
                 "hover:bg-gray-10 active:bg-primary-5",
                 key === "overdue" && counts.overdue > 0
                   ? "text-status-overdue-text"
@@ -303,7 +303,7 @@ export default async function HomePage() {
                       <Link
                         href={`/works/${w.id}`}
                         data-variant="plain"
-                        className="flex items-center gap-3 rounded-sm px-2 py-2.5 hover:bg-gray-10 active:bg-primary-5"
+                        className="flex items-center gap-3 rounded-sm px-2 py-3 hover:bg-gray-10 active:bg-primary-5"
                       >
                         {/* 지연일 때 이 아이콘까지 붉게 칠하고 있었다. 한 줄에
                             붉은 것이 셋(아이콘·배지·날짜)이라 조용해야 할 판이
@@ -318,7 +318,7 @@ export default async function HomePage() {
                           <span className="line-clamp-1 text-body-sm font-bold text-gray-90">
                             {w.title}
                           </span>
-                          <span className="mt-0.5 flex items-center gap-2">
+                          <span className="mt-1 flex items-center gap-2">
                             <StatusBadge status={w.derived} size="sm" />
                           </span>
                         </span>

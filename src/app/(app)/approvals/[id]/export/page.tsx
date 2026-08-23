@@ -132,7 +132,7 @@ export default async function ApprovalExportPage({
           meta={
             <div className="flex flex-wrap items-center gap-2">
               <ApprovalBadge state={approval.state} steps={approval.steps} />
-              <span className="rounded-xs bg-gray-5 px-1.5 py-0.5 text-body-xs font-bold text-gray-60">
+              <span className="rounded-xs bg-gray-5 px-chip-x py-chip-y text-body-xs font-bold text-gray-60">
                 {APPROVAL_FORM_LABEL[approval.form]}
               </span>
               <span className="text-body-xs tabular-nums text-gray-60">
@@ -148,7 +148,7 @@ export default async function ApprovalExportPage({
         {/* ── 내려받기 ───────────────────────────────────────────────────
             예전에는 이 단추 하나를 설명 상자 다섯 개가 둘러싸고 있었다.
             먼저 받게 하고, 단서는 그 아래 한 문단으로 줄인다. */}
-        <div className="mb-5 rounded-md border border-primary/30 bg-primary-5 px-5 py-4">
+        <div className="mb-5 rounded-sm border border-primary/30 bg-primary-5 px-5 py-4">
           <p className="mb-3 text-body-sm font-bold text-gray-90">
             한/글 파일로 내려받기
           </p>
@@ -164,7 +164,7 @@ export default async function ApprovalExportPage({
               한/글 파일(.hwpx)
             </ButtonLink>
             <PrintButton />
-            <span className="inline-flex items-center gap-1.5 text-body-xs text-gray-60">
+            <span className="inline-flex items-center gap-2 text-body-xs text-gray-60">
               <Printer aria-hidden className="size-3.5" />
               Ctrl+P 로도 같은 내용이 A4 한 벌로 나옵니다
             </span>

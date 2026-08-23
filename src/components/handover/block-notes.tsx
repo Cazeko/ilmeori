@@ -58,19 +58,19 @@ export function BlockNotes({
     <div
       className={
         notes.length > 0
-          ? "mt-3 border-t border-dashed border-gray-20 pt-3"
+          ? "mt-3 border-t border-dashed border-rule-hair pt-3"
           : "mt-1"
       }
     >
       {notes.length > 0 ? (
-        <ul className="flex flex-col gap-2.5">
+        <ul className="flex flex-col gap-3">
           {notes.map((n) => (
             // 색을 accent(보라)로 쓰지 않는다. 이 화면에서 accent는 「기계가 뽑은
             // 것·근거 꼬리표」의 색이다. 사람이 적은 줄에 그 색을 쓰면 화면이
             // 구별하려고 만든 두 가지를 같은 색으로 칠하게 된다.
             <li
               key={n.id}
-              className="rounded-r-md border-l-4 border-primary bg-primary-5 px-3.5 py-2.5"
+              className="rounded-r-md border-l-4 border-primary bg-primary-5 px-4 py-3"
             >
               {/* 삭제는 <form>이라 문단(<p>) 안에 넣을 수 없다. */}
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -124,12 +124,12 @@ export function BlockNotes({
         // 결재 문서가 아니라 설문지처럼 보인다.
         <details
           open={needsHuman && notes.length === 0}
-          className={notes.length > 0 ? "mt-2.5" : undefined}
+          className={notes.length > 0 ? "mt-3" : undefined}
         >
           {/* 「이 항목에」는 그 항목 안에 있으니 자명한 말이다. 일곱 번
               반복되면 문서가 아니라 설문지가 된다. 아래 Field 라벨이 어느
               항목인지를 이미 말하므로 여기서는 동작만 적는다. */}
-          <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+          <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-2 text-body-sm font-bold text-gray-60 hover:text-gray-80">
             <PenLine aria-hidden className="size-4" />
             보충 적기
           </summary>

@@ -63,17 +63,22 @@ export function WorkCard({
   return (
     <article
       className={cn(
-        "relative flex min-h-36 flex-col rounded-md border border-gray-10 bg-surface p-3",
-        "transition-colors duration-150 hover:border-primary-30",
-        // 누르는 즉시. :active 는 자바스크립트를 기다리지 않는다.
-        "active:border-primary active:bg-primary-5",
+        "relative flex min-h-36 flex-col rounded-sm border border-rule-frame bg-surface p-3",
+        // 손이 닿았다는 표시는 **바탕**으로 한다. hover:border-* 는 의사클래스라
+        // 특이도가 한 칸 높아 네 변을 통째로 덮는다 — 지연 카드에 마우스를 올리는
+        // 순간 왼쪽 붉은 띠가 파랗게 지워졌다(urgent-hero.tsx 에 같은 주석).
+        // 누르는 즉시 칠해진다. :active 는 자바스크립트를 기다리지 않는다.
+        "transition-colors duration-150 hover:bg-gray-5 active:bg-primary-5",
         // 눌린 카드는 흐려진다. 안쪽 LinkPendingMark 가 표식을 심으면
         // 여기서 받는다 — 카드를 client 컴포넌트로 만들지 않기 위한 배치다.
         "has-[[data-link-pending]]:opacity-55 has-[[data-link-pending]]:transition-opacity",
+        // 경보선의 굵기와 이름은 선 축이 정한다 — alarm 은 3px 이다
+        // (globals.css 의 --color-rule-alarm). 예전에는 4px 에 status-overdue 를
+        // 직접 불렀는데, 같은 색을 두 이름으로 부르면 축이 도로 흐려진다.
         overdue
-          ? "border-l-4 border-l-status-overdue"
+          ? "border-l-3 border-l-rule-alarm"
           : dueNow
-            ? "border-l-4 border-l-accent"
+            ? "border-l-3 border-l-accent"
             : "",
       )}
     >
@@ -126,13 +131,13 @@ export function WorkCard({
             내리고 구분은 아이콘과 글자에 맡긴다 — 카드에서 색이 뜨는 자리는
             왼쪽 띠(지연·임박) 하나로 족하다. */}
         {cross ? (
-          <span className="inline-flex items-center gap-1 rounded-xs bg-gray-10 px-1.5 py-0.5 font-bold text-gray-70">
+          <span className="inline-flex items-center gap-1 rounded-xs bg-gray-10 px-chip-x py-chip-y font-bold text-gray-70">
             <Users aria-hidden className="size-3" />
             {work.department_count}개 부서
           </span>
         ) : null}
         {work.previous_year ? (
-          <span className="inline-flex items-center gap-1 rounded-xs bg-gray-10 px-1.5 py-0.5 font-bold text-gray-70">
+          <span className="inline-flex items-center gap-1 rounded-xs bg-gray-10 px-chip-x py-chip-y font-bold text-gray-70">
             <RotateCcw aria-hidden className="size-3" />
             작년 판 있음
           </span>
@@ -145,7 +150,7 @@ export function WorkCard({
           위에 이미 상태 배지가 있고, 배지가 둘이면 어느 쪽이 업무의 상태인지
           헷갈린다. */}
       {approval ? (
-        <p className="mt-2 flex items-center gap-1.5 text-body-xs font-bold text-gray-70">
+        <p className="mt-2 flex items-center gap-2 text-body-xs font-bold text-gray-70">
           <Stamp aria-hidden className="size-3.5 shrink-0 text-gray-40" />
           <span>
             결재 {approvalStateLine(approval.latest.state, approval.latest)}
@@ -160,7 +165,7 @@ export function WorkCard({
 
       {/* mt-auto 가 이 줄을 바닥에 붙인다. h-7 로 높이를 못박아, 아바타가 있는
           카드와 없는 카드의 밑줄이 같은 자리에 온다. */}
-      <div className="mt-auto flex h-7 items-center justify-between gap-2 border-t border-gray-5 pt-2">
+      <div className="mt-auto flex h-7 items-center justify-between gap-2 border-t border-rule-hair pt-2">
         <AvatarStack people={work.members.map((m) => m.profile)} />
         <span className="flex items-center gap-3 text-body-xs text-gray-60">
           {/* 아이콘 옆 숫자만 두면 스크린리더에는 "5"라고만 읽힌다.
