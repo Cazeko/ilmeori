@@ -151,7 +151,7 @@ export function ActivityTimeline({
                       {showTone ? (
                         <span
                           className={cn(
-                            "rounded-xs px-chip-x py-chip-y text-[11px] font-bold",
+                            "rounded-xs px-chip-x py-chip-y text-body-xs font-bold",
                             TONE[tone].chip,
                           )}
                         >

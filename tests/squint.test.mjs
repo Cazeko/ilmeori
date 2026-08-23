@@ -22,6 +22,30 @@
  * 바탕(#f0f1f2)보다 **밝고**(#fafafa) 글자는 어둡다. 한쪽 끝을 기준으로
  * 잡으면 밝은 판과 어두운 글자 중 한쪽만 「무게」로 세게 된다.
  *
+ * ── ⚠ 지배도만으로는 부족하다 — 두 번째 물음 ────────────────────────────────
+ *
+ * 이 시험에는 구멍이 있었고, 실제로 물렸다. **지배도 ≥ 1.5 는 「상단에 큰
+ * 상자를 하나 얹으면」 만족된다.** 그리고 큰 상자를 얹는 것이 정확히 AI 가 하는
+ * 실패 방식이다 — 「중요한 걸 강조해줘」라고 하면 거대한 숫자와 아이콘 상자를
+ * 화면 위에 툭 던져 놓는 그 패턴이다.
+ *
+ * 업무 보드와 결재함이 한동안 그 상자를 이고 있었다. 46px 짜리 합계 숫자를 단
+ * 흰 종이였고, 결재함 쪽은 **자기 자신으로 가는 링크**였다. 즉 화면에서 가장
+ * 무거운 것이 눌러도 아무 일이 없었다. 숫자는 좋아졌는데 화면은 나빠졌다 —
+ * **시험이 틀린 이유로 통과했다.**
+ *
+ * 그래서 물음을 하나 더 단다.
+ *
+ *   ① 무게   흐리게 보면 덩어리 하나가 서는가          (지배도 ≥ 1.5)
+ *   ② 자리   그 덩어리가 **「문서」 위에** 있는가        (data-rank="doc")
+ *
+ * ②는 화면이 `data-rank="doc"` 로 「이 화면의 1등은 이것이다」라고 선언한
+ * 요소의 사각형을 받아, 지배도 1등 칸의 **중심**이 그 안에 들어오는지 본다.
+ * 머리글·배너·필터 줄에 무게가 쏠려 있으면 들어오지 않는다.
+ *
+ * 숫자를 만족시키는 가장 쉬운 방법이 잘못된 방법이면, 그 시험은 잘못된 방법을
+ * 가르친다. ②가 그 길을 막는다. (DESIGN.md §9.1)
+ *
  * ── 이 숫자를 얼마나 믿는가 ────────────────────────────────────────────────
  *
  * 거칠다. 격자를 어디서 끊느냐에 따라 몇 십분의 일은 움직이고, 화면에 실제로
@@ -177,7 +201,7 @@ for (const screen of SCREENS) {
 
   // 흐린 그림 한 장을 브라우저 안에서 한 번에 격자로 잰다.
   // (칸마다 스크린샷을 따로 찍으면 24번 왕복이고, 그만큼 느리다)
-  const cells = await page.evaluate(
+  const grid = await page.evaluate(
     async ([b64, cols, rows]) => {
       // fetch("data:…") 로 풀지 않는다 — 이 앱의 CSP(proxy.ts)가 data: 를
       // connect-src 에 넣어 주지 않아 「Failed to fetch」로 막힌다. 시험을
@@ -205,18 +229,58 @@ for (const screen of SCREENS) {
           out.push(sum / (data.length / 4));
         }
       }
-      return out;
+      // 격자를 자른 실제 픽셀 크기를 함께 돌려준다 — 아래에서 1등 칸의 자리를
+      // 화면 좌표로 되돌릴 때 **같은 나눗셈**을 써야 한 칸도 어긋나지 않는다.
+      return { cells: out, width: bmp.width, height: bmp.height };
     },
     [blurred.toString("base64"), COLS, ROWS],
   );
 
+  const { cells } = grid;
   const sorted = [...cells].sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)];
-  const weights = cells.map((v) => Math.abs(v - median)).sort((a, b) => b - a);
+  const scored = cells
+    .map((v, i) => ({ i, w: Math.abs(v - median) }))
+    .sort((a, b) => b.w - a.w);
 
-  const top = weights[0];
-  const rivals = weights.slice(1, 5).reduce((s, v) => s + v, 0) / 4;
+  const top = scored[0].w;
+  const rivals = scored.slice(1, 5).reduce((s, v) => s + v.w, 0) / 4;
   const dominance = rivals > 1e-6 ? top / rivals : Infinity;
+
+  // ── ② 그 덩어리는 「문서」 위에 있는가 ─────────────────────────────────────
+  // 1등 칸의 중심을 화면 좌표로 되돌린다. 그림은 clip 으로 잘라 낸 것이므로
+  // 잘라 낸 원점(clip.x, clip.y)을 다시 더한다. 창 배율은 1 이라 그림 픽셀과
+  // CSS 픽셀이 같다(newContext 에 deviceScaleFactor 를 주지 않았다).
+  const cellW = Math.floor(grid.width / COLS);
+  const cellH = Math.floor(grid.height / ROWS);
+  const topRow = Math.floor(scored[0].i / COLS);
+  const topX = clip.x + ((scored[0].i % COLS) + 0.5) * cellW;
+  const topY = clip.y + (topRow + 0.5) * cellH;
+  /** 1등 칸의 아랫변. 판정은 중심이 아니라 이 값으로 한다 — 아래 주석 참조. */
+  const topBottom = clip.y + (topRow + 1) * cellH;
+
+  const anchor = await page.evaluate(
+    ([x, y]) => {
+      const docs = [...document.querySelectorAll('[data-rank="doc"]')]
+        .map((el) => el.getBoundingClientRect())
+        .filter((r) => r.width > 0 && r.height > 0);
+      if (docs.length === 0) return { declared: 0, hit: false, docTop: null };
+      return {
+        declared: docs.length,
+        hit: docs.some(
+          (r) => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom,
+        ),
+        docTop: Math.min(...docs.map((r) => r.top)),
+      };
+    },
+    [topX, topY],
+  );
+
+  const where =
+    anchor.declared === 0 ? "문서 선언 없음" : anchor.hit ? "문서 위" : "문서 밖";
+  console.log(
+    `  · ${screen.label} — 지배도 ${dominance.toFixed(2)} · 1등 칸 (${Math.round(topX)}, ${Math.round(topY)}) ${where}`,
+  );
 
   if (screen.assert) {
     ok(
@@ -224,10 +288,48 @@ for (const screen of SCREENS) {
       dominance >= MIN_DOMINANCE,
       `지배도 ${dominance.toFixed(2)} (문턱 ${MIN_DOMINANCE})`,
     );
-  } else {
-    console.log(
-      `  · ${screen.label} — 지배도 ${dominance.toFixed(2)} (재기만 한다 — 위 SCREENS 주석)`,
+  }
+
+  // ── 자리 검사는 「문서 위인가」가 아니라 「문서보다 **위쪽**인가」를 묻는다 ──
+  //
+  // 처음에는 1등 칸이 문서 사각형 **안에** 들어오는지로 판정했다. 다섯 화면 중
+  // 셋이 실패했는데, 들여다보니 시험이 틀렸지 화면이 틀린 게 아니었다.
+  //
+  // 이 지표가 세는 무게는 |칸 평균 밝기 - 중앙값| 이고, 그 값을 실제로 밀어
+  // 올리는 것은 **잉크의 양**이다. 홈에서 1등 칸은 히어로가 아니라 화면 아래쪽
+  // 의 촘촘한 목록 두 벌이었다 — 히어로는 넓은 흰 판이라 잉크가 적다. 목록이
+  // 촘촘한 것은 옳은 설계이므로, 그것을 옅게 만들어 시험을 통과시키는 것은
+  // **시험이 화면을 망가뜨리는** 일이다.
+  //
+  // 그래서 §9.1 이 원래 적어 둔 형태로 되돌린다 — 부정형이다.
+  //
+  //   ✗ 1등 칸이 페이지 상단 크롬(머리글·배너·필터 줄)에 있으면 실패
+  //
+  // 즉 「가장 무거운 자리가 문서**보다 위**에 있으면 안 된다」. 이것은 잉크
+  // 밀도에 흔들리지 않고, 막으려던 실패 방식(위에 큰 상자를 얹는 것)을 정확히
+  // 겨눈다. 아래쪽에 무게가 쏠리는 것은 무게 검사(지배도)가 본다.
+  //
+  // ── 판정은 칸의 **아랫변**으로 한다 (자를 넘어서 읽지 않기) ─────────────────
+  //
+  // 처음에는 칸의 중심을 썼더니 결재함이 71px 차이로 실패했다. 이 격자는
+  // 912px 를 네 줄로 자르므로 한 칸이 228px 이다 — **71px 은 이 자가 분해하지
+  // 못하는 값이다.** 눈금 사이를 읽고 실패를 선언하면, 그 다음에 벌어지는 일은
+  // 사람이 눈금에 맞춰 화면을 미는 것이다.
+  //
+  // 그래서 자의 해상도에 맞춰 묻는다 — **가장 무거운 칸이 문서에 한 픽셀도
+  // 닿지 않으면서 그보다 위에 있는가.** 한 칸(228px)어치 크롬이 문서 위에
+  // 통째로 얹혔을 때만 걸린다. 거칠지만 정확히 그것이 막으려던 것이다:
+  // 예전 업무 보드는 배너 + 조건 폼 + 칩 줄로 문서 위에 370px 을 쌓고 있었다.
+  if (anchor.declared > 0) {
+    ok(
+      `${screen.label} — 문서 위쪽에 한 칸짜리 크롬이 없다`,
+      topBottom > anchor.docTop,
+      `1등 칸 아랫변 y=${Math.round(topBottom)} · 문서 윗변 y=${Math.round(anchor.docTop)}`,
     );
+  } else if (screen.assert) {
+    ok(`${screen.label} — 화면이 「문서」를 선언했다`, false, 'data-rank="doc" 없음');
+  } else {
+    console.log(`     문서 선언이 없다 — 자리 검사는 건너뛴다`);
   }
 
   await page.evaluate(() => {

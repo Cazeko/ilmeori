@@ -74,3 +74,15 @@ supabase/seed/*.local.sql
 # 커밋됐고, 거기에는 위에서 막아 둔 **데모 계정 비밀번호가 그대로 들어 있었다.**
 # 파일 이름 규칙(*.local.sql)으로만 막으면 사본의 사본이 다른 이름으로 새어 나간다.
 .ipynb_checkpoints/
+
+# 편집기 내용 손실을 재 보던 일회용 프로브. 절대경로가 박혀 있어 다른
+# 기계에서 돌지 않는다 — 한 번 커밋된 적이 있어 다시 들어오지 않게 적어 둔다.
+tests/.probe*.mjs
+
+# 실눈 시험이 돌 때마다 다시 만드는 그림. 남겨 둘 값이 있는 판은 손으로
+# `-before` / `-after` 를 붙여 따로 추적한다(docs/screenshots/README.md).
+# 원본까지 추적하면 시험을 돌릴 때마다 트리가 더러워진다.
+docs/screenshots/squint-*-sharp.png
+docs/screenshots/squint-*-blur.png
+!docs/screenshots/squint-*-before.png
+!docs/screenshots/squint-*-after.png

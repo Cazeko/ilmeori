@@ -243,7 +243,7 @@ export default async function WorkDetailPage({
           이 덩어리를 통째로 문서 등급으로 감싼다 — 흰 종이, 각진 모서리,
           위쪽 2px 먹선. 아래의 탭 본문과 옆칸은 판 등급이므로, 화면에 문서는
           여기 하나뿐이다. */}
-      <header className={cn(CARD_SURFACE.doc, "mb-5 p-6")}>
+      <header data-rank="doc" className={cn(CARD_SURFACE.doc, "mb-5 p-6")}>
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={work.derived} />
           <span className="text-body-xs text-gray-60">
@@ -296,7 +296,11 @@ export default async function WorkDetailPage({
           <div className="flex items-center gap-2">
             <dt className="text-body-sm text-gray-60">주담당</dt>
             <dd>
-              <PersonChip profile={work.owner} size="sm" />
+              <PersonChip
+                profile={work.owner}
+                size="sm"
+                me={work.owner.id === viewer.id}
+              />
             </dd>
           </div>
 
@@ -632,6 +636,7 @@ export default async function WorkDetailPage({
                     <PersonChip
                       profile={m.profile}
                       size="sm"
+                      me={m.profile_id === viewer.id}
                       sub={
                         m.profile_id === work.owner_id
                           ? "주담당"

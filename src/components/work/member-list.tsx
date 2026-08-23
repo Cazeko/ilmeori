@@ -220,7 +220,7 @@ export function MemberList({
             return (
               <li key={m.profile_id} className="px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <Avatar profile={m.profile} size="lg" />
+                  <Avatar profile={m.profile} size="lg" me={isMe} />
                   <div className="min-w-0 flex-1">
                     <p className="text-body-sm font-bold text-gray-90">
                       {m.profile.name}
@@ -228,12 +228,12 @@ export function MemberList({
                         {m.profile.position}
                       </span>
                       {isMe ? (
-                        <span className="ml-2 rounded-xs bg-primary-5 px-chip-x py-chip-y text-[11px] font-bold text-primary">
+                        <span className="ml-2 rounded-xs bg-accent-bg px-chip-x py-chip-y text-body-xs font-bold text-accent-text">
                           나
                         </span>
                       ) : null}
                       {m.profile_id === leadId ? (
-                        <span className="ml-2 rounded-xs bg-gray-90 px-chip-x py-chip-y text-[11px] font-bold text-white">
+                        <span className="ml-2 rounded-xs bg-gray-90 px-chip-x py-chip-y text-body-xs font-bold text-white">
                           주담당
                         </span>
                       ) : null}

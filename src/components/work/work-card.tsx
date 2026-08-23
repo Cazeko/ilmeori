@@ -38,6 +38,26 @@ import type { WorkListItem } from "@/lib/types";
  * 세지 못해도 「정돈이 안 됐다」로 느낀다. 그리고 아래 줄(참여자·대화 수)은
  * mt-auto 로 **바닥에 붙인다** — 제목이 한 줄인 카드와 두 줄인 카드가 나란히
  * 놓였을 때 밑줄이 어긋나 보이는 것이 칸반에서 가장 눈에 띄는 흐트러짐이다.
+ *
+ * ── 지연된 카드가 이 화면의 「문서」다 ──────────────────────────────────────
+ *
+ * 한동안 보드의 문서 등급은 화면 위에 얹은 거대 배너였다. 배너는 개수를 세는
+ * 상자이지 누를 대상이 아니다(DESIGN.md §5.1). 등급을 여기로 옮긴다 —
+ * **지연된 업무 카드 그 자체**가 보드에서 사용자가 손대야 할 물건이다.
+ *
+ * 「한 화면에 문서는 하나」라는 규칙과 어긋나 보이지만 그렇지 않다. 그 규칙이
+ * 막으려는 것은 **서로 다른 종류가 둘 다 1등을 주장하는 일**이다(배너 하나 +
+ * 카드 여럿). 문서 등급은 한 **종류**이지 반드시 한 **개**가 아니다 — 홈에서는
+ * 그 종류가 「가장 급한 일」이라 하나뿐이고, 보드에서는 「지연된 업무」라서
+ * 개수를 데이터가 정한다. 지연이 0건이면 보드에 문서는 없고, 그날 보드에는
+ * 1등이 없는 것이 맞다.
+ *
+ * 등급을 올리는 데 쓰는 것은 세 가지뿐이다 — **제목 크기(17 → 21px) · 왼쪽
+ * 경보선 · 안쪽 여백 한 칸(12 → 16px).** doc 등급의 겉모양(흰 종이 + 위쪽 2px
+ * 먹선)은 가져오지 않는다. 위 먹선은 「여기서 문서가 시작한다」는 뜻인데 열 안에
+ * 든 카드 두 장이 그 말을 하면 열의 윗변과 다투고, 흰 종이(#ffffff)는 판
+ * (#fafafa)과 대비 1.02 라 아무것도 하지 않으면서 규칙만 늘린다.
+ * 대비는 색이 아니라 크기·굵기·여백에서 번다(§5.2).
  */
 
 /** 오늘·내일 마감. 지연은 아니지만 오늘 손대야 하는 일이다. */
@@ -63,11 +83,14 @@ export function WorkCard({
   work,
   approval,
   pick,
+  meId,
 }: {
   work: WorkListItem;
   /** 결재 진행률. 없으면 배지를 그리지 않는다(부르지 않은 화면도 있다). */
   approval?: ApprovalSummary;
   pick?: CardPick;
+  /** 보고 있는 사람. 참여자 줄에서 내 아바타 하나에만 색이 붙는다(avatar.tsx). */
+  meId?: string;
 }) {
   const overdue = work.derived === "overdue";
   const dueNow = isDueNow(work);
@@ -82,8 +105,14 @@ export function WorkCard({
 
   return (
     <Shell
+      // 지연된 카드가 이 화면의 「문서」다 — 실눈 시험이 이 표식을 찾아
+      // 「흐리게 봤을 때 가장 무거운 자리가 여기인가」를 판정한다
+      // (tests/squint.test.mjs, 위 머리글).
+      data-rank={overdue ? "doc" : "panel"}
       className={cn(
-        "relative flex min-h-36 flex-col rounded-sm border border-rule-frame bg-surface p-3",
+        "relative flex min-h-36 flex-col rounded-sm border border-rule-frame bg-surface",
+        // 안쪽 여백 한 칸이 등급이다 — 문서 16px / 판 12px.
+        overdue ? "p-4" : "p-3",
         // 손이 닿았다는 표시는 **바탕**으로 한다. hover:border-* 는 의사클래스라
         // 특이도가 한 칸 높아 네 변을 통째로 덮는다 — 지연 카드에 마우스를 올리는
         // 순간 왼쪽 붉은 띠가 파랗게 지워졌다(urgent-hero.tsx 에 같은 주석).
@@ -152,8 +181,17 @@ export function WorkCard({
 
       {/* 카드 전체가 눌리도록 제목 링크를 확장한다.
           카드 자체를 <a>로 감싸면 안쪽 링크를 중첩시킬 수 없다.
-          제목 17px · 메타 13px — 이 차이가 카드에서 무엇을 먼저 읽을지를 정한다. */}
-      <h3 className="mt-2 text-body leading-snug font-bold break-keep text-gray-90">
+
+          제목 17px · 메타 13px — 이 차이가 카드 **안에서** 무엇을 먼저 읽을지를
+          정한다. 지연된 카드만 21px 로 올라간다 — 그 한 칸(1.24배)이 카드
+          **사이의** 위계다. 17 옆의 19px 은 굵은 본문으로 읽히지만 21px 은
+          제목으로 읽힌다(globals.css 의 사다리 주석). */}
+      <h3
+        className={cn(
+          "mt-2 leading-snug font-bold break-keep text-gray-90",
+          overdue ? "text-h3" : "text-body",
+        )}
+      >
         {pick ? (
           // 정리 모드에서는 제목이 링크가 아니다. 위 Shell 주석 참조.
           <span className="line-clamp-2">{work.title}</span>
@@ -217,7 +255,7 @@ export function WorkCard({
       {/* mt-auto 가 이 줄을 바닥에 붙인다. h-7 로 높이를 못박아, 아바타가 있는
           카드와 없는 카드의 밑줄이 같은 자리에 온다. */}
       <div className="mt-auto flex h-7 items-center justify-between gap-2 border-t border-rule-hair pt-2">
-        <AvatarStack people={work.members.map((m) => m.profile)} />
+        <AvatarStack people={work.members.map((m) => m.profile)} meId={meId} />
         <span className="flex items-center gap-3 text-body-xs text-gray-60">
           {/* 아이콘 옆 숫자만 두면 스크린리더에는 "5"라고만 읽힌다.
               role 없는 span에 aria-label을 붙이는 것은 ARIA 규칙 위반이라,

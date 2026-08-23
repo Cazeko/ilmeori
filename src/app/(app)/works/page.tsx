@@ -12,7 +12,6 @@ import { cn } from "@/lib/cn";
 import { KanbanBoard } from "@/components/work/kanban-board";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
-import { CARD_SURFACE } from "@/components/ui/card";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Field, Input, Select } from "@/components/ui/field";
@@ -177,46 +176,45 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
 
       <ActionFeedback msg={sp.msg} className="mb-4" />
 
-      {/* ── 이 화면의 「문서」 ──────────────────────────────────────────────
-          기한이 지난 업무가 있으면 그것이 이 화면에서 가장 급한 사실이다.
-          한동안 이 사실은 화면 머리 오른쪽의 작은 단추 하나였고, 옆의 「새
-          업무」와 같은 무게라 급함이 여백에 묻혔다.
+      {/* ── 지연 알림은 「여백」이다 ─────────────────────────────────────────
+          한동안 이 자리에 문서 등급의 거대 배너가 있었다 — 흰 종이 125px 에
+          46px 짜리 붉은 숫자. 실눈 시험은 통과했다. 덩어리가 하나 생겼으니까.
+          그런데 그 덩어리가 **눌러야 할 일이 아니라 개수를 세는 상자**였다.
 
-          문서 등급으로 올린다 — 흰 종이, 각진 모서리, 왼쪽 3px 경보선.
-          숫자는 --text-figure(46px), 이 화면에 하나뿐인 큰 숫자다.
-          지연이 없으면 이 판은 아예 없다. 그때 이 화면에는 1등이 없는 것이
-          맞다 — 급한 일이 없는 날에 억지로 뭔가를 크게 세울 이유가 없다.
+          세 가지가 어긋나 있었다.
+            ① 화면에서 가장 큰 글자가 **합계**였다. 홈 화면 주석이 금지한 바로
+               그것이다 — "알고 싶은 건 합계가 아니라 다음 할 일이다."
+            ② 같은 사실이 화면에 세 번 있었다(배너 · 「지연만」 칩 ·
+               대기 열의 「지연 2」 배지).
+            ③ 이 파일의 주석은 "이 화면의 1등은 지연된 업무다"라고 적어 놓고,
+               정작 1등으로 세운 것은 **업무가 아니라 배너**였다.
 
-          정리 모드에서도 내린다. 그때 이 화면의 1등은 「무엇을 고를 것인가」이고,
-          화면에 1등이 둘이면 하나도 없는 것과 같다. */}
+          규칙으로 못박는다(DESIGN.md §5.1): **화면의 「문서」는 사용자가 누를
+          대상이어야 한다.** 요약 배너·통계 타일은 아무리 커도 여백 등급이다.
+
+          그래서 이 줄은 44px 한 줄로 물러나고, 문서 등급은 아래 **지연된
+          카드 그 자체**로 간다(work-card.tsx). 왼쪽 3px 경보선만 남겨 이 줄과
+          그 카드가 같은 말을 하고 있음을 잇는다. */}
       {overdueCount > 0 && !overdueOnly && !archived && !selecting ? (
         <Link
           href={linkWith({ overdue: "1", mine: null })}
           data-variant="plain"
           className={cn(
-            CARD_SURFACE.doc,
-            "mb-5 flex items-center gap-5 border-l-3 border-l-rule-alarm p-6",
+            "mb-4 flex min-h-11 items-center gap-2 border-l-3 border-l-rule-alarm px-3",
+            "text-body font-bold text-status-overdue-text",
             // 테두리가 아니라 바탕으로 알린다 — hover:border-* 는 의사클래스라
             // 네 변을 통째로 덮어 왼쪽 경보선까지 지운다(urgent-hero.tsx 주석).
-            "transition-colors duration-150 hover:bg-gray-5 active:bg-primary-5",
+            "transition-colors duration-150 hover:bg-status-overdue-bg active:bg-status-overdue-bg",
           )}
         >
-          <AlertTriangle
-            aria-hidden
-            className="size-8 shrink-0 text-status-overdue-text"
-          />
-          <span className="min-w-0 flex-1">
-            <span className="block text-h3 font-bold text-gray-90">
-              기한이 지난 업무
-            </span>
-            <span className="mt-1 block text-body-sm text-gray-60">
-              눌러서 지연된 것만 봅니다
-            </span>
+          <AlertTriangle aria-hidden className="size-4 shrink-0" />
+          <span>
+            기한이 지난 업무 <span className="tabular-nums">{overdueCount}</span>건
           </span>
-          <span className="shrink-0 text-figure font-bold tabular-nums text-status-overdue-text">
-            {overdueCount}
-            <span className="ml-1 text-h3 font-normal text-gray-60">건</span>
-          </span>
+          <span className="text-body-sm font-normal text-gray-60">지연만 보기</span>
+          {/* 물음표 뒤만 바뀌는 같은 화면 이동이라 본문 자리를 갈지 않는다 —
+              눌렸다는 표시가 이 자리에 있어야 한다(아래 조건 칩과 같은 이유). */}
+          <LinkPending />
         </Link>
       ) : null}
 
@@ -371,6 +369,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
           <KanbanBoard
             works={works}
             approvals={approvals}
+            meId={viewer.id}
             pickOf={(w) =>
               roleIn(w, viewer) === "owner" ? "pick" : "locked"
             }
@@ -416,7 +415,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
           </div>
         </form>
       ) : (
-        <KanbanBoard works={works} approvals={approvals} />
+        <KanbanBoard works={works} approvals={approvals} meId={viewer.id} />
       )}
     </PageContainer>
   );

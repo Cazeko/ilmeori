@@ -48,6 +48,12 @@ export type CardVariant = "doc" | "panel" | "quiet";
  * 판의 겉모양. `<div>` 가 아닌 태그로 문서를 그리는 곳(work/urgent-hero.tsx 의
  * `<article>`)이 이 표를 가져다 쓴다 — 두 군데에 적어 두면 한쪽만 고치는 날이
  * 반드시 오고, 그러면 「화면에 문서는 하나」라는 전제가 조용히 깨진다.
+ *
+ * ⚠ 이 표를 손으로 가져다 쓰는 자리에는 **`data-rank="doc"` 를 함께 적는다.**
+ * 실눈 시험이 그 표식으로 「흐리게 봤을 때 가장 무거운 자리가 문서 위인가」를
+ * 판정한다(tests/squint.test.mjs). 표식이 없으면 그 화면은 문서를 선언하지
+ * 않은 것이 되고, 시험은 조용히 아무것도 재지 않는다 — 그래서
+ * tests/design-lint.test.mjs 가 둘이 붙어 있는지 감시한다.
  */
 export const CARD_SURFACE: Record<CardVariant, string> = {
   // 종이는 순백이다. bg-white 가 아니라 gray-0 을 쓰는 이유는 globals.css 에 —
@@ -69,7 +75,9 @@ export function Card({
   className,
   ...props
 }: ComponentProps<"div"> & { variant?: CardVariant }) {
-  return <div className={cn(CARD_SURFACE[variant], className)} {...props} />;
+  return (
+    <div data-rank={variant} className={cn(CARD_SURFACE[variant], className)} {...props} />
+  );
 }
 
 const HEADER: Record<CardVariant, string> = {
@@ -81,7 +89,12 @@ const HEADER: Record<CardVariant, string> = {
 };
 
 const TITLE: Record<CardVariant, string> = {
-  doc: "text-h1 font-bold tracking-tight break-keep text-gray-90",
+  // 좁은 화면에서는 27px 로 둔다. 320px 폭에서 34px 제목은 두 줄이 되고, 그러면
+  // 본문이 접힌 만큼 아래로 밀린다 — page-header.tsx 가 같은 이유로 같은 계단을
+  // 쓰고, approvals/[id] 가 그 계단을 빠뜨려 한 번 물렸다(DESIGN.md T7).
+  // 이 가지는 아직 부르는 곳이 없다. 그래서 지금 적어 둔다 — 처음 쓰는 사람이
+  // 같은 버그를 다시 만들지 않도록.
+  doc: "text-h2 font-bold tracking-tight break-keep text-gray-90 sm:text-h1",
   panel: "text-h3 font-bold text-gray-90",
   quiet: "text-body-sm font-bold text-gray-60", // 물러난다
 };
@@ -145,6 +158,10 @@ export function CardPad({
   ...props
 }: ComponentProps<"div"> & { variant?: CardVariant }) {
   return (
-    <div className={cn(CARD_SURFACE[variant], PAD[variant], className)} {...props} />
+    <div
+      data-rank={variant}
+      className={cn(CARD_SURFACE[variant], PAD[variant], className)}
+      {...props}
+    />
   );
 }
