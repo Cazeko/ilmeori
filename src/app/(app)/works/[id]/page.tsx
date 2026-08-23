@@ -473,6 +473,9 @@ export default async function WorkDetailPage({
                   workId={work.id}
                   comments={comments}
                   viewer={viewer}
+                  members={work.members
+                    .filter((m) => m.profile_id !== viewer.id)
+                    .map((m) => m.profile)}
                 />
                 {/* 새 탭을 만들지 않았다. 안에서 한 대화와 밖에 물어본 것이
                     한 화면에 나란히 있어야 인계서가 둘 다 읽는다는 말이

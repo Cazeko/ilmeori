@@ -329,12 +329,27 @@ export async function getComments(workId: string): Promise<CommentWithAuthor[]> 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("comment")
-    .select(`*, author:author_id ( ${PROFILE_SELECT} )`)
+    .select(
+      `*, author:author_id ( ${PROFILE_SELECT} ),
+       mentions:comment_mention ( profile:profile_id ( ${PROFILE_SELECT} ) )`,
+    )
     .eq("work_id", workId)
     .is("deleted_at", null)
     .order("created_at");
   if (error) throw error;
-  return (data ?? []) as unknown as CommentWithAuthor[];
+
+  // 임베드는 [{ profile: {...} }] 로 온다. 화면이 쓰는 모양으로 편다.
+  return (data ?? []).map((c) => {
+    const raw = c as unknown as Omit<CommentWithAuthor, "mentions"> & {
+      mentions: Array<{ profile: Profile | null }> | null;
+    };
+    return {
+      ...raw,
+      mentions: (raw.mentions ?? [])
+        .map((m) => m.profile)
+        .filter((p): p is Profile => p !== null),
+    };
+  });
 }
 
 /**

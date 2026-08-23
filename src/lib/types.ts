@@ -359,6 +359,11 @@ export interface ActivityWithActor extends Activity {
 
 export interface CommentWithAuthor extends Comment {
   author: Profile;
+  /**
+   * 이 글이 부른 사람들. 본문의 `@이름` 글자가 아니라 **고른 사실**이다
+   * (supabase/migrations/0020 — 동명이인과 본문 수정 때문에 표로 둔다).
+   */
+  mentions: Profile[];
 }
 
 export interface NoteWithPeople extends Note {

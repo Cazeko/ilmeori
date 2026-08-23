@@ -1962,6 +1962,87 @@ console.log("\n[쪽지] 물어도 열어 주지는 않는다");
 }
 
 // ---------------------------------------------------------------------------
+// 부르기 (0020)
+// ---------------------------------------------------------------------------
+//
+// 부를 수 있는 사람은 **그 업무의 참여자**다. can_read_work 로 열면 전 직원
+// 공개 업무에서 1,700명이 통과한다 — 부른다는 것은 「당신이 이 일에 관여한다」는
+// 말이고, 그 말이 맞는 범위는 참여자다.
+console.log("\n[부르기] 참여자만 부를 수 있다");
+{
+  // 부서 공개 업무(wDept)에 박협업을 참여자로 넣는다.
+  await admin(
+    `insert into work_member (work_id, profile_id, role) values ($1, $2, 'editor')
+     on conflict do nothing`,
+    [wDept.id, park],
+  );
+  const c = await as(
+    kim,
+    `insert into comment (work_id, author_id, body) values ($1, $2, '확인 부탁드립니다')
+     returning id`,
+    [wDept.id, kim],
+  );
+  check("대화를 남긴다", c.ok, c.error ?? "");
+  const cid = c.ok ? c.rows[0].id : null;
+
+  const ok1 = await as(
+    kim,
+    `insert into comment_mention (comment_id, profile_id) values ($1, $2) returning comment_id`,
+    [cid, park],
+  );
+  check("참여자를 부를 수 있다", ok1.ok, ok1.error ?? "");
+
+  // 이타부서는 대중교통과라 이 부서 공개 업무의 참여자가 아니다.
+  check(
+    "★ 참여자가 아닌 사람은 못 부른다",
+    await denied(
+      kim,
+      `insert into comment_mention (comment_id, profile_id) values ($1, $2)`,
+      [cid, lee],
+    ),
+  );
+
+  check(
+    "★ 남의 글에 부름을 얹을 수 없다",
+    await denied(
+      park,
+      `insert into comment_mention (comment_id, profile_id) values ($1, $2)`,
+      [cid, kim],
+    ),
+  );
+
+  // 부른 것은 사실이고 사실은 안 바뀐다.
+  check(
+    "부름은 고칠 수 없다",
+    await denied(
+      kim,
+      `update comment_mention set profile_id = $2 where comment_id = $1`,
+      [cid, kim],
+    ),
+  );
+  check(
+    "부름은 지울 수 없다",
+    await denied(kim, `delete from comment_mention where comment_id = $1`, [cid]),
+  );
+
+  // 댓글을 볼 수 있으면 누가 불렸는지도 본다.
+  const seen = await as(
+    park,
+    `select count(*)::int n from comment_mention where comment_id = $1`,
+    [cid],
+  );
+  check("댓글을 볼 수 있으면 부름도 본다", seen.ok && seen.rows[0].n === 1);
+
+  // 타 부서는 그 업무를 못 보므로 부름도 못 본다.
+  const hidden = await as(
+    lee,
+    `select count(*)::int n from comment_mention where comment_id = $1`,
+    [cid],
+  );
+  check("업무를 못 보면 부름도 못 본다", hidden.ok && hidden.rows[0].n === 0);
+}
+
+// ---------------------------------------------------------------------------
 await db.close();
 console.log(`\n${pass}개 통과 · ${fail}개 실패`);
 if (fail) {

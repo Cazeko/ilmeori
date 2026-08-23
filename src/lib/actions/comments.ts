@@ -52,16 +52,47 @@ export async function postComment(formData: FormData) {
   const work = await getWork(viewer, workId);
   if (!work) finish("/works", "denied");
 
+  /**
+   * 부를 사람.
+   *
+   * 본문의 `@이름` 글자를 파싱하지 않는다. 동명이인을 못 가리고, 본문을 고치면
+   * 부른 사람이 조용히 바뀐다. 화면이 **고른 사실**을 보내 준다
+   * (mention-box.tsx — 스크립트가 없으면 체크박스, 있으면 @ 목록. 보내는 값은 같다).
+   *
+   * 여기서는 참여자인지 보지 않는다. DB 의 comment_mention_insert 정책이
+   * `app.is_work_member` 로 본다 — 화면에서 한 번 더 거르면 규칙이 두 벌이 되고,
+   * 두 벌은 반드시 어긋난다(db.ts 머리글과 같은 판단).
+   */
+  const mentioned = [
+    ...new Set(
+      formData
+        .getAll("mention")
+        .filter((v): v is string => typeof v === "string" && v.length > 0),
+    ),
+    // 자기 자신을 부르는 것은 뜻이 없다. 알림도 자기가 한 일에는 안 간다.
+  ].filter((id) => id !== viewer.id);
+
   if (canMutate) {
     const supabase = await createClient();
     // author_id를 클라이언트에서 받지 않는다. 남의 이름으로 글을 남기는 경로를 없앤다.
     // (DB의 comment_insert 정책도 author_id = auth.uid()를 요구한다)
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("comment")
-      .insert({ work_id: workId, author_id: viewer.id, body });
+      .insert({ work_id: workId, author_id: viewer.id, body })
+      .select("id")
+      .single();
     // 오류를 그대로 던지면 화면이 통째로 오류 페이지가 된다. 대화 한 줄 때문에
     // 업무 상세를 못 보게 될 이유가 없으므로, 코드로 바꿔 제자리로 돌려보낸다.
     if (error) finish(talk, classifyError(error));
+
+    if (data && mentioned.length > 0) {
+      // 부름이 실패해도 글은 이미 올라갔다. 여기서 되돌리면 **글까지 사라지는데**
+      // 사용자가 쓴 것은 글이다. 부름만 조용히 빠지고 글은 남는 편이 낫다 —
+      // 그 사실은 화면에 바로 보인다(부른 사람 줄이 비어 있다).
+      await supabase.from("comment_mention").insert(
+        mentioned.map((profile_id) => ({ comment_id: data.id, profile_id })),
+      );
+    }
   } else {
     const state = await getDemoState();
     await setDemoState({

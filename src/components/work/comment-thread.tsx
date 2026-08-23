@@ -1,8 +1,8 @@
-import { MessageSquare, Send, Trash2 } from "lucide-react";
+import { AtSign, MessageSquare, Send, Trash2 } from "lucide-react";
 import { deleteComment, postComment } from "@/lib/actions/comments";
 import { Avatar } from "@/components/ui/avatar";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { Field, Textarea } from "@/components/ui/field";
+import { MentionBox } from "@/components/work/mention-box";
 import { EmptyState } from "@/components/ui/empty-state";
 import { canMutate } from "@/lib/env";
 import { formatDateTime, formatFullDateTime } from "@/lib/format";
@@ -41,10 +41,13 @@ export function CommentThread({
   workId,
   comments,
   viewer,
+  members,
 }: {
   workId: string;
   comments: CommentWithAuthor[];
   viewer: Profile;
+  /** 부를 수 있는 사람 = 이 업무의 참여자(나는 뺀다). 0020 의 정책과 같은 범위. */
+  members: Profile[];
 }) {
   return (
     <div>
@@ -101,6 +104,28 @@ export function CommentThread({
                   <p className="mt-1 rounded-sm rounded-tl-none border border-rule-frame bg-surface px-4 py-3 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
                     {c.body}
                   </p>
+                  {/* 누가 불렸는지는 본문의 글자가 아니라 **저장된 사실**이다.
+                      본문에 @이름 이라고 타이핑만 하고 고르지 않았으면 여기가
+                      비어 있고, 그게 「아무도 안 불렸다」는 뜻이다 —
+                      조용히 실패하지 않게 하는 자리다(mention-box.tsx). */}
+                  {c.mentions.length > 0 ? (
+                    <p className="mt-1 flex flex-wrap items-center gap-1 text-body-xs text-gray-60">
+                      <AtSign aria-hidden className="size-3 shrink-0 text-gray-40" />
+                      <span className="sr-only">부른 사람</span>
+                      {c.mentions.map((m) => (
+                        <span
+                          key={m.id}
+                          className={
+                            m.id === viewer.id
+                              ? "rounded-xs bg-accent-bg px-chip-x py-chip-y font-bold text-accent-text"
+                              : "font-bold text-gray-70"
+                          }
+                        >
+                          {m.name}
+                        </span>
+                      ))}
+                    </p>
+                  ) : null}
                 </div>
               </li>
             );
@@ -116,24 +141,18 @@ export function CommentThread({
 
       <form action={postComment} className="mt-6 border-t border-rule-hair pt-5">
           <input type="hidden" name="workId" value={workId} />
-          <Field
+          <MentionBox
             id="comment-body"
             label="대화 남기기"
+            maxLength={240}
+            placeholder="결정한 내용이나 확인이 필요한 사항을 적어 주세요."
+            people={members}
             hint={
               canMutate
                 ? "남긴 글은 업무와 함께 보관되며, 담당자가 바뀌어도 그대로 넘어갑니다. 내가 남긴 글은 지울 수 있지만 지웠다는 사실은 이력에 남습니다."
                 : "시연용입니다. 남긴 글은 이 브라우저에만 저장되며 최근 3개까지 유지됩니다."
             }
-          >
-            {(p) => (
-              <Textarea
-                {...p}
-                name="body"
-                maxLength={240}
-                placeholder="결정한 내용이나 확인이 필요한 사항을 적어 주세요."
-              />
-            )}
-          </Field>
+          />
         <div className="mt-3 flex justify-end">
           <SubmitButton>
             <Send aria-hidden className="size-4" />

@@ -292,7 +292,13 @@ export async function getComments(workId: string): Promise<CommentWithAuthor[]> 
     .map((c) => ({ ...c, deleted_at: null }));
 
   return [...comments.filter((c) => c.work_id === workId && !c.deleted_at), ...extra]
-    .map((c) => ({ ...c, author: requireProfile(c.author_id) }))
+    .map((c) => ({
+      ...c,
+      author: requireProfile(c.author_id),
+      // 목업에는 부름이 없다 — 데모 모드는 대화를 쿠키에 담고, 부른 사람까지
+      // 담기 시작하면 4KB 를 더 빨리 넘긴다. 화면은 빈 배열에서도 그대로 돈다.
+      mentions: [],
+    }))
     .sort((a, b) => a.created_at.localeCompare(b.created_at));
 }
 
