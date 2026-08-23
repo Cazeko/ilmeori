@@ -177,7 +177,7 @@ export default async function NewApprovalPage({
               ) : (
                 <Notice tone="warning" title="자동으로 채울 결재자가 없습니다">
                   같은 부서에 나보다 위인 사람이 없습니다. 문서를 만든 뒤 결재란을
-                  직접 추가해야 상신할 수 있습니다 — 혼자 서명하고 끝나는 문서는
+                  직접 추가해야 상신할 수 있습니다. 혼자 서명하고 끝나는 문서는
                   결재가 아니기 때문입니다.
                 </Notice>
               )}
@@ -200,10 +200,10 @@ export default async function NewApprovalPage({
                 {(p) => (
                   <Select {...p} name="coopMode" defaultValue="parallel">
                     <option value="parallel">
-                      같은 급과 나란히 — 줄을 서지 않습니다 (병렬협조)
+                      같은 급과 나란히. 줄을 서지 않습니다 (병렬협조)
                     </option>
                     <option value="sequential">
-                      내부 검토 뒤에 — 앞이 끝나야 차례가 옵니다 (순차협조)
+                      내부 검토 뒤에. 앞이 끝나야 차례가 옵니다 (순차협조)
                     </option>
                   </Select>
                 )}

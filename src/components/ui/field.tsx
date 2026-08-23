@@ -1,4 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
+import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 /**
@@ -97,8 +98,11 @@ export function Field({
           role="alert"
           className="flex items-start gap-1 text-body-sm font-bold text-danger"
         >
-          {/* 색 말고도 알아볼 표시를 함께 둔다 */}
-          <span aria-hidden>⚠</span>
+          {/* 색 말고도 알아볼 표시를 함께 둔다.
+              여기 「⚠」 글자가 있었다. 이모지는 글꼴·플랫폼마다 다르게 그려지고
+              (윈도우에서는 노란 삼각형이 통째로 들어온다) 크기도 줄 높이도 우리가
+              못 정한다. 화면의 다른 경고 표시와 같은 아이콘을 쓴다. */}
+          <AlertTriangle aria-hidden className="mt-1 size-4 shrink-0" />
           {error}
         </p>
       ) : null}

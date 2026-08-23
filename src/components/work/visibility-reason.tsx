@@ -36,7 +36,7 @@ export function VisibilityReason({
       <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm text-gray-70 hover:text-gray-90">
         <Eye aria-hidden className="size-4 shrink-0 text-gray-40" />
         <span className="break-keep">
-          <span className="font-bold">이 업무가 보이는 이유</span> —{" "}
+          <span className="font-bold">이 업무가 보이는 이유</span>:{" "}
           {reason.short}
         </span>
       </summary>
@@ -86,7 +86,7 @@ export function VisibilityReason({
               <strong className="font-bold text-gray-80">
                 볼 수 없는 계정으로 오면 「없습니다」라고 답합니다.
               </strong>{" "}
-              권한이 없다고 말하지 않습니다 — 그렇게 답하는 순간 「그런 업무가
+              권한이 없다고 말하지 않습니다. 그렇게 답하는 순간 「그런 업무가
               있다」는 사실이 새어 나가기 때문입니다.
             </>
           ) : (

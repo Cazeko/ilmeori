@@ -40,7 +40,6 @@ export default function OfflinePage() {
       {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
       <a
         href="/"
-        data-variant="button"
         className="mt-6 inline-flex min-h-11 items-center justify-center rounded-sm bg-primary px-6 text-body-sm font-bold text-white transition-colors duration-150 hover:bg-primary-hover active:bg-primary-active"
       >
         다시 시도

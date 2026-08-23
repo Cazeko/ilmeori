@@ -118,8 +118,7 @@ export function UrgentHero({
       <h3 className="mt-4 text-h2 leading-snug font-bold break-keep text-gray-90">
         <Link
           href={`/works/${work.id}`}
-          data-variant="plain"
-          className="after:absolute after:inset-0 hover:underline"
+          className="after:absolute after:inset-0"
         >
           <span className="line-clamp-2">{work.title}</span>
           <LinkPendingMark />
@@ -186,7 +185,6 @@ export function UrgentRow({ work }: { work: WorkListItem }) {
   return (
     <Link
       href={`/works/${work.id}`}
-      data-variant="plain"
       className="flex items-center gap-3 rounded-sm px-2 py-3 hover:bg-gray-10 active:bg-primary-5"
     >
       <span className="line-clamp-1 min-w-0 flex-1 text-body-sm font-bold text-gray-90">

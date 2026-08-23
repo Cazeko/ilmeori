@@ -2,7 +2,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Info,
-  Sparkles,
+  Cog,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -40,7 +40,7 @@ const TONE: Record<Tone, { box: string; icon: LucideIcon; iconColor: string }> =
   },
   ai: {
     box: "border-accent/30 bg-accent-bg",
-    icon: Sparkles,
+    icon: Cog,
     iconColor: "text-accent-text",
   },
 };

@@ -452,7 +452,7 @@ function Picker({
     >
       <summary
         data-ilm-tab=""
-        aria-label={`${label} — 지금 ${value}`}
+        aria-label={`${label}, 지금 ${value}`}
         title={`${label} · 지금 ${value}`}
         className={cn("ilm-tbtn", disabled && "pointer-events-none opacity-50")}
         onMouseDown={(e) => e.preventDefault()}

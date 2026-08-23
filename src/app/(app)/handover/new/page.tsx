@@ -169,7 +169,7 @@ export default async function StartHandoverPage({
                               : "마감 없음"}
                           </span>
                           {w.previous_year ? (
-                            <span className="inline-flex items-center gap-1 rounded-xs bg-accent-bg px-chip-x py-chip-y text-body-xs font-bold text-accent-text">
+                            <span className="inline-flex items-center gap-1 text-body-xs font-bold text-accent-text">
                               <RotateCcw aria-hidden className="size-3" />
                               연간 반복
                             </span>

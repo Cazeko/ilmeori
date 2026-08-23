@@ -23,7 +23,7 @@ export async function generateMetadata({
   const { id } = await params;
   const approval = await getApproval(viewer, id);
   return {
-    title: approval ? `온나라로 넘기기 — ${approval.title}` : "찾을 수 없습니다",
+    title: approval ? `온나라로 넘기기 | ${approval.title}` : "찾을 수 없습니다",
   };
 }
 
@@ -132,7 +132,7 @@ export default async function ApprovalExportPage({
           meta={
             <div className="flex flex-wrap items-center gap-2">
               <ApprovalBadge state={approval.state} steps={approval.steps} />
-              <span className="rounded-xs bg-gray-5 px-chip-x py-chip-y text-body-xs font-bold text-gray-60">
+              <span className="text-body-xs font-bold text-gray-60">
                 {APPROVAL_FORM_LABEL[approval.form]}
               </span>
               <span className="text-body-xs tabular-nums text-gray-60">
@@ -190,14 +190,11 @@ export default async function ApprovalExportPage({
             </strong>{" "}
             법정 결재는 온나라의 일이고 이 파일은 거기에 올리는 초안입니다.{" "}
             <strong className="font-bold text-gray-90">
-              한/글에서 열리는 것을 확인했습니다
+              한/글에서 열리는 것을 확인했습니다.
             </strong>{" "}
-            — 규격 시험 57건에 더해 실물로도 열어 보았습니다. 한/글이 없는
-            자리에서는 <kbd className="font-sans font-bold">Ctrl+P</kbd>로 나오는
-            A4 가 같은 내용을 담습니다.{" "}
-            <Link href="/method" className="font-bold">
-              검증 현황
-            </Link>
+            한/글이 없는 자리에서는{" "}
+            <kbd className="font-sans font-bold">Ctrl+P</kbd>로 나오는 A4 가 같은
+            내용을 담습니다.
           </p>
         </div>
 
@@ -231,12 +228,7 @@ export default async function ApprovalExportPage({
           <strong className="font-bold text-gray-90">
             어느 대화를 실을지 고르는 일은 모델이 아니라 규칙이 합니다.
           </strong>{" "}
-          모델이 고르면 왜 골랐는지를 화면에 적을 수 없고, 그러면 이 꼬리표는
-          아무것도 보증하지 못합니다. 고른 대화는 요약하지 않고 원문 그대로
-          싣습니다.{" "}
-          <Link href="/method" className="font-bold">
-            규칙이 하는 일
-          </Link>
+          고른 대화는 요약하지 않고 원문 그대로 싣습니다.
         </Notice>
 
         <Card>

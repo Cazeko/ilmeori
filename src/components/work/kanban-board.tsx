@@ -129,7 +129,7 @@ export function KanbanBoard({
               {STATUS_LABEL[status]}
               <span className="tabular-nums text-gray-60">{items.length}</span>
               {overdue > 0 ? (
-                <span className="ml-auto rounded-xs bg-status-overdue-bg px-chip-x py-chip-y text-body-xs font-bold text-status-overdue-text">
+                <span className="ml-auto text-body-xs font-bold text-status-overdue-text">
                   지연 {overdue}
                 </span>
               ) : null}

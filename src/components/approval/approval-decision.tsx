@@ -34,7 +34,7 @@ export function ApprovalDecision({
   return (
     <div className="rounded-sm border border-primary/30 bg-primary-5 px-5 py-4">
       <p className="text-body-sm font-bold text-gray-90">
-        지금 내 차례입니다 — {APPROVAL_KIND_LABEL[step.kind]}란
+        지금 내 차례입니다. {APPROVAL_KIND_LABEL[step.kind]}란
       </p>
       <p className="mt-1 mb-4 text-body-sm break-keep text-gray-70">
         서명하면 다음 순서로 넘어갑니다. 마지막 칸이면 그 자리에서 완결됩니다.
@@ -119,7 +119,7 @@ export function ApprovalWithdraw({ approvalId }: { approvalId: string }) {
       <div className="border-t border-rule-hair px-4 py-4">
         <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
           아직 아무도 서명하지 않았다면 되가져올 수 있습니다. 회수한 사실은 업무
-          이력에 남고, 문서는 사라지지 않습니다 — 결재는 증빙이고 증빙은 지워지면
+          이력에 남고, 문서는 사라지지 않습니다. 결재는 증빙이고 증빙은 지워지면
           증빙이 아닙니다. 내용을 고쳐 다시 올리려면 새로 기안해 주세요.
         </p>
         <form action={withdrawApproval}>

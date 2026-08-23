@@ -74,12 +74,16 @@ const ICON: Record<ActivityKind, LucideIcon> = {
  * 색이 남는 것은 **인계** 하나다. 인사이동은 이 제품이 존재하는 이유이고,
  * 이력에서 유일하게 사람이 실제로 움직여야 하는 사건이다.
  */
+/*
+ * 점은 면이 곧 뜻이라 채움을 남기고, 갈래 이름표는 글자만 남긴다.
+ * (배지에서 면을 걷어낸 것과 같은 결정 — status-badge.tsx 의 머리말)
+ */
 const TONE: Record<ActivityTone, { dot: string; chip: string }> = {
-  결재: { dot: "bg-gray-10 text-gray-90", chip: "bg-gray-10 text-gray-90" }, // 13.17:1
-  권한: { dot: "bg-gray-10 text-gray-70", chip: "bg-gray-10 text-gray-70" }, //  7.07:1
-  대화: { dot: "bg-gray-5 text-gray-60", chip: "bg-gray-5 text-gray-60" }, //    5.57:1
-  내용: { dot: "bg-gray-5 text-gray-60", chip: "bg-gray-5 text-gray-60" }, //    5.57:1
-  인계: { dot: "bg-accent-bg text-accent-text", chip: "bg-accent-bg text-accent-text" }, // 4.95:1
+  결재: { dot: "bg-gray-10 text-gray-90", chip: "text-gray-90" },
+  권한: { dot: "bg-gray-10 text-gray-70", chip: "text-gray-70" },
+  대화: { dot: "bg-gray-5 text-gray-60", chip: "text-gray-60" },
+  내용: { dot: "bg-gray-5 text-gray-60", chip: "text-gray-60" },
+  인계: { dot: "bg-accent-bg text-accent-text", chip: "text-accent-text" },
 };
 
 const dayFmt = new Intl.DateTimeFormat("ko-KR", {
@@ -155,7 +159,7 @@ export function ActivityTimeline({
                       {showTone ? (
                         <span
                           className={cn(
-                            "rounded-xs px-chip-x py-chip-y text-body-xs font-bold",
+                            "text-body-xs font-bold",
                             TONE[tone].chip,
                           )}
                         >
@@ -211,8 +215,6 @@ export function ActivityFeed({
                 {a.summary}
               </p>
               <p className="mt-1 flex items-center gap-2 text-body-xs text-gray-60">
-                {/* data-variant를 붙이지 않아 전역 밑줄 규칙이 그대로 적용된다.
-                    링크를 색상만으로 구분하지 않기 위해서다. */}
                 {/* 소식 8줄이 잇달아 서는 자리라 44px 를 주면 목록이 화면 두 배로
                     길어진다. 문장 안에 섞인 링크는 2.5.8 의 예외이기도 해서,
                     여기는 AA 기준선인 24px 까지만 넓힌다. 손가락으로 눌러야 하는

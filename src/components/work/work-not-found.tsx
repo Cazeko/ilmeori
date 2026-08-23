@@ -66,7 +66,7 @@ export function WorkNotFound({
                 아니고 공개 범위로만 보고 있는 경우입니다.
               </p>
               <p className="mt-4 text-body-sm leading-relaxed break-keep text-gray-60">
-                고쳐야 한다면 소유자에게 편집 권한을 요청하십시오 — 누구인지는
+                고쳐야 한다면 소유자에게 편집 권한을 요청하십시오. 누구인지는
                 참여자·권한 탭에 있습니다.
               </p>
             </>
@@ -89,8 +89,8 @@ export function WorkNotFound({
                 <div className="mt-2 flex flex-col gap-3 text-body-sm leading-relaxed break-keep text-gray-60">
                   <p>
                     「권한이 없습니다」라고 답하면 그 업무가 존재한다는 사실을
-                    알려 주는 셈이 됩니다. 업무 제목 하나로 알 수 있는 것이 있고
-                    — 어느 부서에 무슨 감사가 걸려 있는지 같은 것 — 공문서를
+                    알려 주는 셈이 됩니다. 업무 제목 하나로 알 수 있는 것이 있고(어느
+                    부서에 무슨 감사가 걸려 있는지 같은 것), 공문서를
                     다루는 시스템에서는 존재 여부 자체가 지켜야 할 정보입니다.
                   </p>
                   {/* 목업 모드에서는 Supabase가 아예 없다. 그때도 RLS를 근거로 대면

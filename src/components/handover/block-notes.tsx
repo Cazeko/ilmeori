@@ -68,9 +68,15 @@ export function BlockNotes({
             // 색을 accent(보라)로 쓰지 않는다. 이 화면에서 accent는 「기계가 뽑은
             // 것·근거 꼬리표」의 색이다. 사람이 적은 줄에 그 색을 쓰면 화면이
             // 구별하려고 만든 두 가지를 같은 색으로 칠하게 된다.
+            //
+            // 파란 왼쪽 4px 띠 + 옅은 파란 면 + 오른쪽만 둥근 모서리였다.
+            // 셋이 합쳐 「AI가 만든 안내상자」의 전형이고, 그중 둥근 모서리는
+            // 지운 토큰(--radius-md)을 부르고 있어 이 시스템 밖의 값이었다.
+            // 사람이 보탠 줄이라는 것은 아래 「인계자 보충」 꼬리표가 이미
+            // 말한다. 면과 띠를 걷고 hair 선 한 줄만 남긴다.
             <li
               key={n.id}
-              className="rounded-r-md border-l-4 border-primary bg-primary-5 px-4 py-3"
+              className="border-l border-l-rule-hair py-1 pl-3"
             >
               {/* 삭제는 <form>이라 문단(<p>) 안에 넣을 수 없다. */}
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">

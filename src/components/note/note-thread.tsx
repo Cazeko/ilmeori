@@ -104,7 +104,7 @@ export function NoteThreadView({
                     ) : null}
                   </span>
                   {mine ? (
-                    <span className="rounded-xs bg-accent-bg px-chip-x py-chip-y text-body-xs font-bold text-accent-text">
+                    <span className="text-body-xs font-bold text-accent-text">
                       나
                     </span>
                   ) : null}

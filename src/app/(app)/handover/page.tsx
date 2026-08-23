@@ -7,7 +7,7 @@ import {
   Inbox,
   PenLine,
   RotateCcw,
-  Sparkles,
+  Cog,
 } from "lucide-react";
 import {
   cancelHandover,
@@ -247,7 +247,7 @@ export default async function HandoverPage({
                       입력칸을 그리지 않으므로, 없는 칸을 있다고 적으면 안 된다. */}
                   {canWriteNotes ? (
                     <p>
-                      규칙이 뽑은 문단은 고쳐 쓰지 못하게 두었습니다 — 덮어쓰면
+                      규칙이 뽑은 문단은 고쳐 쓰지 못하게 두었습니다. 덮어쓰면
                       그 문장이 근거를 잃고, 옆에 붙은 근거 표시가 거짓이 되기
                       때문입니다. 보탠 글은 누가 언제 적었는지와 함께 「인계자
                       보충」으로 따로 표시하며, 인쇄본에도 그렇게 나옵니다.
@@ -359,7 +359,7 @@ export default async function HandoverPage({
                         문장까지 "이 기록에서 나왔다"고 말하는 꼴이 된다. */}
                     {block.sources.length > 0 ? (
                       <p className="mt-2 flex flex-wrap items-center gap-2 text-body-xs text-gray-60">
-                        <Sparkles
+                        <Cog
                           aria-hidden
                           className="size-3 text-accent-text"
                         />
@@ -367,7 +367,7 @@ export default async function HandoverPage({
                         {block.sources.map((s) => (
                           <span
                             key={s}
-                            className="rounded-xs bg-accent-bg px-chip-x py-chip-y font-bold text-accent-text"
+                            className="font-bold text-accent-text"
                           >
                             {s}
                           </span>
@@ -432,7 +432,6 @@ export default async function HandoverPage({
                   <li key={work.id} className="px-4 py-3">
                     <Link
                       href={`/works/${work.id}`}
-                      data-variant="plain"
                       className="block hover:text-primary"
                     >
                       <span className="line-clamp-2 text-body-sm font-bold break-keep text-gray-90">
@@ -441,14 +440,20 @@ export default async function HandoverPage({
                     </Link>
                     <span className="mt-2 flex flex-wrap items-center gap-2">
                       <StatusBadge status={work.derived} size="sm" />
+                      {/* 「인계 완료」의 글자색은 success(#228738)가 아니라
+                          status-done-text(#1c722f)다. 채움이 있을 때는 옅은 초록
+                          위에 얹혀 있었지만, 면을 걷어낸 지금은 판(#fafafa) 위에
+                          그대로 선다. 판 위에서 success 는 4.38:1 로 미달이고
+                          done-text 는 5.75:1 이다. globals.css 가 「-text 는
+                          배지·칩의 글자용」이라고 적어 둔 것이 이 자리다. */}
                       {transferred ? (
-                        <span className="inline-flex items-center gap-1 rounded-xs bg-success-bg px-chip-x py-chip-y text-body-xs font-bold text-success">
+                        <span className="inline-flex items-center gap-1 text-body-xs font-bold text-status-done-text">
                           <CheckCircle2 aria-hidden className="size-3" />
                           인계 완료
                         </span>
                       ) : null}
                       {work.previous_year ? (
-                        <span className="inline-flex items-center gap-1 rounded-xs bg-accent-bg px-chip-x py-chip-y text-body-xs font-bold text-accent-text">
+                        <span className="inline-flex items-center gap-1 text-body-xs font-bold text-accent-text">
                           <RotateCcw aria-hidden className="size-3" />
                           연간 반복
                         </span>
@@ -502,7 +507,7 @@ export default async function HandoverPage({
                       // 데모 모드다. 적을 칸이 없는 곳으로 보내면 안 된다.
                       <p className="mb-4 text-body-sm break-keep text-gray-60">
                         초안의 각 항목이 실제와 맞는지 확인해 주세요. 물품·예산
-                        항목은 비어 있습니다 —{" "}
+                        항목은 비어 있습니다.{" "}
                         <strong className="font-bold text-gray-80">
                           데모 모드에서는 읽기만 됩니다.
                         </strong>{" "}
@@ -774,7 +779,7 @@ async function HandoverStandby({
                           className="mt-1 size-4 shrink-0 text-danger"
                         />
                         <span>
-                          기한이 지난 업무 {overdue}건 — 왜 멈췄는지가 문서와
+                          기한이 지난 업무 {overdue}건. 왜 멈췄는지가 문서와
                           대화에 남아 있으면 그대로 실립니다. 담당자가 바뀔 때
                           가장 먼저 사라지는 것이 이 「왜」입니다.
                         </span>
@@ -787,7 +792,7 @@ async function HandoverStandby({
                           className="mt-1 size-4 shrink-0 text-accent-text"
                         />
                         <span>
-                          해마다 반복되는 업무 {repeating}건 — 작년 판이 함께
+                          해마다 반복되는 업무 {repeating}건. 작년 판이 함께
                           걸려 있어 인수자가 작년 시행착오부터 읽을 수 있습니다.
                         </span>
                       </li>
@@ -820,7 +825,7 @@ async function HandoverStandby({
                           : "마감 없음"}
                       </span>
                       {w.previous_year ? (
-                        <span className="inline-flex items-center gap-1 rounded-xs bg-accent-bg px-chip-x py-chip-y text-body-xs font-bold text-accent-text">
+                        <span className="inline-flex items-center gap-1 text-body-xs font-bold text-accent-text">
                           <RotateCcw aria-hidden className="size-3" />
                           연간 반복
                         </span>

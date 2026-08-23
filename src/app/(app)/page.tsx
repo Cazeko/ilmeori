@@ -135,7 +135,6 @@ export default async function HomePage() {
       {handover ? (
         <Link
           href="/handover"
-          data-variant="plain"
           className="mb-3 flex items-center gap-4 rounded-sm border border-rule-frame border-l-3 border-l-accent bg-surface px-5 py-4 transition-colors duration-150 hover:bg-gray-5 active:bg-accent-bg"
         >
           <ArrowLeftRight aria-hidden className="size-5 shrink-0 text-accent-text" />
@@ -159,7 +158,6 @@ export default async function HomePage() {
       {myTurnCount > 0 ? (
         <Link
           href="/approvals"
-          data-variant="plain"
           className="mb-3 flex items-center gap-4 rounded-sm border border-rule-frame border-l-3 border-l-primary bg-surface px-5 py-4 transition-colors duration-150 hover:bg-gray-5 active:bg-primary-5"
         >
           <Stamp aria-hidden className="size-5 shrink-0 text-primary" />
@@ -196,7 +194,6 @@ export default async function HomePage() {
                   ? "/works?mine=1&overdue=1"
                   : `/works?mine=1#col-${key}`
               }
-              data-variant="plain"
               className={cn(
                 "inline-flex items-center gap-2 rounded-xs px-2 py-1 text-body-xs font-bold tabular-nums",
                 "hover:bg-gray-10 active:bg-primary-5",
@@ -306,7 +303,6 @@ export default async function HomePage() {
                     <li key={w.id}>
                       <Link
                         href={`/works/${w.id}`}
-                        data-variant="plain"
                         className="flex items-center gap-3 rounded-sm px-2 py-3 hover:bg-gray-10 active:bg-primary-5"
                       >
                         {/* 지연일 때 이 아이콘까지 붉게 칠하고 있었다. 한 줄에

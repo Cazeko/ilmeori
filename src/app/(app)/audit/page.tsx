@@ -9,7 +9,7 @@ import { Notice } from "@/components/ui/notice";
 import { Avatar } from "@/components/ui/avatar";
 import { formatDateTime, formatFullDateTime } from "@/lib/format";
 import { listAccessLogs } from "@/lib/data";
-import { getViewerDepartmentName, requireViewer } from "@/lib/session";
+import { requireViewer } from "@/lib/session";
 import { ACCESS_KIND_LABEL, type AccessKind } from "@/lib/types";
 
 export const metadata: Metadata = { title: "열람기록" };
@@ -32,10 +32,7 @@ const KIND_ICON: Record<AccessKind, typeof Eye> = {
  */
 export default async function AuditPage() {
   const viewer = await requireViewer();
-  const [logs, departmentName] = await Promise.all([
-    listAccessLogs(viewer),
-    getViewerDepartmentName(),
-  ]);
+  const logs = await listAccessLogs(viewer);
 
   return (
     <PageContainer>
@@ -51,23 +48,12 @@ export default async function AuditPage() {
         )}
       />
 
-      <Notice
-        tone="info"
-        title="이 기록은 지울 수 없습니다"
-        className="mb-5"
-      >
-        사용자 계정에는 이 표에 대한 쓰기 권한이 없습니다. 기록은 서버의 지정된
-        함수만 남길 수 있고, 화면을 우회해 직접 요청을 보내도 추가·수정·삭제가
-        되지 않습니다. 감사 기록이 당사자의 손에 있으면 기록이 아니기 때문입니다.
-        {/* 「왜 남의 열람은 안 보이나」는 반드시 나오는 질문이다. 감사 담당자가
-            아닌 사람에게 남의 열람 이력을 보여 주면, 그 자체가 「누가 무엇에
-            관심이 있는가」라는 새로운 정보가 된다. */}{" "}
-        <strong className="font-bold">
-          남의 열람 이력은 본인에게 보이지 않습니다
-        </strong>
-        {" — "}누가 무엇에 관심이 있는가도 보호해야 할 정보이기 때문입니다.
-        {departmentName ? ` (${departmentName} 소속으로 볼 수 있는 업무에 한합니다)` : null}
-      </Notice>
+      {/* 이 자리에 네 문장이 있었다 — 쓰기 권한이 없다는 설명, 서버 함수만
+          남긴다는 설명, 우회 요청도 안 된다는 설명, 남의 이력이 안 보이는
+          이유. 넷 다 맞는 말인데 **제목 한 줄이 이미 그 전부를 말하고 있었다.**
+          「지울 수 없습니다」를 읽은 사람이 다음에 궁금해하는 것은 구현 방식이
+          아니라 자기 기록이고, 그건 바로 아래에 있다. */}
+      <Notice tone="info" title="이 기록은 지울 수 없습니다" className="mb-5" />
 
       <div className="grid gap-5 xl:grid-cols-[1fr_300px]">
         <Card>
@@ -95,7 +81,7 @@ export default async function AuditPage() {
                         <span className="font-bold text-gray-90">
                           {l.actor?.name ?? "알 수 없음"}
                         </span>
-                        <span className="inline-flex items-center gap-1 rounded-xs bg-gray-5 px-chip-x py-chip-y text-body-xs font-bold text-gray-60">
+                        <span className="inline-flex items-center gap-1 text-body-xs font-bold text-gray-60">
                           <Icon aria-hidden className="size-3" />
                           {ACCESS_KIND_LABEL[l.kind]}
                         </span>
@@ -158,7 +144,7 @@ export default async function AuditPage() {
               <ShieldCheck aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
               <p className="text-body-xs leading-relaxed break-keep text-gray-60">
                 사람·시각·대상 업무만 남깁니다. 접속 IP 와 단말 정보는 모으지
-                않습니다 — 필요 이상으로 모으면 그 자체가 유출 대상이 됩니다.
+                않습니다.
               </p>
             </div>
           </Card>
@@ -171,5 +157,5 @@ export default async function AuditPage() {
 const KIND_DESC: Record<AccessKind, string> = {
   "work.viewed": "업무 상세 화면을 연 것",
   "document.viewed": "업무에 붙은 문서 본문을 읽은 것",
-  "attachment.downloaded": "첨부파일을 내려받은 것. 유출 조사에서 가장 먼저 보는 기록입니다.",
+  "attachment.downloaded": "첨부파일을 내려받은 것",
 };

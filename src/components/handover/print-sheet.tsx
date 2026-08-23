@@ -155,7 +155,7 @@ export function HandoverPrintSheet({
             {notes.map((n) => (
               <div key={n.id} className="note">
                 <p className="note-label">
-                  인계자 보충 — {who(n.author)}, {formatDate(n.created_at)}
+                  인계자 보충: {who(n.author)}, {formatDate(n.created_at)}
                 </p>
                 <p className="whitespace-pre-line">{n.body}</p>
               </div>
@@ -197,9 +197,9 @@ export function HandoverPrintSheet({
           맨 아래에 한 번 모아 적는다. */}
       <footer className="avoid-break mt-6 border-t border-black pt-2">
         <p>
-          이 초안은 「일머리」에 쌓인 기록 — 업무 {draft.evidence.works}건 · 문서{" "}
+          이 초안은 「일머리」에 쌓인 기록(업무 {draft.evidence.works}건 · 문서{" "}
           {draft.evidence.documents}건 · 대화 {draft.evidence.comments}건 · 이력{" "}
-          {draft.evidence.activities}건 · 첨부 {draft.evidence.attachments}건 —
+          {draft.evidence.activities}건 · 첨부 {draft.evidence.attachments}건)
           에서 서식 순서대로 뽑아 정리한 것입니다. 항목별 근거는 화면에서 확인할 수
           있습니다. 사람이 확인하고 보태야 하는 초안이며, 그대로 제출하는 문서가
           아닙니다.

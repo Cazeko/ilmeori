@@ -16,7 +16,6 @@ import {
   Repeat,
   ScrollText,
   Search,
-  Sparkles,
   Stamp,
   X,
   type LucideIcon,
@@ -56,20 +55,14 @@ const NAV: Array<{ heading: string; items: NavItem[] }> = [
       { href: "/handover", label: "인계·인수", icon: ArrowLeftRight },
     ],
   },
+  // 「제품 › 자동 생성·검증」 묶음이 여기 있었다. 화면 하나를 위해 옆줄에
+  // 묶음 하나를 통째로 세운 것인데, 그 화면이 답하는 것은 **심사장의 질문**
+  // (「AI 어디 있어요」·「이거 진짜 돌아요」)이지 일하는 사람의 질문이 아니다.
+  // 하루 여덟 시간 이 옆줄을 보는 사람에게 그 칸은 한 번도 눌리지 않는다.
+  // 메뉴는 일하는 순서대로만 둔다.
   {
     heading: "기록",
     items: [{ href: "/audit", label: "열람기록", icon: ScrollText }],
-  },
-  {
-    // 「AI 어디 있어요?」와 「이거 진짜 돌아요?」는 반드시 나오는 두 질문인데,
-    // 답이 인계·인수 화면 안쪽의 접힌 상자와 내보내기 화면의 각주로 흩어져
-    // 있었다. 메뉴에 자리를 하나 내어 준다.
-    //
-    // 이름을 「AI」로 달지 않는다. 이 제품은 어떤 모델도 부르지 않고, 부르지
-    // 않는 것을 부른다고 적는 순간 심사에서 「모델이 뭐예요」 한 마디에
-    // 무너진다. 하는 일을 그대로 적는 편이 더 강하다.
-    heading: "제품",
-    items: [{ href: "/method", label: "자동 생성·검증", icon: Sparkles }],
   },
 ];
 
@@ -106,7 +99,6 @@ function NavList({ pathname }: { pathname: string }) {
                       2px 밀려 보이는 일이 없다. */}
                   <Link
                     href={href}
-                    data-variant="plain"
                     aria-current={active ? "page" : undefined}
                     className={cn(
                       "flex min-h-11 items-center gap-3 rounded-sm border-l-3 pr-3 pl-3 text-body-sm font-bold transition-colors duration-150",
@@ -321,7 +313,6 @@ export function AppShell({
             한 선에 서고, 머리와 옆줄이 두 덩어리가 아니라 한 판으로 읽힌다. */}
         <Link
           href="/"
-          data-variant="plain"
           className="flex shrink-0 items-center gap-2 pointer-coarse:min-h-11 lg:w-[calc(var(--spacing-sidebar)-1rem)]"
         >
           <BrandMark className="size-8" />

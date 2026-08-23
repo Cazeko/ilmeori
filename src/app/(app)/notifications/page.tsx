@@ -49,11 +49,10 @@ export default async function NotificationsPage() {
         }
       />
 
-      <p className="mb-4 text-body-sm break-keep text-gray-60">
-        읽으면 끝나는 것만 모읍니다. 처리해야 사라지는 것(내 차례 결재·지연된
-        업무)은 결재함과 업무 보드에 그대로 있습니다.
-      </p>
-
+      {/* 「읽으면 끝나는 것만 모읍니다. 처리해야 사라지는 것은 결재함과 업무
+          보드에 그대로 있습니다」가 이 자리에 늘 떠 있었다. 설계의 근거를 적은
+          말이지 알림을 보러 온 사람에게 하는 말이 아니다 — 그 근거는 이 파일
+          머리말에 있으면 되고, 화면에서는 목록이 곧 답이다. */}
       {items.length > 0 ? (
         <>
           <ul
@@ -70,7 +69,6 @@ export default async function NotificationsPage() {
                     그 응답을 페이지로 읽지 못한다(notification-bell 과 같다). */}
                 <a
                   href={`/notifications/${n.id}`}
-                  data-variant="plain"
                   className={cn(
                     "flex min-h-11 items-start gap-3 px-4 py-4 sm:px-5",
                     "transition-colors duration-150 hover:bg-gray-5 active:bg-primary-5",

@@ -228,7 +228,7 @@ export function MemberList({
                         {m.profile.position}
                       </span>
                       {isMe ? (
-                        <span className="ml-2 rounded-xs bg-accent-bg px-chip-x py-chip-y text-body-xs font-bold text-accent-text">
+                        <span className="ml-2 text-body-xs font-bold text-accent-text">
                           나
                         </span>
                       ) : null}

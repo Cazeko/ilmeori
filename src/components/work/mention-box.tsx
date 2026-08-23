@@ -214,14 +214,12 @@ export function MentionBox({
 
       {/* ── 부를 사람 — 여기가 진실이다 ─────────────────────────────────── */}
       <fieldset className="mt-3">
+        {/* 「— 본문에 @ 를 치면 목록이 뜹니다」가 붙어 있었다. 그 사실은 실제로
+            @ 를 쳐 본 사람에게 즉시 드러나고, 안 쳐 본 사람은 아래 체크박스로
+            이미 부를 수 있다. 어느 쪽에게도 필요하지 않은 줄이었다. */}
         <legend className="mb-2 flex items-center gap-1 text-body-xs font-bold text-gray-70">
           <AtSign aria-hidden className="size-3.5 text-gray-40" />
           부를 사람
-          {ready ? (
-            <span className="font-normal text-gray-60">
-              — 본문에 <span className="font-bold">@</span> 를 치면 목록이 뜹니다
-            </span>
-          ) : null}
         </legend>
         <div className="flex flex-wrap gap-2">
           {people.map((p) => {
@@ -254,11 +252,10 @@ export function MentionBox({
               </label>
             );
           })}
-          {ready && picked.length === 0 ? (
-            <p className="text-body-sm text-gray-60">
-              아무도 부르지 않았습니다. 부르면 그 사람에게 알림이 갑니다.
-            </p>
-          ) : null}
+          {/* 「아무도 부르지 않았습니다. 부르면 그 사람에게 알림이 갑니다.」가
+              여기 있었다. 아무도 안 골랐을 때 칩이 없는 것이 곧 그 말이라,
+              빈 자리에 그 사실을 글로 또 적고 있었다. 칩 줄이 비어 있는 것으로
+              족하다 — 이 줄이 있는 이유(조용한 실패를 막는 것)는 그대로다. */}
         </div>
       </fieldset>
     </div>

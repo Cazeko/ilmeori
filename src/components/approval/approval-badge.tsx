@@ -15,12 +15,17 @@ import type { ApprovalState, ApprovalStep } from "@/lib/types";
  * 그것이 곧 「지금 손봐야 하는 문서」다.
  */
 
+/*
+ * 면은 걷어냈다 — 상태 배지와 같은 이유이고 같은 시점이다(status-badge.tsx).
+ * 위계는 명도 한 축으로만 낸다: 지금 돌고 있는 것이 가장 진하고, 끝났거나
+ * 아직 안 올린 것은 물러난다. 반려만 색을 갖는다.
+ */
 const TONE: Record<ApprovalState, string> = {
-  drafting: "bg-gray-5 text-gray-60", //     5.57:1 — 아직 안 올린 것
-  in_progress: "bg-gray-10 text-gray-90", // 13.17:1 — 지금 돌고 있는 것
-  completed: "bg-gray-5 text-gray-60", //    5.57:1 — 끝나서 물러난 것
-  rejected: "bg-status-overdue-bg text-status-overdue-text", // 5.34:1 — 유일한 색
-  withdrawn: "bg-gray-5 text-gray-60", //    5.57:1
+  drafting: "text-gray-60", //     아직 안 올린 것
+  in_progress: "text-gray-90", //  지금 돌고 있는 것
+  completed: "text-gray-60", //    끝나서 물러난 것
+  rejected: "text-status-overdue-text", // 유일한 색
+  withdrawn: "text-gray-60",
 };
 
 export function ApprovalBadge({
@@ -35,8 +40,8 @@ export function ApprovalBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 rounded-xs font-bold whitespace-nowrap tabular-nums",
-        size === "sm" ? "px-chip-x py-chip-y text-body-xs" : "px-2 py-1 text-body-sm",
+        "inline-flex items-center gap-2 font-bold whitespace-nowrap tabular-nums",
+        size === "sm" ? "text-body-xs" : "text-body-sm",
         TONE[state],
       )}
     >
