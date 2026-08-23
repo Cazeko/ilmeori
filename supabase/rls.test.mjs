@@ -1800,6 +1800,353 @@ console.log("\n[16] 서식 문서 — 자동 저장이 권한도 이력도 밀�
 }
 
 // ---------------------------------------------------------------------------
+// 쪽지 (0019)
+// ---------------------------------------------------------------------------
+//
+// 설계가 내린 결정 셋을 DB 가 증명하게 한다
+// (docs/plans/2026-08-23-쪽지-알림-design.md §3 · §5 · §10-1).
+//
+//   ① 물어도 업무를 열어 주지 않는다 — 받은 사람은 그 업무를 여전히 못 읽는다
+//   ② 쪽지는 비밀이 아니다 — 그 업무를 읽을 수 있는 사람은 쪽지도 읽는다
+//   ③ 남의 실에는 끼어들 수 없다
+//
+// ①이 없으면 「안 보여준다」는 말일 뿐이고, ②가 없으면 「문답이 인계서까지
+// 간다」가 거짓이 된다. 둘은 반대 방향이라 함께 재야 뜻이 성립한다.
+console.log("\n[쪽지] 물어도 열어 주지는 않는다");
+{
+  const count = async (userId, sql, params) => {
+    const r = await as(userId, sql, params);
+    return r.ok ? r.rows[0].n : -1;
+  };
+
+  // 김담당(자원순환과)이 자기 private 업무에 대해 이타부서(대중교통과)에게 묻는다.
+  // 이타부서는 그 업무의 참여자도 아니고 같은 부서도 아니다 — 쪽지가 필요한 자리다.
+  const sent = await as(
+    kim,
+    `insert into note (work_id, author_id, recipient_id, body)
+     values ($1, $2, $3, '통제 협의를 언제까지 넣어야 하나요?') returning id, thread_id`,
+    [workId, kim, lee],
+  );
+  check("업무를 볼 수 있으면 바깥 사람에게 물을 수 있다", sent.ok, sent.error ?? "");
+  const noteId = sent.ok ? sent.rows[0].id : null;
+  check(
+    "뿌리 쪽지는 thread_id 가 자기 id 다",
+    Boolean(noteId) && sent.rows[0].thread_id === noteId,
+  );
+
+  // ① 핵심. 쪽지를 받았다고 업무가 열리지 않는다.
+  check(
+    "★ 쪽지를 받아도 그 업무는 여전히 못 읽는다",
+    (await count(lee, `select count(*)::int n from work where id = $1`, [workId])) === 0,
+  );
+  check(
+    "★ 업무의 대화도 못 읽는다",
+    (await count(lee, `select count(*)::int n from comment where work_id = $1`, [
+      workId,
+    ])) === 0,
+  );
+
+  check(
+    "받은 사람은 자기 쪽지를 읽는다",
+    (await count(lee, `select count(*)::int n from note where id = $1`, [noteId])) === 1,
+  );
+
+  // ② 업무를 읽을 수 있는 사람은 쪽지도 읽는다 — 주담당이 인계서를 뽑을 때
+  //    이 문답이 실리려면 읽을 수 있어야 한다.
+  check(
+    "★ 업무를 읽을 수 있는 사람은 쪽지도 읽는다",
+    (await count(kim, `select count(*)::int n from note where id = $1`, [noteId])) === 1,
+  );
+
+  // 아무 상관 없는 사람은 못 읽는다.
+  // 최후임(choi)을 쓰지 않는다 — 이 파일 앞의 인계 시나리오에서 그 사람이
+  // 이 업무의 주담당이 되었다. 앞 시나리오의 부산물을 뒤 시나리오의 전제로
+  // 쓰면, 앞을 고치는 날 뒤가 조용히 뜻을 잃는다. 새 사람을 하나 만든다.
+  const nobody = await makeUser("남남", deptB.id);
+  check(
+    "업무도 못 보고 당사자도 아니면 쪽지를 못 읽는다",
+    (await count(nobody, `select count(*)::int n from note where id = $1`, [noteId])) === 0,
+  );
+
+  // 답장은 방향이 뒤집힌 쪽지다. 받은 사람은 업무를 못 봐도 답할 수 있어야 한다.
+  const reply = await as(
+    lee,
+    `insert into note (work_id, thread_id, author_id, recipient_id, body)
+     values ($1, $2, $3, $4, '두 달 전까지 넣으셔야 합니다.') returning id`,
+    [workId, noteId, lee, kim],
+  );
+  check("★ 업무를 못 봐도 받은 실에는 답할 수 있다", reply.ok, reply.error ?? "");
+
+  // ③ 남의 실에 끼어들기. 최후임은 이 업무를 읽을 수 있지만(인계로 주담당이
+  //    되었다) 이 실의 당사자는 아니다 — 읽는 것과 끼어드는 것은 다르다.
+  check(
+    "★ 남의 쪽지 실에는 끼어들 수 없다",
+    await denied(
+      choi,
+      `insert into note (work_id, thread_id, author_id, recipient_id, body)
+       values ($1, $2, $3, $4, '끼어들기')`,
+      [workId, noteId, choi, lee],
+    ),
+  );
+
+  // 못 보는 업무를 걸어 두고 묻기. 통과하면 그 업무의 존재가 새어 나간다.
+  check(
+    "못 보는 업무에 대해서는 물을 수 없다",
+    await denied(
+      lee,
+      `insert into note (work_id, author_id, recipient_id, body)
+       values ($1, $2, $3, '이 업무 뭔가요')`,
+      [workId, lee, kim],
+    ),
+  );
+
+  check(
+    "남의 이름으로 쪽지를 보낼 수 없다",
+    await denied(
+      park,
+      `insert into note (work_id, author_id, recipient_id, body)
+       values ($1, $2, $3, '사칭')`,
+      [workId, kim, lee],
+    ),
+  );
+
+  check(
+    "자기 자신에게는 못 보낸다 (메모장이 아니다)",
+    await denied(
+      kim,
+      `insert into note (work_id, author_id, recipient_id, body)
+       values ($1, $2, $2, '메모')`,
+      [workId, kim],
+    ),
+  );
+
+  // ── 칸 잠금 ───────────────────────────────────────────────────────────
+  check(
+    "쪽지 본문은 보낸 뒤에 못 고친다",
+    await denied(kim, `update note set body = '고쳤다' where id = $1`, [noteId]),
+  );
+  check(
+    "보낸 사람은 자기 쪽지를 읽음으로 표시할 수 없다",
+    await denied(kim, `update note set read_at = now() where id = $1`, [noteId]),
+  );
+  const mark = await as(lee, `update note set read_at = now() where id = $1 returning id`, [
+    noteId,
+  ]);
+  check("받은 사람은 읽음으로 표시한다", mark.ok && mark.rows.length === 1, mark.error ?? "");
+  check(
+    "★ 읽음은 되돌릴 수 없다 (보낸 사람이 보는 표시가 거짓이 되면 안 된다)",
+    await denied(lee, `update note set read_at = null where id = $1`, [noteId]),
+  );
+  check(
+    "받은 사람은 남의 쪽지를 지울 수 없다",
+    await denied(lee, `update note set deleted_at = now() where id = $1`, [noteId]),
+  );
+  check(
+    "쪽지를 진짜로 지우는 길은 없다 (soft delete 만)",
+    await denied(kim, `delete from note where id = $1`, [noteId]),
+  );
+
+  // ── 이력 ──────────────────────────────────────────────────────────────
+  // activity 는 업무를 읽을 수 있는 모두가 본다. 쪽지는 그보다 좁게 열려 있으므로
+  // 요약에 본문을 넣지 않는다 — 「누구에게 물었다」까지만이다.
+  const acts = await as(
+    kim,
+    `select summary from activity where work_id = $1 and kind::text like 'note.%' order by id`,
+    [workId],
+  );
+  check("쪽지를 보내면 이력이 남는다", acts.ok && acts.rows.length === 2, acts.error ?? "");
+  check(
+    "★ 이력에 쪽지 본문은 안 적힌다",
+    acts.ok && acts.rows.every((a) => !a.summary.includes("통제 협의")),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 부르기 (0020)
+// ---------------------------------------------------------------------------
+//
+// 부를 수 있는 사람은 **그 업무의 참여자**다. can_read_work 로 열면 전 직원
+// 공개 업무에서 1,700명이 통과한다 — 부른다는 것은 「당신이 이 일에 관여한다」는
+// 말이고, 그 말이 맞는 범위는 참여자다.
+console.log("\n[부르기] 참여자만 부를 수 있다");
+{
+  // 부서 공개 업무(wDept)에 박협업을 참여자로 넣는다.
+  await admin(
+    `insert into work_member (work_id, profile_id, role) values ($1, $2, 'editor')
+     on conflict do nothing`,
+    [wDept.id, park],
+  );
+  const c = await as(
+    kim,
+    `insert into comment (work_id, author_id, body) values ($1, $2, '확인 부탁드립니다')
+     returning id`,
+    [wDept.id, kim],
+  );
+  check("대화를 남긴다", c.ok, c.error ?? "");
+  const cid = c.ok ? c.rows[0].id : null;
+
+  const ok1 = await as(
+    kim,
+    `insert into comment_mention (comment_id, profile_id) values ($1, $2) returning comment_id`,
+    [cid, park],
+  );
+  check("참여자를 부를 수 있다", ok1.ok, ok1.error ?? "");
+
+  // 이타부서는 대중교통과라 이 부서 공개 업무의 참여자가 아니다.
+  check(
+    "★ 참여자가 아닌 사람은 못 부른다",
+    await denied(
+      kim,
+      `insert into comment_mention (comment_id, profile_id) values ($1, $2)`,
+      [cid, lee],
+    ),
+  );
+
+  check(
+    "★ 남의 글에 부름을 얹을 수 없다",
+    await denied(
+      park,
+      `insert into comment_mention (comment_id, profile_id) values ($1, $2)`,
+      [cid, kim],
+    ),
+  );
+
+  // 부른 것은 사실이고 사실은 안 바뀐다.
+  check(
+    "부름은 고칠 수 없다",
+    await denied(
+      kim,
+      `update comment_mention set profile_id = $2 where comment_id = $1`,
+      [cid, kim],
+    ),
+  );
+  check(
+    "부름은 지울 수 없다",
+    await denied(kim, `delete from comment_mention where comment_id = $1`, [cid]),
+  );
+
+  // 댓글을 볼 수 있으면 누가 불렸는지도 본다.
+  const seen = await as(
+    park,
+    `select count(*)::int n from comment_mention where comment_id = $1`,
+    [cid],
+  );
+  check("댓글을 볼 수 있으면 부름도 본다", seen.ok && seen.rows[0].n === 1);
+
+  // 타 부서는 그 업무를 못 보므로 부름도 못 본다.
+  const hidden = await as(
+    lee,
+    `select count(*)::int n from comment_mention where comment_id = $1`,
+    [cid],
+  );
+  check("업무를 못 보면 부름도 못 본다", hidden.ok && hidden.rows[0].n === 0);
+}
+
+// ---------------------------------------------------------------------------
+// 알림 (0021)
+// ---------------------------------------------------------------------------
+//
+// 「처리해야 사라지는 것은 알림이 아니다」가 이 표의 규칙이다. 여기서 재는
+// 것은 그 규칙이 아니라 **소음과 권한** 셋이다.
+//
+//   ① 만드는 길은 app.notify 하나뿐이다 — 사람이 남에게 꽂아 넣을 수 없다
+//   ② 내가 한 일은 나에게 안 온다
+//   ③ 안 읽은 work_touched 는 묶인다 (안 묶으면 하루에 스무 줄이 쌓인다)
+console.log("\n[알림] 소음과 권한");
+{
+  const inbox = async (userId) => {
+    const r = await as(userId, `select count(*)::int n from notification`);
+    return r.ok ? r.rows[0].n : -1;
+  };
+
+  // 박협업을 wDept 참여자로 이미 넣어 두었다(위 [부르기]). 그 블록이 이미
+  // 안 읽은 work_touched 를 하나 만들어 두었으므로, **먼저 다 읽는다** —
+  // 안 그러면 첫 건드림이 그 줄에 묶여 「줄이 안 늘었다」로 보인다.
+  // (앞 시나리오의 부산물을 전제로 쓰지 않는다는 규칙을 여기서도 지킨다)
+  await as(park, `update notification set read_at = now() where read_at is null`);
+  const before = await inbox(park);
+  const mineBefore = await inbox(kim);
+
+  const c = await as(
+    kim,
+    `insert into comment (work_id, author_id, body) values ($1, $2, '진행 상황 공유합니다') returning id`,
+    [wDept.id, kim],
+  );
+  check("대화를 남긴다 (알림의 방아쇠)", c.ok, c.error ?? "");
+
+  const after = await inbox(park);
+  check("★ 참여자에게 알림이 간다", after === before + 1, `${before} → ${after}`);
+  check(
+    "★ 내가 한 일은 나에게 안 온다",
+    (await inbox(kim)) === mineBefore,
+  );
+
+  // ③ 한 번 더 건드려도 안 읽은 것이 있으면 줄이 안 는다.
+  await as(
+    kim,
+    `insert into comment (work_id, author_id, body) values ($1, $2, '하나 더') returning id`,
+    [wDept.id, kim],
+  );
+  const merged = await inbox(park);
+  check("★ 안 읽은 것이 있으면 묶인다 (줄이 안 는다)", merged === after, `${after} → ${merged}`);
+  const cnt = await as(
+    park,
+    `select count from notification where kind = 'work_touched' and work_id = $1 and read_at is null`,
+    [wDept.id],
+  );
+  check("묶인 개수가 오른다", cnt.ok && cnt.rows[0]?.count >= 2, JSON.stringify(cnt.rows));
+
+  // ① 남에게 꽂아 넣기.
+  check(
+    "★ 사람이 알림을 만들 수 없다",
+    await denied(
+      kim,
+      `insert into notification (recipient_id, kind, summary) values ($1, 'mention', '가짜')`,
+      [park],
+    ),
+  );
+  check(
+    "알림을 지울 수 없다",
+    await denied(park, `delete from notification where recipient_id = $1`, [park]),
+  );
+
+  // 남의 알림은 안 보인다.
+  const mine = await as(
+    lee,
+    `select count(*)::int n from notification where recipient_id = $1`,
+    [park],
+  );
+  check("남의 알림은 못 읽는다", mine.ok && mine.rows[0].n === 0);
+
+  // 고칠 수 있는 것은 read_at 뿐.
+  check(
+    "요약을 고칠 수 없다",
+    await denied(park, `update notification set summary = '조작' where recipient_id = $1`, [
+      park,
+    ]),
+  );
+  const read = await as(
+    park,
+    `update notification set read_at = now() where recipient_id = $1 and read_at is null returning id`,
+    [park],
+  );
+  check("읽음으로 표시한다", read.ok && read.rows.length > 0, read.error ?? "");
+
+  // 묶임은 **안 읽은 것**에만 붙는다. 다 읽은 뒤에 또 움직이면 새 줄이 생겨야
+  // 한다 — 안 그러면 읽고 나서 벌어진 일이 조용히 사라진다.
+  const afterRead = await inbox(park);
+  await as(
+    kim,
+    `insert into comment (work_id, author_id, body) values ($1, $2, '읽은 뒤에 하나 더') returning id`,
+    [wDept.id, kim],
+  );
+  check(
+    "★ 다 읽은 뒤에 움직이면 새 줄이 생긴다",
+    (await inbox(park)) === afterRead + 1,
+  );
+}
+
+// ---------------------------------------------------------------------------
 await db.close();
 console.log(`\n${pass}개 통과 · ${fail}개 실패`);
 if (fail) {

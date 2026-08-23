@@ -120,6 +120,7 @@ const SCREENS = [
   { name: "home", path: "/", label: "홈", assert: true },
   { name: "works", path: "/works", label: "업무 보드", assert: false },
   { name: "approvals", path: "/approvals", label: "결재함", assert: false },
+  { name: "notes", path: "/notes", label: "쪽지함", assert: false },
   { name: "handover", path: "/handover", label: "인계·인수", assert: false },
   { name: "work", path: null, label: "업무 상세", assert: false },
 ];

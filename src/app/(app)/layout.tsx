@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
+import { NotificationBell } from "@/components/shell/notification-bell";
+import { countUnreadNotifications, listNotifications } from "@/lib/data";
+import { BELL_LIMIT } from "@/lib/notification";
 import { getViewer, getViewerDepartmentName } from "@/lib/session";
 
 /**
@@ -25,8 +28,19 @@ export default async function AppLayout({
   ]);
   if (!viewer) redirect("/login");
 
+  // 종에 들어갈 것. 머리 줄은 모든 화면에 있으므로 여기서 한 번만 읽는다.
+  // 최근 10건 + 안 읽은 수 — 상한은 화면이 「전부 보기」로 말한다.
+  const [bellItems, unread] = await Promise.all([
+    listNotifications(viewer, BELL_LIMIT),
+    countUnreadNotifications(viewer),
+  ]);
+
   return (
-    <AppShell viewer={viewer} departmentName={departmentName ?? "소속 없음"}>
+    <AppShell
+      viewer={viewer}
+      departmentName={departmentName ?? "소속 없음"}
+      bell={<NotificationBell items={bellItems} unread={unread} />}
+    >
       {children}
     </AppShell>
   );

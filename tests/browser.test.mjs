@@ -335,7 +335,12 @@ console.log("\n[4] 기존 동선");
     ok(`${path} 가 열린다`, res.status() === 200 && t.includes(needle), String(res.status()));
   }
   await page.goto(`${BASE}/works`, { waitUntil: "domcontentloaded" });
-  await page.locator("header form button[type=submit]").click();
+  // 머리 줄에 폼이 하나뿐이던 시절의 선택자였다. 알림 종이 들어오면서
+  // 「전부 읽음」 폼이 하나 더 생겨 strict mode 로 걸렸다. 무엇을 누르는지
+  // **이름으로** 고른다 — 자리로 고르면 옆에 뭔가 생길 때마다 또 깨진다.
+  await page
+    .getByRole("button", { name: "계정 전환" })
+    .click();
   await page.waitForLoadState("domcontentloaded");
   ok("상단 계정 전환은 그대로 동작한다", page.url().endsWith("/login"), page.url());
   await ctx.close();

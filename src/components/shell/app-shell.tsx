@@ -11,6 +11,7 @@ import {
   ArrowLeftRight,
   Columns3,
   LayoutDashboard,
+  Mail,
   Menu,
   Repeat,
   ScrollText,
@@ -48,6 +49,10 @@ const NAV: Array<{ heading: string; items: NavItem[] }> = [
       { href: "/", label: "홈", icon: LayoutDashboard },
       { href: "/works", label: "업무 보드", icon: Columns3 },
       { href: "/approvals", label: "결재", icon: Stamp },
+      // 결재 옆에 둔다. 둘 다 「함」이다 — 와 있는 것을 확인하는 자리.
+      // 인계·인수는 맨 뒤를 지킨다. 이 제품의 마지막 한 방이라 순서에서 밀리면
+      // 안 된다(docs/plans/2026-08-23-쪽지-알림-design.md §6).
+      { href: "/notes", label: "쪽지", icon: Mail },
       { href: "/handover", label: "인계·인수", icon: ArrowLeftRight },
     ],
   },
@@ -178,10 +183,17 @@ function SidebarCityMark() {
 export function AppShell({
   viewer,
   departmentName,
+  bell,
   children,
 }: {
   viewer: Profile;
   departmentName: string;
+  /**
+   * 머리 줄의 종. **서버에서 그려 넘긴다** — 알림 목록은 사람마다 다르고
+   * DB 를 읽어야 하는데, 이 파일은 client 컴포넌트라 여기서 못 읽는다.
+   * 슬롯으로 받으면 서버 컴포넌트 그대로 꽂힌다.
+   */
+  bell?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -381,6 +393,7 @@ export function AppShell({
               가르치기 때문**이다 — 머리 줄에서 이 옅은 주황 원을 본 사람은,
               업무 카드의 참여자 줄에서 같은 원을 보는 순간 「저기 내가 있다」를
               배우지 않고 안다(avatar.tsx 의 MINE 주석). */}
+          {bell}
           <Avatar profile={viewer} me />
           {/* /login으로 가는 링크로 두면 안 된다. proxy가 로그인한 사람을
               /login에서 곧바로 홈으로 되돌려보내 눌러도 제자리가 된다.

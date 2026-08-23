@@ -4,6 +4,7 @@ import {
   CircleDot,
   FileCheck,
   FileText,
+  Mail,
   MessageSquare,
   Paperclip,
   PenLine,
@@ -49,6 +50,9 @@ const ICON: Record<ActivityKind, LucideIcon> = {
   "section.updated": PenLine,
   "comment.created": MessageSquare,
   "comment.deleted": MessageSquare,
+  // 쪽지는 봉투다. 대화(말풍선)와 한눈에 갈리되 같은 「대화」 색으로 묶인다.
+  "note.sent": Mail,
+  "note.answered": Mail,
   "attachment.added": Paperclip,
   "attachment.removed": Paperclip,
   "handover.started": ArrowLeftRight,

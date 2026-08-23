@@ -45,6 +45,11 @@ export type ActivityKind =
   | "section.updated"
   | "comment.created"
   | "comment.deleted"
+  // 쪽지(0019). DB 의 activity_kind 에 값을 더하면 **여기도 더해야 한다** —
+  // ICON·ACTIVITY_TONE 이 Record<ActivityKind, …> 라 빠뜨리면 타입은 통과하고
+  // 이력 탭이 <undefined /> 로 터진다. 실제로 코드리뷰에서 잡혔다.
+  | "note.sent"
+  | "note.answered"
   | "attachment.added"
   | "attachment.removed"
   | "handover.started"
@@ -227,6 +232,62 @@ export interface Comment {
   created_at: string;
 }
 
+/**
+ * 쪽지 — 메신저가 아니라 **업무를 물고 다니는 문의**다.
+ *
+ * `work_id` 가 optional 이 아닌 것이 이 타입의 전부다. 업무 없는 쪽지를
+ * 허용하는 순간 지식이 업무 밖으로 새는 통로가 열린다
+ * (docs/plans/2026-08-23-쪽지-알림-design.md §1, supabase/migrations/0019).
+ */
+export interface Note {
+  id: string;
+  work_id: string;
+  /** 첫 쪽지의 id. 답장이 같은 실에 묶인다. 뿌리 쪽지는 thread_id = id. */
+  thread_id: string;
+  author_id: string;
+  recipient_id: string;
+  body: string;
+  /** 받은 사람이 연 시각. 보낸 사람 화면에 「보냄」 → 「읽음」으로 나타난다. */
+  read_at: string | null;
+  deleted_at: string | null;
+  created_at: string;
+}
+
+/**
+ * 알림 — **사건만** 담는다.
+ *
+ * 「처리해야 사라지는 것은 알림이 아니다」가 이 타입의 규칙이다. 「지금 내 차례
+ * 결재」는 여기 없다 — 읽음 처리된 순간 목록에서 사라지는데 일은 그대로 남기
+ * 때문이다(supabase/migrations/0021).
+ *
+ * 이름이 `Notification` 이 아닌 것은 브라우저 전역 `Notification` 과 겹치기
+ * 때문이다. 겹치면 타입은 통과하고 런타임에 엉뚱한 것을 잡는다.
+ */
+export type NotificationKind =
+  | "mention"
+  | "note"
+  | "work_touched"
+  | "approval_decided";
+
+export interface AppNotification {
+  id: number;
+  recipient_id: string;
+  kind: NotificationKind;
+  work_id: string | null;
+  /** comment.id · note.thread_id · approval.id — kind 와 함께 주소를 만든다. */
+  target_id: string | null;
+  actor_id: string | null;
+  summary: string;
+  /** 묶인 개수. work_touched 만 1보다 커진다. */
+  count: number;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface NotificationWithActor extends AppNotification {
+  actor: Profile | null;
+}
+
 export interface Handover {
   id: string;
   from_profile_id: string;
@@ -338,6 +399,35 @@ export interface ActivityWithActor extends Activity {
 
 export interface CommentWithAuthor extends Comment {
   author: Profile;
+  /**
+   * 이 글이 부른 사람들. 본문의 `@이름` 글자가 아니라 **고른 사실**이다
+   * (supabase/migrations/0020 — 동명이인과 본문 수정 때문에 표로 둔다).
+   */
+  mentions: Profile[];
+}
+
+export interface NoteWithPeople extends Note {
+  author: Profile;
+  recipient: Profile;
+}
+
+/**
+ * 쪽지 실 하나. 쪽지함의 한 줄이자 업무 상세의 한 덩어리다 — 같은 것을 두
+ * 자리에서 보는 것이지 복사가 아니다.
+ */
+export interface NoteThread {
+  thread_id: string;
+  work: { id: string; title: string };
+  /**
+   * 보는 사람 기준의 상대. 쪽지함에서 「누구와의 대화인가」다.
+   * 업무 상세처럼 제3자가 볼 때는 뿌리 쪽지를 **받은** 사람이 온다 —
+   * 그 화면에서 궁금한 것은 「바깥의 누구에게 물었나」이기 때문이다.
+   */
+  counterpart: Profile;
+  notes: NoteWithPeople[];
+  /** 나에게 온 것 중 아직 안 읽은 수. 제3자에게는 언제나 0이다. */
+  unread: number;
+  last_at: string;
 }
 
 export interface AttachmentWithUploader extends Attachment {
@@ -535,6 +625,9 @@ export const ACTIVITY_TONE: Record<ActivityKind, ActivityTone> = {
   "section.updated": "내용",
   "comment.created": "대화",
   "comment.deleted": "대화",
+  // 쪽지도 대화다 — 안에서 한 것과 밖에 물어본 것이 같은 색으로 묶인다.
+  "note.sent": "대화",
+  "note.answered": "대화",
   "attachment.added": "내용",
   "attachment.removed": "내용",
   "handover.started": "인계",
