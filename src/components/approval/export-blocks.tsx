@@ -19,7 +19,7 @@ export function ExportBlocks({ blocks }: { blocks: readonly ExportBlock[] }) {
         <section key={block.key} aria-labelledby={`export-${block.key}`}>
           <h3
             id={`export-${block.key}`}
-            className="mb-2 text-h4 font-bold text-gray-90"
+            className="mb-2 text-h3 font-bold text-gray-90"
           >
             {block.heading}
           </h3>

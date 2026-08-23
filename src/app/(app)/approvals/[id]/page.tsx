@@ -133,8 +133,10 @@ export default async function ApprovalDetailPage({
           <span className="rounded-xs bg-gray-5 px-1.5 py-0.5 text-body-xs font-bold text-gray-60">
             {APPROVAL_FORM_LABEL[approval.form]}
           </span>
+          {/* 결재함 목록(approval-row.tsx)의 같은 칩과 **같은 모양이어야 한다.**
+              목록에서 짙게 뒤집힌 칩이 상세에서 황토색이면 같은 표시로 안 읽힌다. */}
           {approval.security === "confidential" ? (
-            <span className="rounded-xs bg-status-review-bg px-1.5 py-0.5 text-body-xs font-bold text-status-review-text">
+            <span className="rounded-xs bg-gray-90 px-1.5 py-0.5 text-body-xs font-bold text-gray-0">
               대외비
             </span>
           ) : null}
@@ -216,7 +218,7 @@ export default async function ApprovalDetailPage({
 
       {/* ── 결재란 ─────────────────────────────────────────────────────── */}
       <section aria-labelledby="approval-grid-heading" className="mb-6">
-        <h2 id="approval-grid-heading" className="mb-2 text-h4 font-bold text-gray-90">
+        <h2 id="approval-grid-heading" className="mb-2 text-h3 font-bold text-gray-90">
           결재란
         </h2>
         <ApprovalGrid
@@ -245,7 +247,7 @@ export default async function ApprovalDetailPage({
         <section aria-labelledby="approval-body-heading" className="mb-6">
           <h2
             id="approval-body-heading"
-            className="mb-2 text-h4 font-bold text-gray-90"
+            className="mb-2 text-h3 font-bold text-gray-90"
           >
             본문
           </h2>

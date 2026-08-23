@@ -121,11 +121,19 @@ export default async function ApprovalsPage({
                         본문 자리를 갈지 않는다. 눌렸다는 표시가 여기 있어야
                         한다(업무 보드 조건 칩과 같은 이유). */}
                     <LinkPending />
+                    {/* 파랑이었다. 주황으로 옮긴다 — 이 제품에서 주황은 「내가
+                        움직여야 하는 것」 하나만 가리킨다(결재 줄의 「지금 내
+                        차례」, 홈의 인계 알림, 카드의 임박 띠). 왼쪽 칸은 여섯
+                        개가 다 파랑 계열이라, 그 안에서 파란 배지는 안 튄다.
+                        흰 글자는 accent(3.33:1) 위가 아니라 accent-text
+                        (5.48:1) 위에 얹는다. */}
                     {b === "todo" && todoCount > 0 ? (
                       <span
                         className={cn(
                           "rounded-xs px-1.5 py-0.5 text-body-xs font-bold tabular-nums",
-                          on ? "bg-primary text-white" : "bg-primary-5 text-primary",
+                          on
+                            ? "bg-accent-text text-white"
+                            : "bg-accent-bg text-accent-text",
                         )}
                       >
                         {todoCount}
@@ -141,7 +149,9 @@ export default async function ApprovalsPage({
         {/* ── 오른쪽: 목록 ─────────────────────────────────────────────── */}
         <div className="min-w-0">
           <div className="mb-3">
-            <h2 className="text-h4 font-bold text-gray-90">
+            {/* text-h4 는 17px 로 **본문과 같은 크기**였다. 판 제목이 본문과
+                같으면 목록이 제목 아래 딸린 것으로 안 읽힌다(card.tsx 참조). */}
+            <h2 className="text-h3 font-bold text-gray-90">
               {APPROVAL_BOX_LABEL[box]}
               <span className="ml-2 text-body-sm font-normal tabular-nums text-gray-60">
                 {list.length}건
@@ -193,9 +203,11 @@ export default async function ApprovalsPage({
           {/* ── 서식 ──────────────────────────────────────────────────── */}
           {canMutate ? (
             <section aria-labelledby="approval-forms" className="mt-6">
+              {/* 조용 등급 — 결재함에서 먼저 읽혀야 하는 것은 목록이지
+                  「새로 만들기」가 아니다. */}
               <h2
                 id="approval-forms"
-                className="mb-1 text-body-sm font-bold text-gray-80"
+                className="mb-1 text-body-sm font-bold text-gray-60"
               >
                 서식으로 시작하기
               </h2>

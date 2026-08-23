@@ -120,14 +120,19 @@ export function WorkCard({
           <Building2 aria-hidden className="size-3.5" />
           {work.department.name}
         </span>
+        {/* 두 칩은 예전에 각각 파랑(primary-5/primary)과 주황(accent-bg/
+            accent-text)이었다. 카드 한 장에 색이 둘 더 붙는 셈이었는데, 둘 다
+            「알아 두면 좋은 것」이지 「지금 해야 할 것」이 아니다. 무채색으로
+            내리고 구분은 아이콘과 글자에 맡긴다 — 카드에서 색이 뜨는 자리는
+            왼쪽 띠(지연·임박) 하나로 족하다. */}
         {cross ? (
-          <span className="inline-flex items-center gap-1 rounded-xs bg-primary-5 px-1.5 py-0.5 font-bold text-primary">
+          <span className="inline-flex items-center gap-1 rounded-xs bg-gray-10 px-1.5 py-0.5 font-bold text-gray-70">
             <Users aria-hidden className="size-3" />
             {work.department_count}개 부서
           </span>
         ) : null}
         {work.previous_year ? (
-          <span className="inline-flex items-center gap-1 rounded-xs bg-accent-bg px-1.5 py-0.5 font-bold text-accent-text">
+          <span className="inline-flex items-center gap-1 rounded-xs bg-gray-10 px-1.5 py-0.5 font-bold text-gray-70">
             <RotateCcw aria-hidden className="size-3" />
             작년 판 있음
           </span>

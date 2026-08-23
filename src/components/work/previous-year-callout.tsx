@@ -57,9 +57,14 @@ export function PreviousYearCard({
   currentWork?: { id: string; title: string };
 }) {
   return (
+    /* 판 전체가 주황이었다(accent-bg + accent 테두리). 홈에서 세로로 긴
+       주황 덩어리가 되어, 「지금 손대야 하는 일」보다 이 회고 판이 먼저
+       눈에 들어왔다. 작년 판은 **참고**이지 지금 할 일이 아니다.
+       주황은 왼쪽 3px 선 한 줄로만 남긴다 — 이 판이 무엇인지 가리키는
+       데는 그것으로 족하고, 면을 칠하면 무게가 생긴다. */
     <section
       aria-labelledby="prev-year-heading"
-      className="rounded-md border border-accent/35 bg-accent-bg p-4"
+      className="rounded-md border border-gray-10 border-l-3 border-l-accent/60 bg-surface p-4"
     >
       <p
         id="prev-year-heading"
@@ -89,7 +94,7 @@ export function PreviousYearCard({
       </p>
 
       {brief.headings.length > 0 ? (
-        <ul className="mt-3 space-y-1 border-t border-accent/20 pt-3">
+        <ul className="mt-3 space-y-1 border-t border-gray-10 pt-3">
           {brief.headings.map((h) => (
             <li
               key={h}
@@ -112,7 +117,7 @@ export function PreviousYearCard({
       <Link
         href={`/works/${brief.work.id}`}
         data-variant="plain"
-        className="mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-sm bg-surface px-3 text-body-sm font-bold text-accent-text ring-1 ring-accent/30 hover:bg-accent hover:text-white hover:ring-accent pointer-coarse:min-h-11"
+        className="mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-sm bg-surface px-3 text-body-sm font-bold text-gray-70 ring-1 ring-gray-20 hover:bg-gray-5 hover:text-gray-90 hover:ring-gray-30 pointer-coarse:min-h-11"
       >
         작년 판 열어 보기
         <ArrowRight aria-hidden className="size-4" />

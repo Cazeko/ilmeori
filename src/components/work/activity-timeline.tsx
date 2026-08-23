@@ -60,18 +60,22 @@ const ICON: Record<ActivityKind, LucideIcon> = {
   "approval.withdrawn": Undo2,
 };
 
+/**
+ * 갈래 표시 — 다섯 갈래에 다섯 색을 주던 것을 색 하나 + 명도 셋으로 줄였다.
+ *
+ * 이력은 「무슨 일이 있었는가」를 시간순으로 늘어놓는 자리라, 갈래마다 색이
+ * 붙으면 화면이 통째로 알록달록해지고 **정작 어느 사건이 중요한지는 여전히
+ * 알 수 없다.** 갈래는 이미 아이콘과 글자로 적혀 있다.
+ *
+ * 색이 남는 것은 **인계** 하나다. 인사이동은 이 제품이 존재하는 이유이고,
+ * 이력에서 유일하게 사람이 실제로 움직여야 하는 사건이다.
+ */
 const TONE: Record<ActivityTone, { dot: string; chip: string }> = {
-  권한: { dot: "bg-primary-5 text-primary", chip: "bg-primary-5 text-primary" },
-  내용: { dot: "bg-gray-5 text-gray-60", chip: "bg-gray-5 text-gray-60" },
-  대화: {
-    dot: "bg-status-doing-bg text-status-doing-text",
-    chip: "bg-status-doing-bg text-status-doing-text",
-  },
-  인계: { dot: "bg-accent-bg text-accent-text", chip: "bg-accent-bg text-accent-text" },
-  결재: {
-    dot: "bg-status-review-bg text-status-review-text",
-    chip: "bg-status-review-bg text-status-review-text",
-  },
+  결재: { dot: "bg-gray-10 text-gray-90", chip: "bg-gray-10 text-gray-90" }, // 13.17:1
+  권한: { dot: "bg-gray-10 text-gray-70", chip: "bg-gray-10 text-gray-70" }, //  7.07:1
+  대화: { dot: "bg-gray-5 text-gray-60", chip: "bg-gray-5 text-gray-60" }, //    5.57:1
+  내용: { dot: "bg-gray-5 text-gray-60", chip: "bg-gray-5 text-gray-60" }, //    5.57:1
+  인계: { dot: "bg-accent-bg text-accent-text", chip: "bg-accent-bg text-accent-text" }, // 4.95:1
 };
 
 const dayFmt = new Intl.DateTimeFormat("ko-KR", {

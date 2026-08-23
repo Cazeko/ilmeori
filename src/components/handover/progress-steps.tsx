@@ -44,11 +44,15 @@ export function ProgressSteps({ current }: { current: HandoverStatus }) {
                 aria-hidden
                 className={cn(
                   "flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
+                  // 끝난 단계는 초록이었다. 이 화면에서 색이 뜨는 자리는
+                  // 「지금 어느 단계인가」(주황) 하나여야 한다 — 끝난 단계가
+                  // 지금 단계만큼 튀면 어디까지 왔는지가 오히려 흐려진다.
+                  // 무채색으로 내리되 아직 안 한 단계보다는 진하게 둔다.
                   done
-                    ? "bg-status-done-text text-white"
+                    ? "bg-gray-60 text-white" // 6.30:1
                     : now
-                      ? "bg-accent-text text-white"
-                      : "bg-gray-10 text-gray-60",
+                      ? "bg-accent-text text-white" // 5.48:1
+                      : "bg-gray-10 text-gray-60", // 5.13:1
                 )}
               >
                 {done ? <Check className="size-3" /> : i + 1}

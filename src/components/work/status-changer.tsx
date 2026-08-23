@@ -30,12 +30,10 @@ import { STATUS_LABEL, type WorkStatus } from "@/lib/types";
 
 const COLUMNS: WorkStatus[] = ["todo", "doing", "review", "done"];
 
-const ON: Record<WorkStatus, string> = {
-  todo: "bg-status-todo-text text-white",
-  doing: "bg-status-doing-text text-white",
-  review: "bg-status-review-text text-white",
-  done: "bg-status-done-text text-white",
-};
+/* 켜진 칸. 예전에는 상태마다 다른 색으로 채웠는데(회색·파랑·황토·초록),
+   **한 번에 하나만 켜지므로 색으로 구분할 이유가 없다.** 무엇이 켜졌는지는
+   글자가 말하고, 켜졌다는 사실은 채움이 말한다. 네 색을 하나로 줄인다. */
+const ON = "bg-gray-80 text-white"; // 11.09:1
 
 function Columns({ current }: { current: WorkStatus }) {
   const { pending, data } = useFormStatus();
@@ -68,7 +66,7 @@ function Columns({ current }: { current: WorkStatus }) {
               "min-h-11 cursor-pointer px-3.5 text-body-sm font-bold transition-colors duration-150",
               "disabled:cursor-not-allowed",
               i > 0 && "border-l border-gray-20",
-              active ? ON[s] : "bg-surface text-gray-60 hover:bg-gray-5",
+              active ? ON : "bg-surface text-gray-60 hover:bg-gray-5",
             )}
           >
             {STATUS_LABEL[s]}

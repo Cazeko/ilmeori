@@ -7,26 +7,25 @@ import type { Profile } from "@/lib/types";
  * 이름 글자를 쓴다. 한국 이름은 성을 빼고 이름 두 글자를 보이는 편이
  * "김"만 다섯 개 늘어서는 것보다 훨씬 잘 구분된다.
  *
- * 색은 이름에서 결정적으로 뽑는다. 같은 사람이 화면마다 다른 색이면
- * 아바타를 색으로 기억하는 사람에게는 없는 것만 못하다.
+ * ── 색을 뺐다 ──────────────────────────────────────────────────────────────
+ *
+ * 예전에는 이름에서 여섯 색(남색·파랑·초록·주황·보라·회색) 중 하나를
+ * 결정적으로 뽑아 썼다. "같은 사람이 화면마다 다른 색이면 색으로 기억하는
+ * 사람에게 없는 것만 못하다"가 그 이유였고, 그 자체는 지금도 맞다.
+ *
+ * 문제는 **화면 전체에서 채도가 가장 높은 자리가 아바타**가 된 것이었다.
+ * 업무 보드 한 장에 색이 12개 있었는데 그중 다섯이 아바타였고, 아바타는
+ * 그 화면에서 가장 덜 중요한 정보다. 지연된 업무의 붉은 띠보다 보라색
+ * 아바타가 먼저 눈에 들어왔다 — 시선이 안 가는 게 아니라 **틀린 곳으로**
+ * 가고 있었다.
+ *
+ * 그래서 무채색 하나로 통일한다. 사람을 가르는 일은 색이 아니라 **이름
+ * 글자**가 한다(아래 initials). 색으로 기억하던 사람은 잃는 것이 있지만,
+ * 그 대신 화면에 색이 뜨면 그건 언제나 「지금 문제인 것」 하나가 된다.
  */
 
-/**
- * 옅은 배경 + 같은 색 글자 조합은 예뻐 보이지만 대비가 4.1:1 근처에서 걸린다.
- * 24px 원 안의 작은 글자라 더 불리하다. 그래서 진한 바탕에 흰 글자로 간다.
- * 아래 여섯 색은 모두 흰색 대비 4.9:1 이상이다(측정값 괄호 안).
- */
-const PALETTE = [
-  // 브랜드 파랑(--color-primary)은 쓰지 않는다. 그 색은 이 제품에서 「지금
-  // 여기」와 「누르면 되는 것」을 가리키는 색이라, 사람 얼굴 자리에 같이 쓰면
-  // 둘 중 하나가 흐려진다. 명도만 맞춘 다른 남색을 쓴다(흰 글자 대비 8.28).
-  "bg-[#1f4e79] text-white", //  (8.66)
-  "bg-[#0a63a8] text-white", // (6.24)
-  "bg-[#1c7030] text-white", // (6.16)
-  "bg-[#b3541f] text-white", // (4.99)
-  "bg-[#6b3fa0] text-white", // (7.38)
-  "bg-gray-60 text-white", //   #58616a (6.30)
-] as const;
+/** 대비 7.07:1 (gray-70 on gray-10). tests/contrast.test.mjs 가 지킨다. */
+const NEUTRAL = "bg-gray-10 text-gray-70";
 
 /**
  * 작은 원에 한글 두 글자는 들어가지 않는다. 억지로 넣으면 글자가 잘려서
@@ -39,12 +38,6 @@ const PALETTE = [
 function initials(name: string, compact: boolean) {
   const given = name.length >= 3 ? name.slice(1) : name;
   return compact ? given.slice(0, 1) : given;
-}
-
-function hueOf(name: string) {
-  let h = 0;
-  for (let i = 0; i < name.length; i += 1) h = (h * 31 + name.charCodeAt(i)) | 0;
-  return PALETTE[Math.abs(h) % PALETTE.length];
 }
 
 const SIZE = {
@@ -67,7 +60,7 @@ export function Avatar({
       className={cn(
         "inline-flex shrink-0 items-center justify-center rounded-full font-bold select-none",
         SIZE[size],
-        hueOf(profile.name),
+        NEUTRAL,
         className,
       )}
       // 이름은 옆에 글자로도 적히는 경우가 많다. 그때 두 번 읽히지 않도록

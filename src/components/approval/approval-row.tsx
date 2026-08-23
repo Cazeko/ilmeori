@@ -49,13 +49,20 @@ export function ApprovalRow({
         <span className="rounded-xs bg-gray-5 px-1.5 py-0.5 text-body-xs font-bold text-gray-60">
           {APPROVAL_FORM_LABEL[approval.form]}
         </span>
+        {/* 대외비는 황토색 칩이었다. 색을 걷어내되 다른 칩에 묻히면 안 되는
+            표시라, 색 대신 **뒤집는다** — 짙은 바탕에 흰 글자. 뒤집기는 색을
+            한 개도 쓰지 않으면서 눈에 띄는 유일한 수단이다. */}
         {approval.security === "confidential" ? (
-          <span className="rounded-xs bg-status-review-bg px-1.5 py-0.5 text-body-xs font-bold text-status-review-text">
+          <span className="rounded-xs bg-gray-90 px-1.5 py-0.5 text-body-xs font-bold text-gray-0">
             대외비
           </span>
         ) : null}
+        {/* 파랑이었다. 주황으로 옮긴다 — 이 제품에서 주황은 「내가 움직여야
+            하는 것」 한 가지만 가리키기로 했고(work-card 의 임박 띠, 홈의 인계
+            알림), 결재함에서 그것은 「지금 내 차례」다. 파랑은 「누를 수 있는
+            것」이라 목록의 모든 줄이 이미 파랑이다. */}
         {mine && pending ? (
-          <span className="inline-flex items-center gap-1 rounded-xs bg-primary-5 px-1.5 py-0.5 text-body-xs font-bold text-primary">
+          <span className="inline-flex items-center gap-1 rounded-xs bg-accent-bg px-1.5 py-0.5 text-body-xs font-bold text-accent-text">
             <Hourglass aria-hidden className="size-3" />
             지금 내 차례 · {APPROVAL_KIND_LABEL[pending.kind]}
           </span>

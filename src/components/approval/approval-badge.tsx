@@ -10,15 +10,17 @@ import type { ApprovalState, ApprovalStep } from "@/lib/types";
  * 그 두 가지를 한 번에 읽는다.
  *
  * 상태 배지(status-badge.tsx)와 같은 규칙을 따른다 — 색만으로 알리지 않고
- * 점 옆에 언제나 글자가 붙는다.
+ * 점 옆에 언제나 글자가 붙는다. 색을 쓰는 규칙도 같다: **되돌아온 것(반려)
+ * 에만 색이 붙고 나머지는 명도로 나뉜다.** 결재함에서 붉은 것이 하나면
+ * 그것이 곧 「지금 손봐야 하는 문서」다.
  */
 
 const TONE: Record<ApprovalState, string> = {
-  drafting: "bg-gray-5 text-gray-60",
-  in_progress: "bg-status-doing-bg text-status-doing-text",
-  completed: "bg-status-done-bg text-status-done-text",
-  rejected: "bg-status-overdue-bg text-status-overdue-text",
-  withdrawn: "bg-gray-5 text-gray-60",
+  drafting: "bg-gray-5 text-gray-60", //     5.57:1 — 아직 안 올린 것
+  in_progress: "bg-gray-10 text-gray-90", // 13.17:1 — 지금 돌고 있는 것
+  completed: "bg-gray-5 text-gray-60", //    5.57:1 — 끝나서 물러난 것
+  rejected: "bg-status-overdue-bg text-status-overdue-text", // 5.34:1 — 유일한 색
+  withdrawn: "bg-gray-5 text-gray-60", //    5.57:1
 };
 
 export function ApprovalBadge({

@@ -62,7 +62,20 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             일머리는 못 넘겨받습니다.
           </h1>
 
-          <p className="mt-5 max-w-md text-body leading-relaxed break-keep text-gray-60">
+          {/* ── 한 줄 소개 ──────────────────────────────────────────────────
+              위 h1 은 **문제**를 말하지 기능을 말하지 않는다. 좋은 문장이지만
+              처음 보는 사람은 「그래서 뭘 하는 건데」에 답을 못 얻는다.
+              1차예선 심사평이 정확히 그 지점을 짚었다 — 「핵심 기능을 한 줄로
+              소개할 수 있어야 한다」.
+
+              그래서 문제 다음 자리에 **하는 일 한 문장**을 둔다. 이 문장은
+              로그인·홈·README·발표 대본 네 곳에서 **토씨까지 같아야 한다.**
+              자리마다 다르게 적으면 그건 한 줄 소개가 아니라 네 개의 설명이다. */}
+          <p className="mt-5 max-w-lg text-body-lg leading-relaxed font-bold break-keep text-gray-90">
+            평소 결재와 대화가 쌓이면, 근거가 붙은 한/글 결재문서와 법정 인계서가
+            저절로 나옵니다.
+          </p>
+          <p className="mt-3 max-w-md text-body-sm leading-relaxed break-keep text-gray-60">
             부서 간 협업을 업무 단위로 쌓고, 인사이동이 와도 그 기록이 끊기지 않게
             하는 내부 업무공유 플랫폼입니다.
           </p>

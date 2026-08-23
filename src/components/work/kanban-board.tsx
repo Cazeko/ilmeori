@@ -16,13 +16,6 @@ import { STATUS_LABEL, type WorkListItem, type WorkStatus } from "@/lib/types";
 
 const COLUMNS: WorkStatus[] = ["todo", "doing", "review", "done"];
 
-const HEAD: Record<WorkStatus, string> = {
-  todo: "border-t-status-todo",
-  doing: "border-t-status-doing",
-  review: "border-t-status-review",
-  done: "border-t-status-done",
-};
-
 export function KanbanBoard({
   works,
   approvals,
@@ -62,7 +55,13 @@ export function KanbanBoard({
           <section
             key={status}
             aria-labelledby={`col-${status}`}
-            className={`rounded-md border border-t-3 border-gray-10 bg-gray-10 ${HEAD[status]}`}
+            /* 예전에는 위 3px 띠를 열마다 다른 상태색으로 칠했다(회색·파랑·
+               황토·초록). 열 이름이 이미 「대기·진행중·검토·완료」라고 적고
+               있는데 그 위에 색을 한 겹 더 얹은 것이라, 정보는 안 늘고 화면의
+               색만 넷 늘었다. 칸반에서 튀어야 하는 것은 **지연된 카드 한 장**
+               이지 열이 아니다. 띠는 남기되 넷 다 같은 회색으로 둔다 — 열의
+               윗변을 긋는 일만 하게 한다. */
+            className="rounded-md border border-t-3 border-gray-10 border-t-gray-20 bg-gray-10"
           >
             {/* 높이를 못박는다(min-h-12 = 48px).
                 「지연 N」 배지는 지연이 있는 열에만 붙는데, 배지에 위아래 여백이
@@ -70,9 +69,12 @@ export function KanbanBoard({
                 선이 열마다 어긋나고**, 2~4px 만 달라도 사람은 삐뚤다고 느낀다.
                 좌우 여백도 아래 목록과 같은 값(px-3)이어야 머리글 글자와 카드
                 왼쪽 모서리가 한 선에 선다. */}
+            {/* 열 이름은 「조용」 등급이다(card.tsx 의 세 등급 참조). 보드에서
+                먼저 읽혀야 하는 것은 카드이지 열 이름이 아니다. gray-80 →
+                gray-60 으로 한 단계 물린다. */}
             <h2
               id={`col-${status}`}
-              className="flex min-h-12 items-center gap-2 px-3 text-body-sm font-bold text-gray-80"
+              className="flex min-h-12 items-center gap-2 px-3 text-body-sm font-bold text-gray-60"
             >
               {STATUS_LABEL[status]}
               <span className="tabular-nums text-gray-60">{items.length}</span>

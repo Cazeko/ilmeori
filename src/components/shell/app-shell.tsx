@@ -138,10 +138,13 @@ function NavList({ pathname }: { pathname: string }) {
  * 세로 128px 를 영구히 먹었고, 모든 화면에 늘 같은 글이 떠 있었다. 알아야 할
  * 것은 「가상 데이터다」 한마디뿐이고, 어디까지 가상인지는 궁금할 때만 읽으면 된다.
  * <details> 라서 스크립트 없이도 열린다.
+ *
+ * 노란 바탕(warning)이었다. 옆줄에서 **가장 눈에 띄는 것이 면책 문구**가 되는
+ * 배치라, 무채색으로 내렸다. 이 쪽지는 읽히기만 하면 되지 눈에 띌 필요가 없다.
  */
 function DemoNotice() {
   return (
-    <details className="mx-3 mb-4 rounded-md border border-warning/30 bg-warning-bg px-3 py-2">
+    <details className="mx-3 mb-4 rounded-md border border-gray-10 bg-gray-5 px-3 py-2">
       <summary className="flex cursor-pointer list-none items-center text-body-xs font-bold text-gray-90 pointer-coarse:min-h-11 [&::-webkit-details-marker]:hidden">
         시연용 가상 데이터
         <span className="ml-1 font-normal text-gray-60">자세히</span>

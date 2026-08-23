@@ -63,13 +63,15 @@ const NO_DEPARTMENT = "소속 없음";
 
 const ROLE_STYLE: Record<MemberRole, { chip: string; icon: typeof Eye; desc: string }> =
   {
+    /* 세 칩은 파랑·파랑·회색이었다. 권한은 강도 순으로 늘어선 것이므로
+       색이 아니라 **명도**로 나누는 편이 뜻에 맞는다 — 권한이 셀수록 진하다. */
     owner: {
-      chip: "bg-primary-5 text-primary",
+      chip: "bg-gray-10 text-gray-90", // 13.17:1
       icon: ShieldCheck,
       desc: "업무를 만들고 참여자와 권한을 정합니다. 인계 대상이 되는 자리입니다.",
     },
     editor: {
-      chip: "bg-status-doing-bg text-status-doing-text",
+      chip: "bg-gray-10 text-gray-70", // 7.07:1
       icon: PenLine,
       desc: "문서와 상태를 고칠 수 있습니다.",
     },
@@ -152,7 +154,7 @@ export function MemberList({
     <div className="flex flex-col gap-6">
       {/* ── 공개 범위 ─────────────────────────────────────────────────────── */}
       <section aria-labelledby="visibility-heading">
-        <h2 id="visibility-heading" className="mb-2.5 text-h4 font-bold text-gray-90">
+        <h2 id="visibility-heading" className="mb-2.5 text-h3 font-bold text-gray-90">
           공개 범위
         </h2>
         <div className="flex items-start gap-3 rounded-md border border-gray-10 bg-surface px-4 py-3.5">
@@ -207,7 +209,7 @@ export function MemberList({
 
       {/* ── 참여자 ───────────────────────────────────────────────────────── */}
       <section aria-labelledby="members-heading">
-        <h2 id="members-heading" className="mb-2.5 text-h4 font-bold text-gray-90">
+        <h2 id="members-heading" className="mb-2.5 text-h3 font-bold text-gray-90">
           참여자 {members.length}명
         </h2>
         <ul className="divide-y divide-gray-5 rounded-md border border-gray-10 bg-surface">
@@ -355,7 +357,7 @@ export function MemberList({
         <section aria-labelledby="add-member-heading">
           <h2
             id="add-member-heading"
-            className="mb-2.5 text-h4 font-bold text-gray-90"
+            className="mb-2.5 text-h3 font-bold text-gray-90"
           >
             참여자 추가
           </h2>
@@ -416,7 +418,7 @@ export function MemberList({
       <section aria-labelledby="role-guide-heading">
         <h2
           id="role-guide-heading"
-          className="mb-2.5 text-h4 font-bold text-gray-90"
+          className="mb-2.5 text-h3 font-bold text-gray-90"
         >
           권한이 뜻하는 것
         </h2>
