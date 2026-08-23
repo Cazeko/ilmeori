@@ -32,11 +32,15 @@ export function ApprovalFields({
 
   return (
     <>
+      {/* 이 칸을 「서식」이라고 부르지 않는다. 서식은 **하나**다 — 시행규칙
+          제3조3항의 별지 제2호서식. 여기서 고르는 것은 그 서식으로 만드는
+          문서의 성격이고, 내보낸 문서의 표에도 「문서종류」로 찍힌다
+          (approval-export.ts). 종이·결재함·이 칸이 한 이름으로 불러야 한다. */}
       <Field
         id="approval-form"
-        label="서식"
+        label="문서종류"
         required
-        hint="네 가지 모두 별지 제2호서식이며, 고른 서식이 문서번호에 들어갑니다."
+        hint="넷 다 같은 서식(별지 제2호서식)입니다. 고른 것이 문서번호에 들어갑니다."
       >
         {(p) => (
           <Select {...p} name="form" defaultValue={form}>
