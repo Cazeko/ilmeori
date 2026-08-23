@@ -2,7 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { approvalProgress, byRecent } from "@/lib/approval";
-import { groupThreads } from "@/lib/note";
+import { NOTE_LIMIT, groupThreads } from "@/lib/note";
 import { daysUntil } from "@/lib/format";
 import {
   derivedStatus,
@@ -368,9 +368,6 @@ export async function getComments(workId: string): Promise<CommentWithAuthor[]> 
  */
 const NOTE_SELECT = `*, author:author_id ( ${PROFILE_SELECT} ), recipient:recipient_id ( ${PROFILE_SELECT} )`;
 
-/** 쪽지함이 한 번에 보는 상한. 결재함(100)과 같은 규약이고 화면이 그 사실을 적는다. */
-export const NOTE_LIMIT = 100;
-
 export async function listNoteThreads(viewer: Profile): Promise<NoteThread[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -390,6 +387,48 @@ export async function listNoteThreads(viewer: Profile): Promise<NoteThread[]> {
   >;
   const titles = new Map(rows.map((r) => [r.work_id, r.work?.title ?? "업무"]));
   return groupThreads(rows, viewer.id, (id) => titles.get(id) ?? "업무");
+}
+
+/**
+ * 실 하나. **쪽지함 목록에서 찾지 않는다.**
+ *
+ * 처음에는 `listNoteThreads` 결과에서 골랐다. 거기서 고르면 「당사자인가」가
+ * 공짜로 걸리지만, 그 목록은 최근 100통 상한이 있다 — 쪽지가 100통을 넘는
+ * 순간 오래된 실은 **404 가 되거나 반쪽만 보인다.** 화면 상한이 데이터
+ * 접근 규칙 노릇을 하고 있었다.
+ *
+ * 그래서 실을 직접 가져오고, 자격은 **여기서 명시적으로** 본다. RLS 는 업무를
+ * 읽을 수 있는 제3자에게도 이 실을 열어 주므로(0019, 그게 맞다) 그것만으로는
+ * 부족하다 — 이 화면은 답장을 쓰는 자리이고, 그 자격은 당사자에게만 있다.
+ */
+export async function getNoteThread(
+  threadId: string,
+  viewer: Profile,
+): Promise<NoteThread | null> {
+  if (!UUID.test(threadId)) return null;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("note")
+    .select(`${NOTE_SELECT}, work:work_id ( id, title )`)
+    .eq("thread_id", threadId)
+    .is("deleted_at", null)
+    .order("created_at");
+  if (error) throw error;
+
+  const rows = (data ?? []) as unknown as Array<
+    NoteWithPeople & { work: { id: string; title: string } | null }
+  >;
+  if (rows.length === 0) return null;
+  // 당사자가 아니면 없는 것과 같다. 「권한이 없다」고 답하면 그 실이 존재한다는
+  // 사실 자체가 새어 나간다(getWork 가 null 을 주는 것과 같은 규칙).
+  const mine = rows.some(
+    (n) => n.author_id === viewer.id || n.recipient_id === viewer.id,
+  );
+  if (!mine) return null;
+
+  const title = rows[0].work?.title ?? "업무";
+  return groupThreads(rows, viewer.id, () => title)[0] ?? null;
 }
 
 export async function getWorkNoteThreads(

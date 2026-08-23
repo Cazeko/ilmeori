@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/cn";
 import { listNoteThreads } from "@/lib/data";
 import { formatDateTime, formatFullDateTime } from "@/lib/format";
-import { unreadCount } from "@/lib/note";
+import { NOTE_LIMIT, unreadCount } from "@/lib/note";
 import { requireViewer } from "@/lib/session";
 
 export const metadata: Metadata = { title: "쪽지" };
@@ -34,6 +34,10 @@ export default async function NotesPage({ searchParams }: PageProps<"/notes">) {
   const sp = await searchParams;
   const threads = await listNoteThreads(viewer);
   const unread = unreadCount(threads);
+  // 상한을 걸었으면 **화면이 그 사실을 말한다.** 결재함과 같은 규약이다 —
+  // 「말하지 않는 상한은 「전부 다 봤다」로 읽힌다」.
+  const truncated =
+    threads.reduce((n, t) => n + t.notes.length, 0) >= NOTE_LIMIT;
 
   return (
     <PageContainer>
@@ -62,6 +66,7 @@ export default async function NotesPage({ searchParams }: PageProps<"/notes">) {
       </p>
 
       {threads.length > 0 ? (
+        <>
         <ul
           data-rank="doc"
           className={cn(CARD_SURFACE.doc, "divide-y divide-rule-hair overflow-hidden")}
@@ -127,6 +132,13 @@ export default async function NotesPage({ searchParams }: PageProps<"/notes">) {
             );
           })}
         </ul>
+          {threads.length >= 0 && truncated ? (
+            <p className="mt-2 text-body-xs text-gray-60">
+              최근 {NOTE_LIMIT}통까지만 봅니다. 더 오래된 쪽지는 그 업무의
+              「대화」 탭에서 볼 수 있습니다.
+            </p>
+          ) : null}
+        </>
       ) : (
         <div className="rounded-sm border border-rule-frame bg-surface">
           <EmptyState

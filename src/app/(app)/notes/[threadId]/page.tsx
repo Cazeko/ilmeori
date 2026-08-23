@@ -6,7 +6,7 @@ import { ActionFeedback } from "@/components/ui/feedback";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/cn";
-import { getWork, listNoteThreads, markThreadRead } from "@/lib/data";
+import { getNoteThread, getWork, markThreadRead } from "@/lib/data";
 import { requireViewer } from "@/lib/session";
 
 export const metadata: Metadata = { title: "쪽지" };
@@ -14,13 +14,15 @@ export const metadata: Metadata = { title: "쪽지" };
 /**
  * 쪽지 실 하나.
  *
- * ── 왜 목록에서 찾는가 ─────────────────────────────────────────────────────
+ * ── 실을 직접 가져온다 ─────────────────────────────────────────────────────
  *
- * `listNoteThreads` 는 **내가 주고받은 것**만 돌려준다. 여기서 그 안을 찾으면
- * 「당사자인가」가 자동으로 걸린다. 업무를 읽을 수 있어서 이 실을 구경만 하는
- * 제3자는 여기 들어오지 못하고, 그 사람이 볼 자리는 업무 상세 쪽이다.
+ * 처음에는 `listNoteThreads` 결과에서 골랐다. 「당사자인가」가 공짜로 걸려서
+ * 좋아 보였는데, 그 목록에는 **최근 100통 상한**이 있다 — 쪽지가 100통을 넘는
+ * 순간 오래된 실이 404 가 되거나 반쪽만 보인다. 화면 상한이 데이터 접근 규칙
+ * 노릇을 하고 있었다(코드리뷰에서 잡혔다).
  *
- * 없는 실과 남의 실은 똑같이 404 다. 「권한이 없습니다」라고 답하면 그 실이
+ * 지금은 `getNoteThread` 가 실을 통째로 가져오고 자격을 그 안에서 본다.
+ * 없는 실과 남의 실은 똑같이 404 다 — 「권한이 없습니다」라고 답하면 그 실이
  * 존재한다는 사실 자체가 새어 나간다(getWork 가 null 을 주는 것과 같은 규칙).
  *
  * ── 읽음은 화면을 그리는 중에 찍는다 ───────────────────────────────────────
@@ -39,8 +41,7 @@ export default async function NoteThreadPage({
   const { threadId } = await params;
   const sp = await searchParams;
 
-  const threads = await listNoteThreads(viewer);
-  const thread = threads.find((t) => t.thread_id === threadId);
+  const thread = await getNoteThread(threadId, viewer);
   if (!thread) notFound();
 
   // 받는 사람은 이 업무를 못 본다(설계 §3). null 이면 그 사실을 화면이 적는다.

@@ -62,3 +62,12 @@ export function groupThreads(
 export function unreadCount(threads: NoteThread[]): number {
   return threads.reduce((n, t) => n + t.unread, 0);
 }
+
+/**
+ * 쪽지함이 한 번에 읽는 통 수. 결재함(100건)과 같은 규약이고 **화면이 그 사실을
+ * 적는다** — 「말하지 않는 상한은 「전부 다 봤다」로 읽힌다」(approvals/page.tsx).
+ *
+ * 실 하나를 펴 볼 때는 이 값을 안 쓴다. 화면 상한이 데이터 접근 규칙 노릇을 하면
+ * 100통을 넘는 순간 오래된 실이 404 가 된다(getNoteThread 주석).
+ */
+export const NOTE_LIMIT = 100;

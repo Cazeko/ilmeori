@@ -349,6 +349,86 @@ for (const { path, code } of tsxFiles) {
 ok("문서 겉모양에는 문서 표식이 붙어 있다", unmarkedDoc);
 
 // ---------------------------------------------------------------------------
+console.log("\n열거형 — DB 와 타입이 같은 말을 하는가");
+// ---------------------------------------------------------------------------
+/*
+ * 실제로 물렸다. 0019 가 `activity_kind` 에 note.sent · note.answered 를 더했는데
+ * `src/lib/types.ts` 의 `ActivityKind` 유니온에는 안 더했다.
+ *
+ * **타입 검사는 통과했다.** DB 에서 온 값은 캐스팅으로 들어오기 때문이다. 그런데
+ * `ICON` 과 `ACTIVITY_TONE` 이 `Record<ActivityKind, …>` 라, 쪽지를 한 번이라도
+ * 보낸 업무의 이력 탭에서 `ICON["note.sent"]` 가 undefined 가 되고 React 가
+ * `<undefined />` 로 터진다. 화면 하나가 통째로 죽는데 시험도 타입도 조용하다.
+ *
+ * 「양쪽에 적어야 한다」를 사람이 기억하는 대신 여기서 센다.
+ */
+const ENUM_PAIRS = [
+  { sql: "activity_kind", ts: "ActivityKind" },
+  { sql: "notification_kind", ts: "NotificationKind" },
+];
+
+const sqlText = (
+  await Promise.all(
+    (await readdir(join(ROOT, "supabase/migrations")))
+      .filter((f) => f.endsWith(".sql"))
+      .sort()
+      .map((f) => readFile(join(ROOT, "supabase/migrations", f), "utf8")),
+  )
+).join("\n");
+
+const typesText = (await read(join(SRC, "lib/types.ts"))).code;
+
+/** create type X as enum ('a','b') + alter type X add value 'c' 를 함께 모은다. */
+function sqlEnumValues(name) {
+  const out = new Set();
+  const created = new RegExp(
+    `create type ${name} as enum\\s*\\(([\\s\\S]*?)\\)\\s*;`,
+    "i",
+  ).exec(sqlText);
+  if (created) {
+    for (const m of created[1].matchAll(/'([^']+)'/g)) out.add(m[1]);
+  }
+  for (const m of sqlText.matchAll(
+    new RegExp(`alter type ${name} add value[^']*'([^']+)'`, "gi"),
+  )) {
+    out.add(m[1]);
+  }
+  return out;
+}
+
+/** export type X = | "a" | "b"; 의 문자열 리터럴을 모은다. */
+function tsUnionValues(name) {
+  const m = new RegExp(`export type ${name} =([\\s\\S]*?);`).exec(typesText);
+  if (!m) return null;
+  return new Set([...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]));
+}
+
+const enumDrift = [];
+for (const { sql, ts } of ENUM_PAIRS) {
+  const a = sqlEnumValues(sql);
+  const b = tsUnionValues(ts);
+  if (a.size === 0) {
+    enumDrift.push(`supabase/migrations  ${sql} 을 못 찾았다`);
+    continue;
+  }
+  if (b === null) {
+    enumDrift.push(`src/lib/types.ts  ${ts} 을 못 찾았다`);
+    continue;
+  }
+  for (const v of a) {
+    if (!b.has(v)) enumDrift.push(`src/lib/types.ts  ${ts} 에 「${v}」 이 없다 (DB 에는 있다)`);
+  }
+  for (const v of b) {
+    if (!a.has(v)) enumDrift.push(`supabase/migrations  ${sql} 에 「${v}」 이 없다 (타입에는 있다)`);
+  }
+}
+ok(
+  "DB 열거형과 TS 유니온이 같다",
+  enumDrift,
+  `${ENUM_PAIRS.length}쌍`,
+);
+
+// ---------------------------------------------------------------------------
 console.log("\n스트리밍 — loading.tsx 를 두지 않는다");
 // ---------------------------------------------------------------------------
 /*

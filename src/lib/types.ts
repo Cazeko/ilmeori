@@ -45,6 +45,11 @@ export type ActivityKind =
   | "section.updated"
   | "comment.created"
   | "comment.deleted"
+  // 쪽지(0019). DB 의 activity_kind 에 값을 더하면 **여기도 더해야 한다** —
+  // ICON·ACTIVITY_TONE 이 Record<ActivityKind, …> 라 빠뜨리면 타입은 통과하고
+  // 이력 탭이 <undefined /> 로 터진다. 실제로 코드리뷰에서 잡혔다.
+  | "note.sent"
+  | "note.answered"
   | "attachment.added"
   | "attachment.removed"
   | "handover.started"
@@ -620,6 +625,9 @@ export const ACTIVITY_TONE: Record<ActivityKind, ActivityTone> = {
   "section.updated": "내용",
   "comment.created": "대화",
   "comment.deleted": "대화",
+  // 쪽지도 대화다 — 안에서 한 것과 밖에 물어본 것이 같은 색으로 묶인다.
+  "note.sent": "대화",
+  "note.answered": "대화",
   "attachment.added": "내용",
   "attachment.removed": "내용",
   "handover.started": "인계",

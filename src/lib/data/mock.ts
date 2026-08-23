@@ -347,6 +347,20 @@ export async function listNoteThreads(viewer: Profile): Promise<NoteThread[]> {
   );
 }
 
+export async function getNoteThread(
+  threadId: string,
+  viewer: Profile,
+): Promise<NoteThread | null> {
+  const rows = notes.filter((n) => n.thread_id === threadId && !n.deleted_at);
+  if (rows.length === 0) return null;
+  const mine = rows.some(
+    (n) => n.author_id === viewer.id || n.recipient_id === viewer.id,
+  );
+  if (!mine) return null;
+  const title = works.find((w) => w.id === rows[0].work_id)?.title ?? "업무";
+  return groupThreads(rows.map(withPeople), viewer.id, () => title)[0] ?? null;
+}
+
 export async function getWorkNoteThreads(
   workId: string,
   viewer: Profile,

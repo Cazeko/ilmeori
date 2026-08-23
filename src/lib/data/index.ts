@@ -67,6 +67,9 @@ export const listProfiles = () => impl.listProfiles();
  */
 export const listNoteThreads = (viewer: Profile) => impl.listNoteThreads(viewer);
 
+export const getNoteThread = (threadId: string, viewer: Profile) =>
+  impl.getNoteThread(threadId, viewer);
+
 export const getWorkNoteThreads = (
   workId: string,
   viewer: Profile,
