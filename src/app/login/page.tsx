@@ -157,7 +157,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
                 ["35.0%", "현행 인계가 비효율적이라는 응답"],
               ].map(([figure, label]) => (
                 <div key={label}>
-                  <dt className="text-h3 leading-none font-bold tabular-nums text-primary">
+                  {/* 파랑이었다 — 파랑은 「누를 수 있는 것」인데 이 숫자들은
+                      눌리지 않는다(globals.css 의 4갈래 색 언어). 근거 수치는
+                      정보이므로 먹색으로 둔다. */}
+                  <dt className="text-h3 leading-none font-bold tabular-nums text-gray-90">
                     {figure}
                   </dt>
                   <dd className="mt-2 text-body-xs leading-snug break-keep text-gray-60">
@@ -178,7 +181,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             사람이 이 화면에 온 이유는 들어가기 위해서다. 문서 등급으로 올린다 —
             흰 종이, 각진 모서리, 위쪽 2px 먹선. */}
         <div>
-          <div className={cn(CARD_SURFACE.doc, "p-6 sm:p-7")}>
+          <div data-rank="doc" className={cn(CARD_SURFACE.doc, "p-6 sm:p-7")}>
             <h2 className="text-h3 font-bold text-gray-90">
               데모 계정으로 들어가기
             </h2>

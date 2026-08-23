@@ -230,7 +230,7 @@ export default async function ApprovalDetailPage({
           원래부터 종이 언어(검은 괘선·각진 칸)로 그려져 있었으므로, 껍데기가
           그제야 안쪽과 같은 말을 하게 된다. */}
       <section aria-labelledby="approval-grid-heading" className="mb-6">
-        <div className={cn(CARD_SURFACE.doc, "p-6")}>
+        <div data-rank="doc" className={cn(CARD_SURFACE.doc, "p-6")}>
           <h2
             id="approval-grid-heading"
             className="mb-4 text-h3 font-bold text-gray-90"

@@ -43,7 +43,7 @@ export function ProgressSteps({ current }: { current: HandoverStatus }) {
               <span
                 aria-hidden
                 className={cn(
-                  "flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
+                  "flex size-5 shrink-0 items-center justify-center rounded-full text-body-xs font-bold",
                   // 끝난 단계는 초록이었다. 이 화면에서 색이 뜨는 자리는
                   // 「지금 어느 단계인가」(주황) 하나여야 한다 — 끝난 단계가
                   // 지금 단계만큼 튀면 어디까지 왔는지가 오히려 흐려진다.

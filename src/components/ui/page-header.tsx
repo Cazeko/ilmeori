@@ -25,7 +25,12 @@ const TITLE = {
   // 좁은 화면에서는 24px 로 둔다 — 320px 폭에서 32px 제목은 두 줄이 되고,
   // 그러면 본문이 접힌 만큼 아래로 밀린다.
   lg: "text-h2 font-bold break-keep text-gray-90 sm:text-h1",
-  sm: "text-body-sm font-bold break-keep text-gray-60",
+  // 물러나되 **사라지지는 않는다.** 한동안 15px gray-60 이었는데, 그 값은
+  // 캡션(--text-body-xs 13px)과 본문(17px) 사이에 끼어 있어서 옆에 선 파란
+  // 단추 옆에서 「이 화면의 이름」이 아니라 「단추에 딸린 설명」처럼 읽혔다.
+  // 17px gray-90 이면 본문 한 줄의 무게다 — 읽히되 1등을 주장하지 않는다.
+  // 1등을 막는 것은 크기가 아니라 **그 아래에 문서 등급이 서 있다는 사실**이다.
+  sm: "text-body font-bold break-keep text-gray-90",
 } as const;
 
 const GAP = { lg: "mb-6", sm: "mb-4" } as const;

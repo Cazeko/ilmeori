@@ -68,7 +68,7 @@ export function CommentThread({
                       ) : null}
                     </span>
                     {mine ? (
-                      <span className="rounded-xs bg-primary-5 px-chip-x py-chip-y text-[11px] font-bold text-primary">
+                      <span className="rounded-xs bg-accent-bg px-chip-x py-chip-y text-body-xs font-bold text-accent-text">
                         나
                       </span>
                     ) : null}

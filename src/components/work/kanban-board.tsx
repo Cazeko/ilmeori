@@ -16,14 +16,49 @@ import { STATUS_LABEL, type WorkListItem, type WorkStatus } from "@/lib/types";
 
 const COLUMNS: WorkStatus[] = ["todo", "doing", "review", "done"];
 
+/**
+ * 열 이름 앞의 점 — 색이 아니라 **명도**로 나눈다.
+ *
+ * 예전에는 열 위에 3px 띠를 넷 다 다른 상태색(회색·파랑·황토·초록)으로 칠했다.
+ * 열 이름이 이미 「대기·진행중·검토·완료」라고 적고 있는데 그 위에 색을 한 겹
+ * 더 얹은 것이라, 정보는 안 늘고 화면의 색만 넷 늘었다. 그래서 걷어냈고,
+ * 그 뒤로는 네 열이 완전히 같은 회색이 되어 훑을 때 구분이 되지 않았다.
+ *
+ * 색을 되살리는 대신 **이 제품이 이미 정한 축**을 쓴다 — status-badge.tsx 가
+ * 적어 둔 명도 순서 그대로다.
+ *
+ *   진행중  gray-90  13.17:1   가장 진하다 — 지금 움직이고 있는 것
+ *   검토    gray-70   7.07:1   그 다음
+ *   대기    gray-60   5.13:1   옅다 — 아직 시작하지 않은 것
+ *   완료    gray-50   3.67:1   가장 옅다 — 끝나서 물러난 것
+ *
+ * (대비는 열 머리 바탕 gray-10 기준. 넷 다 비문자 3:1 을 넘는다 —
+ *  tests/contrast.test.mjs 가 잰다)
+ *
+ * 배지(status-badge)는 같은 순서를 못 낸다. 배지의 글자는 4.5:1 을 넘겨야
+ * 하는데 옅은 바탕 두 종류 위에서 네 단계를 그 위쪽에만 욱여넣으면 대기와
+ * 검토가 7.68 대 7.07 로 붙어 버린다(실측). 점은 **글자가 아니라 표식**이라
+ * 3:1 만 넘으면 되고, 그래서 아래쪽 두 칸이 열리며 순서가 비로소 보인다.
+ * 하나뿐인 색 신호(지연)는 오른쪽 「지연 N」 배지가 그대로 나른다.
+ */
+const DOT: Record<WorkStatus, string> = {
+  todo: "bg-gray-60",
+  doing: "bg-gray-90",
+  review: "bg-gray-70",
+  done: "bg-gray-50",
+};
+
 export function KanbanBoard({
   works,
   approvals,
   pickOf,
+  meId,
 }: {
   works: WorkListItem[];
   /** 업무 id → 결재 진행률. 화면이 한 번에 가져와 내려 준다. */
   approvals?: ReadonlyMap<string, ApprovalSummary>;
+  /** 보고 있는 사람. 카드의 참여자 줄에서 내 아바타 하나에만 색이 붙는다. */
+  meId?: string;
   /**
    * 정리 모드일 때, 카드마다 고를 수 있는지 정한다. 없으면 평소의 보드다.
    *
@@ -84,6 +119,13 @@ export function KanbanBoard({
               id={`col-${status}`}
               className="flex min-h-12 items-center gap-2 px-3 text-body-sm font-bold text-gray-60"
             >
+              {/* 점은 장식이 아니라 스캔 속도를 위한 것 — 카드 안의 상태 배지가
+                  쓰는 것과 같은 표식이다. 뜻은 옆의 글자가 이미 나르므로
+                  스크린리더에서는 숨긴다(status-badge.tsx 와 같은 규약). */}
+              <span
+                aria-hidden
+                className={`size-1.5 shrink-0 rounded-full ${DOT[status]}`}
+              />
               {STATUS_LABEL[status]}
               <span className="tabular-nums text-gray-60">{items.length}</span>
               {overdue > 0 ? (
@@ -100,6 +142,7 @@ export function KanbanBoard({
                     work={w}
                     approval={approvals?.get(w.id)}
                     pick={pickOf?.(w)}
+                    meId={meId}
                   />
                 </li>
               ))}

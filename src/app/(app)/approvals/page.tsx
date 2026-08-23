@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FileCheck2, FilePlus2, Hourglass, Inbox } from "lucide-react";
+import { FileCheck2, FilePlus2, Hourglass, Inbox, Info } from "lucide-react";
 import { CARD_SURFACE } from "@/components/ui/card";
 import { ApprovalRow } from "@/components/approval/approval-row";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ActionFeedback } from "@/components/ui/feedback";
-import { Notice } from "@/components/ui/notice";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import {
@@ -92,48 +91,69 @@ export default async function ApprovalsPage({
 
       <ActionFeedback msg={sp.msg} className="mb-4" />
 
-      {/* ── 이 화면의 「문서」 ──────────────────────────────────────────────
-          결재함에서 답해야 하는 물음은 하나다 — **지금 내가 서명할 것이
-          몇 건인가.** 한동안 그 답은 왼쪽 칸 목록의 「대기」 옆에 붙은 13px
-          짜리 숫자였고, 34px 이름표 「결재함」이 화면의 1등이었다.
+      {/* ── 「지금 내 차례」는 알림이 아니라 목록이다 ─────────────────────────
+          한동안 이 자리에 문서 등급의 거대 배너가 있었다 — 46px 짜리 주황
+          숫자를 단 흰 종이. 업무 보드가 같은 시기에 같은 모양이었고, 둘 다
+          같은 함정이었다(DESIGN.md §5.1): **화면의 「문서」는 사용자가 누를
+          대상이어야 하는데, 개수를 세는 상자를 세워 놓은 것**이다.
 
-          문서 등급으로 올린다. 왼쪽 3px 은 주황(rule-alarm 이 아니다) —
-          이건 늦은 것이 아니라 **나를 기다리는 것**이고, 이 제품에서 그
-          뜻을 가진 색은 주황 하나다.
-          0건이면 이 판은 없다. 서명할 것이 없는 날은 조용한 것이 맞다. */}
-      {todoCount > 0 ? (
+          여기는 한 가지가 더 나빴다. 그 배너의 링크가 `/approvals` 였다 —
+          **지금 보고 있는 바로 그 화면**이다(box 의 기본값이 todo 다).
+          화면에서 가장 크고 가장 눈에 띄는 것이 눌러도 아무 일이 없었다.
+
+          그리고 같은 사실이 세 곳에 있었다 — 이 배너 · 왼쪽 칸의 「대기 N」
+          배지 · 오른쪽 목록 머리의 「대기함 N건」.
+
+          그래서 배너를 걷어낸다. 문서 등급은 아래 **결재 목록 그 자체**로
+          가고(진짜로 누를 것이 거기 있다), 이 줄은 다른 칸을 보고 있을 때만
+          「돌아갈 길」로 한 줄 남는다. 왼쪽 3px 은 주황이다 — 이건 늦은 것이
+          아니라 **나를 기다리는 것**이고, 이 제품에서 그 뜻을 가진 색은
+          주황 하나다. */}
+      {todoCount > 0 && box !== "todo" ? (
         <Link
           href="/approvals"
           data-variant="plain"
           className={cn(
-            CARD_SURFACE.doc,
-            "mb-5 flex items-center gap-5 border-l-3 border-l-accent p-6",
+            "mb-4 flex min-h-11 items-center gap-2 border-l-3 border-l-accent px-3",
+            "text-body font-bold text-accent-text",
             // 테두리가 아니라 바탕으로 알린다 — hover:border-* 는 의사클래스라
             // 네 변을 통째로 덮어 왼쪽 경보선까지 지운다(urgent-hero.tsx 주석).
-            "transition-colors duration-150 hover:bg-gray-5 active:bg-primary-5",
+            "transition-colors duration-150 hover:bg-accent-bg active:bg-accent-bg",
           )}
         >
-          <Hourglass aria-hidden className="size-8 shrink-0 text-accent-text" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-h3 font-bold text-gray-90">
-              지금 내 차례
-            </span>
-            <span className="mt-1 block text-body-sm text-gray-60">
-              내가 서명하거나 반려해야 하는 문서입니다
-            </span>
+          <Hourglass aria-hidden className="size-4 shrink-0" />
+          <span>
+            지금 내 차례 <span className="tabular-nums">{todoCount}</span>건
           </span>
-          <span className="shrink-0 text-figure font-bold tabular-nums text-accent-text">
-            {todoCount}
-            <span className="ml-1 text-h3 font-normal text-gray-60">건</span>
+          <span className="text-body-sm font-normal text-gray-60">
+            대기함으로
           </span>
+          <LinkPending />
         </Link>
       ) : null}
 
+      {/* ── 읽기 전용 안내는 「여백」이다 ────────────────────────────────────
+          한동안 이 자리가 채운 파란 판이었다. 실눈 시험으로 재 보니 **이
+          화면에서 가장 무거운 덩어리가 그 안내문**이었고, 정작 서명해야 할
+          문서 목록보다 위에 있었다(§9.1 의 자리 검사가 잡아냈다).
+
+          안내를 지우는 것이 아니라 무게를 맞춘다. 이것은 사건이 아니라 늘
+          참인 상태이고, 「시연용 가상 데이터」는 머리 줄이 이미 늘 말하고
+          있다(app-shell). 여기서 보태는 것은 「그래서 이 화면에서 무엇을 못
+          하는가」 한 줄뿐이다.
+
+          새 업무·결재 올리기 같은 **폼 화면에서는 판을 그대로 둔다** — 거기서는
+          사용자가 곧 시작할 동작을 막는 말이라 먼저 읽혀야 한다. 여기서는
+          막을 동작 자체가 화면에 없다(단추를 아예 그리지 않는다). */}
       {!canMutate ? (
-        <Notice tone="info" title="지금은 읽기 전용입니다" className="mb-4">
-          데이터베이스에 연결되지 않은 상태에서는 결재를 올리거나 서명할 수
-          없습니다. 결재함·결재란·진행률은 시연용 문서로 그대로 볼 수 있습니다.
-        </Notice>
+        <p className="mb-4 flex items-start gap-2 border-l border-l-rule-hair py-2 pl-3 text-body-sm break-keep text-gray-60">
+          <Info aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
+          <span>
+            지금은 <strong className="font-bold text-gray-70">읽기 전용</strong>
+            입니다 — 결재를 올리거나 서명할 수 없고, 결재함·결재란·진행률은
+            시연용 문서로 그대로 봅니다.
+          </span>
+        </p>
       ) : null}
 
       <div className="grid gap-5 lg:grid-cols-[220px_1fr]">
@@ -205,7 +225,23 @@ export default async function ApprovalsPage({
 
           {list.length > 0 ? (
             <>
-              <ul className="divide-y divide-rule-hair overflow-hidden rounded-sm border border-rule-frame">
+              {/* ── 이 화면의 「문서」 ────────────────────────────────────
+                  대기함일 때만 문서 등급이다 — 흰 종이, 각진 모서리, 위쪽
+                  2px 먹선. 「여기서부터 내가 서명할 것이다」를 종이가 말하는
+                  방식으로 말한다. 다른 칸(상신함·참조함…)은 지나간 것을 보는
+                  자리라 판 등급으로 물러난다.
+
+                  0건이면 문서가 없다. 서명할 것이 없는 날 화면에 1등이 없는
+                  것은 옳다 — 억지로 세울 이유가 없다. */}
+              <ul
+                data-rank={box === "todo" ? "doc" : "panel"}
+                className={cn(
+                  "divide-y divide-rule-hair overflow-hidden",
+                  box === "todo"
+                    ? CARD_SURFACE.doc
+                    : "rounded-sm border border-rule-frame",
+                )}
+              >
                 {list.map((a) => (
                   <ApprovalRow key={a.id} approval={a} viewerId={viewer.id} />
                 ))}

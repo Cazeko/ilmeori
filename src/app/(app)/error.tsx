@@ -43,7 +43,10 @@ export default function AppError({
 
   return (
     <PageContainer width="doc">
-      <div className={cn(CARD_SURFACE.doc, "border-l-3 border-l-rule-alarm p-6")}>
+      <div
+        data-rank="doc"
+        className={cn(CARD_SURFACE.doc, "border-l-3 border-l-rule-alarm p-6")}
+      >
         <AlertTriangle
           aria-hidden
           className="size-8 text-status-overdue-text"

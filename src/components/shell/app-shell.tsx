@@ -376,7 +376,12 @@ export function AppShell({
               {departmentName}
             </span>
           </span>
-          <Avatar profile={viewer} />
+          {/* 색이 붙는 유일한 아바타 자리다. 여기 있는 사람은 언제나 「나」라서
+              구분할 것이 없는데도 색을 주는 이유는 **이 자리가 색의 뜻을
+              가르치기 때문**이다 — 머리 줄에서 이 옅은 주황 원을 본 사람은,
+              업무 카드의 참여자 줄에서 같은 원을 보는 순간 「저기 내가 있다」를
+              배우지 않고 안다(avatar.tsx 의 MINE 주석). */}
+          <Avatar profile={viewer} me />
           {/* /login으로 가는 링크로 두면 안 된다. proxy가 로그인한 사람을
               /login에서 곧바로 홈으로 되돌려보내 눌러도 제자리가 된다.
               계정을 바꾸려면 세션을 실제로 끊어야 하므로 서버 액션을 태운다.

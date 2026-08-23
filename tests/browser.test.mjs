@@ -121,9 +121,12 @@ console.log("\n[1] 인계서 — 대화에서 현안 뽑기");
 
   // ── 2. 인쇄 서식 ──────────────────────────────────────────────────────────
   console.log("\n[2] 인쇄 서식");
-  const sheet = page.locator(".print-sheet");
-  ok("인쇄용 문서가 DOM에 있다", (await sheet.count()) === 1);
-  ok("화면에서는 감춰져 있다", (await sheet.isVisible()) === false);
+  const sheet = page.locator(".sheet");
+  ok("서식이 DOM에 있다", (await sheet.count()) === 1);
+  // 예전에는 `hidden print:block` 이라 **Ctrl+P 를 눌러야만 보였다.** 이 제품에서
+  // 가장 강한 물건이 화면에 없었던 셈이라, 서식을 화면의 「문서」로 올렸다
+  // (DESIGN.md T6). 그래서 여기서 재는 것이 뒤집힌다 — 감춰져 있으면 실패다.
+  ok("서식이 화면에도 보인다", await sheet.isVisible());
 
   const raw = (await sheet.textContent()) ?? "";
   ok("서식 제목이 있다", raw.includes("업무인계·인수서"));
@@ -368,16 +371,16 @@ console.log("\n[5] 코드리뷰 수정분");
   await page.goto(`${BASE}/handover`, { waitUntil: "domcontentloaded" });
   await page.emulateMedia({ media: "print" });
   const th = await page
-    .locator(".print-sheet thead th")
+    .locator(".sheet thead th")
     .first()
     .evaluate((el) => getComputedStyle(el).fontWeight);
   ok("인쇄용 표 머리글이 굵다", th === "700", th);
   const td = await page
-    .locator(".print-sheet tbody td")
+    .locator(".sheet tbody td")
     .first()
     .evaluate((el) => getComputedStyle(el).fontWeight);
   ok("데이터 칸은 굵지 않다", td === "400", td);
-  const foot = (await page.locator(".print-sheet footer").textContent()) ?? "";
+  const foot = (await page.locator(".sheet footer").textContent()) ?? "";
   ok(
     "인계 시작 시각과 인쇄본 조립 시각을 나눠 적는다",
     foot.includes("인계 시작") && foot.includes("이 인쇄본은"),
@@ -542,7 +545,7 @@ console.log("\n[7] 인계서 보충 — 스크립트 없이 적고, 종이에 �
     ok("아직 비어 있으면 「사람이 직접 적어야 합니다」", before.includes("사람이 직접 적어야 합니다"));
     ok(
       "종이에는 손으로 적을 빈칸이 인쇄된다",
-      (await page.locator(".print-sheet div.border-black").count()) === 1,
+      (await page.locator(".sheet div.border-black").count()) === 1,
     );
 
     const text = `${MARK} 물품관리대장 확인 결과 인계 대상 물품 3건(노트북 1, 계측기 2).`;
@@ -582,12 +585,12 @@ console.log("\n[7] 인계서 보충 — 스크립트 없이 적고, 종이에 �
       ok("적어 넣은 뒤에는 「적어야 합니다」가 남지 않는다", !after.includes("직접 적어야 합니다"));
       ok("규칙이 뽑은 문단은 그대로다 (대화 인용이 사라지지 않았다)", after.includes("[대화 —"));
 
-      const sheet = (await page.locator(".print-sheet").textContent()) ?? "";
+      const sheet = (await page.locator(".sheet").textContent()) ?? "";
       ok("종이에도 실린다", sheet.includes(text));
       ok("종이에서는 이름과 날짜가 붙는다", sheet.includes("인계자 보충 — 박준호"));
       ok(
         "적어 넣었으면 손으로 적을 빈칸은 인쇄하지 않는다",
-        (await page.locator(".print-sheet div.border-black").count()) === 0,
+        (await page.locator(".sheet div.border-black").count()) === 0,
       );
       ok("종이에서도 「적어야 하는 칸」 안내가 사라진다", !sheet.includes("직접 적어야 하는 칸입니다"));
       ok(
@@ -832,7 +835,7 @@ console.log("\n[9] 온나라로 넘기기 — 근거 꼬리표가 붙은 내보�
     );
 
     // ── 종이 ──────────────────────────────────────────────────────────────
-    const sheet = park.locator(".print-sheet");
+    const sheet = park.locator(".sheet");
     ok("인쇄용 문서가 DOM에 있다", (await sheet.count()) === 1);
     ok("화면에서는 감춰져 있다", (await sheet.isVisible()) === false);
     const paper = (await sheet.textContent()) ?? "";

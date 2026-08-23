@@ -68,15 +68,21 @@ function toneOf(work: WorkListItem) {
 export function UrgentHero({
   work,
   approval,
+  meId,
 }: {
   work: WorkListItem;
   approval?: ApprovalSummary;
+  /** 보고 있는 사람. 참여자 줄에서 내 아바타 하나에만 색이 붙는다(avatar.tsx). */
+  meId?: string;
 }) {
   const tone = toneOf(work);
   const cross = work.department_count > 1;
 
   return (
     <article
+      // 실눈 시험이 이 표식을 찾는다 — 흐리게 봤을 때 가장 무거운 자리가
+      // 문서 위인지 본다(tests/squint.test.mjs, card.tsx 의 CARD_SURFACE 주석).
+      data-rank="doc"
       className={cn(
         // 이 화면의 「문서」다. 겉모양은 card.tsx 의 doc 등급을 그대로 가져다
         // 쓴다(<article> 이라 Card 컴포넌트를 못 쓴다).
@@ -140,7 +146,11 @@ export function UrgentHero({
       </p>
 
       <div className="mt-5 flex items-center justify-between gap-3 border-t border-rule-hair pt-4">
-        <AvatarStack people={work.members.map((m) => m.profile)} max={6} />
+        <AvatarStack
+          people={work.members.map((m) => m.profile)}
+          max={6}
+          meId={meId}
+        />
         <span className="flex items-center gap-4 text-body-sm text-gray-60">
           {work.comment_count > 0 ? (
             <span className="inline-flex items-center gap-2">

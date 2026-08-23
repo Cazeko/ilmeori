@@ -237,7 +237,11 @@ export default async function HomePage() {
 
         {hero ? (
           <>
-            <UrgentHero work={hero} approval={approvals.get(hero.id)} />
+            <UrgentHero
+              work={hero}
+              approval={approvals.get(hero.id)}
+              meId={viewer.id}
+            />
             {alsoUrgent.length > 0 ? (
               <div className="mt-4">
                 <h3 className="mb-1 px-2 text-body-xs font-bold text-gray-60">

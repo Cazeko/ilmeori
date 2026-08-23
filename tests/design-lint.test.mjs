@@ -318,6 +318,37 @@ for (const { path, code } of tsxFiles) {
 ok("hover·active 가 뜻 있는 선을 덮지 않는다", wipedEdges);
 
 // ---------------------------------------------------------------------------
+console.log("\n문서 등급은 자기가 문서라고 말하는가");
+// ---------------------------------------------------------------------------
+/*
+ * 실눈 시험(tests/squint.test.mjs)은 두 가지를 묻는다 — 흐리게 봤을 때
+ * 덩어리가 하나 서는가(무게), 그 덩어리가 **「문서」 위에 있는가**(자리).
+ * 두 번째 물음은 화면이 `data-rank="doc"` 로 「이 화면의 1등은 이것」이라고
+ * 선언해야 성립한다.
+ *
+ * 선언을 빠뜨리면 **시험이 실패하지 않는다. 조용히 아무것도 안 잰다.** 통과만
+ * 하는 시험은 시험이 아니므로, 겉모양(CARD_SURFACE.doc)을 가져다 쓴 자리에
+ * 선언이 붙어 있는지 여기서 본다.
+ *
+ * Card·CardPad 컴포넌트는 자기가 알아서 붙이므로(card.tsx) 걸릴 일이 없다.
+ * 걸리는 것은 <article>·<header>·<ul> 처럼 그 컴포넌트를 못 쓰는 자리다.
+ */
+const NEAR_RANK = 400;
+const unmarkedDoc = [];
+for (const { path, code } of tsxFiles) {
+  for (const m of code.matchAll(/CARD_SURFACE\.doc\b/g)) {
+    const around = code.slice(
+      Math.max(0, m.index - NEAR_RANK),
+      m.index + NEAR_RANK,
+    );
+    if (/data-rank=/.test(around)) continue;
+    const line = code.slice(0, m.index).split("\n").length;
+    unmarkedDoc.push(`${path}:${line}  CARD_SURFACE.doc 옆에 data-rank="doc" 이 없다`);
+  }
+}
+ok("문서 겉모양에는 문서 표식이 붙어 있다", unmarkedDoc);
+
+// ---------------------------------------------------------------------------
 console.log("\n스트리밍 — loading.tsx 를 두지 않는다");
 // ---------------------------------------------------------------------------
 /*

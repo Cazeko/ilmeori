@@ -127,7 +127,12 @@ function contrast(fg, bg, min, where) {
  */
 function ordered(...args) {
   const label = args.pop();
-  const values = args.map((n) => ({ name: n, r: ratio(resolve(n), resolve("surface")) }));
+  return orderedOn("surface", args, label);
+}
+
+/** 위와 같되 바탕을 고른다 — 열 머리의 점은 판이 아니라 gray-10 위에 놓인다. */
+function orderedOn(bg, names, label) {
+  const values = names.map((n) => ({ name: n, r: ratio(resolve(n), resolve(bg)) }));
   const rising = values.every((v, i) => i === 0 || v.r > values[i - 1].r);
   const shown = values.map((v) => `${v.name} ${v.r.toFixed(2)}`).join(" < ");
   if (rising) {
@@ -197,6 +202,29 @@ contrast("gray-0", "gray-80", 4.5, "상태 바꾸기의 켜진 칸");
 console.log("\n아바타 — 사람 얼굴 자리는 화면에서 채도가 가장 높으면 안 된다");
 contrast("gray-70", "gray-10", 4.5, "아바타 글자");
 contrast("gray-60", "gray-10", 4.5, "아바타 겹침의 +N");
+// 색이 붙는 아바타는 「나」 하나뿐이다(avatar.tsx 의 MINE). 사람마다 색을 주지
+// 않는 이유는 그 파일 머리글에 있다 — 여기서는 그 하나가 읽히는지만 잰다.
+contrast("accent-text", "accent-bg", 4.5, "「나」 아바타 글자");
+
+console.log("\n한 줄 알림 — 판이 아니라 **바탕** 위에 놓인다");
+// 「기한이 지난 업무 2건」·「지금 내 차례 3건」은 상자를 벗고 여백 등급으로
+// 내려왔다(DESIGN.md §5.1). 상자가 없으니 바탕은 surface 가 아니라 gray-5 이고,
+// gray-5 는 surface 보다 어두우므로 판 위에서 잰 값으로는 이 자리를 보증하지
+// 못한다. 17px 본문이라 요구는 4.5:1 이다.
+contrast("status-overdue-text", "gray-5", 4.5, "지연 한 줄");
+contrast("accent-text", "gray-5", 4.5, "「지금 내 차례」 한 줄");
+contrast("gray-60", "gray-5", 4.5, "그 줄의 꼬리말");
+
+console.log("\n열 머리의 점 — 색이 아니라 명도로 넷을 나눈다");
+// 칸반 열 이름 앞의 점(kanban-board.tsx 의 DOT). 글자가 아니라 표식이므로
+// 요구는 비문자 3:1 이다. 넷이 **서로 구별되는 순서**인지가 요점이고,
+// 그 순서는 status-badge.tsx 가 적어 둔 「진행중 > 검토 > 대기 > 완료」다.
+contrast("gray-50", "gray-10", 3, "완료 점 — 가장 옅다");
+orderedOn(
+  "gray-10",
+  ["gray-50", "gray-60", "gray-70", "gray-90"],
+  "완료 < 대기 < 검토 < 진행중",
+);
 
 console.log("\n선 굵기 네 단 — 이 시스템의 주력 위계 축");
 // 네 단이 **서로 구별되는지**가 요점이다. 값이 하나라도 이웃과 붙으면 축이

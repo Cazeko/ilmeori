@@ -170,6 +170,7 @@ export default async function HandoverPage({
           항목마다 붙는 근거 꼬리표는 여기 없다. 그것은 아래 확인 구역의 일이고,
           결재에 올라가는 종이에서 꼬리표는 서식을 어지럽힌다. */}
       <div
+        data-rank="doc"
         className={cn(
           CARD_SURFACE.doc,
           "mb-6 p-6 sm:p-10",
@@ -744,7 +745,11 @@ async function HandoverStandby({
                       <dt className="text-body-xs font-bold text-gray-60">
                         {label}
                       </dt>
-                      <dd className="mt-1 text-h2 leading-none font-bold tabular-nums text-primary">
+                      {/* 파랑이었다. 이 제품에서 파랑은 「누를 수 있는 것」
+                          하나만 가리키는데(globals.css 의 4갈래), 이 숫자들은
+                          눌리지 않는다. 색 언어가 거짓말을 하고 있었다 —
+                          정보는 먹색이다. */}
+                      <dd className="mt-1 text-h2 leading-none font-bold tabular-nums text-gray-90">
                         {value}
                         <span className="ml-1 text-body-sm font-normal text-gray-60">
                           건
