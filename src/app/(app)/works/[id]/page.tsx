@@ -29,6 +29,7 @@ import { TabNav, type TabItem } from "@/components/ui/tab-nav";
 import { ActivityTimeline } from "@/components/work/activity-timeline";
 import { AttachmentPanel } from "@/components/work/attachment-panel";
 import { CommentThread } from "@/components/work/comment-thread";
+import { WorkNotes } from "@/components/note/work-notes";
 import { DocSections } from "@/components/work/doc-sections";
 import { DocPreview } from "@/components/editor/doc-preview";
 import { docTitle, parseRichDoc } from "@/lib/editor/model";
@@ -43,6 +44,7 @@ import {
   getAccessLogsForWork,
   getActivities,
   getApprovalsForWork,
+  getWorkNoteThreads,
   getAttachments,
   getComments,
   getWork,
@@ -135,6 +137,7 @@ export default async function WorkDetailPage({
     attachments,
     accessLogs,
     approvals,
+    noteThreads,
   ] = await Promise.all([
     getWorkDocument(work.id),
     getComments(work.id),
@@ -142,6 +145,11 @@ export default async function WorkDetailPage({
     getAttachments(work.id),
     getAccessLogsForWork(work.id, viewer),
     getApprovalsForWork(viewer, work.id),
+    // 「바깥에 물어본 것」은 대화 탭에만 그린다. 다른 탭을 볼 때마다 쪽지를
+    // 읽어 올 이유가 없다(아래 candidates 와 같은 판단).
+    tab === "talk"
+      ? getWorkNoteThreads(work.id, viewer, work.title)
+      : Promise.resolve([]),
   ]);
 
   /**
@@ -154,9 +162,26 @@ export default async function WorkDetailPage({
    */
   const richDoc = doc ? parseRichDoc(doc.blocks) : null;
 
-  // 부를 수 있는 사람 목록은 참여자 탭에서 소유자에게만 필요하다.
-  // 다른 탭을 볼 때마다 전 직원을 읽어 올 이유가 없다.
-  const candidates = tab === "people" && canOwn ? await listProfiles() : [];
+  // 부를 수 있는 사람 목록은 두 자리에서 쓴다 — 참여자 탭(소유자만)과
+  // 대화 탭의 쪽지 보내기. 다른 탭을 볼 때마다 전 직원을 읽어 올 이유가 없다.
+  const candidates =
+    (tab === "people" && canOwn) || tab === "talk" ? await listProfiles() : [];
+
+  /**
+   * 쪽지를 보낼 수 있는 사람 — **참여자와 나를 뺀 전 직원.**
+   *
+   * 참여자를 빼는 것이 이 기능의 뜻을 설명 없이 드러낸다. 참여자에게는 위의
+   * 대화로 말하면 되고 그 글은 업무를 볼 수 있는 모두가 읽는다. 쪽지는 그
+   * 반대편, 공개 범위 밖이라 댓글이 닿지 않는 사람을 위한 것이다.
+   */
+  const outsiders =
+    tab === "talk"
+      ? candidates.filter(
+          (p) =>
+            p.id !== viewer.id &&
+            !work.members.some((m) => m.profile_id === p.id),
+        )
+      : [];
 
   // 누가 열어 봤는지 남긴다. 사용자에게는 이 표에 쓰기 권한이 없고,
   // 서버의 지정된 함수만 기록할 수 있다.
@@ -443,11 +468,22 @@ export default async function WorkDetailPage({
             ) : null}
 
             {tab === "talk" ? (
-              <CommentThread
-                workId={work.id}
-                comments={comments}
-                viewer={viewer}
-              />
+              <>
+                <CommentThread
+                  workId={work.id}
+                  comments={comments}
+                  viewer={viewer}
+                />
+                {/* 새 탭을 만들지 않았다. 안에서 한 대화와 밖에 물어본 것이
+                    한 화면에 나란히 있어야 인계서가 둘 다 읽는다는 말이
+                    화면에서도 보인다(설계 §6). */}
+                <WorkNotes
+                  workId={work.id}
+                  threads={noteThreads}
+                  viewer={viewer}
+                  candidates={outsiders}
+                />
+              </>
             ) : null}
 
             {tab === "approval" ? (

@@ -23,6 +23,7 @@ import {
   documents,
   handoverItems,
   handovers,
+  notes,
   workMembers,
   works,
 } from "@/lib/mock/works";
@@ -35,6 +36,7 @@ import type {
   WorkRecords,
 } from "./types";
 import { approvalProgress, byRecent } from "@/lib/approval";
+import { groupThreads } from "@/lib/note";
 import { daysUntil } from "@/lib/format";
 import {
   derivedStatus,
@@ -50,6 +52,9 @@ import {
   type Document,
   type Handover,
   type MemberWithProfile,
+  type Note,
+  type NoteThread,
+  type NoteWithPeople,
   type Profile,
   type ProfileWithDepartment,
   type Work,
@@ -289,6 +294,61 @@ export async function getComments(workId: string): Promise<CommentWithAuthor[]> 
   return [...comments.filter((c) => c.work_id === workId && !c.deleted_at), ...extra]
     .map((c) => ({ ...c, author: requireProfile(c.author_id) }))
     .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+/**
+ * 쪽지.
+ *
+ * db 구현과 같은 것을 흉내 낸다 — 읽는 사람은 셋이다(보낸 사람 · 받은 사람 ·
+ * 그 업무를 읽을 수 있는 사람). 목업에서도 계정을 바꾸면 보이는 쪽지가 실제로
+ * 달라져야, 「권한은 DB가 강제한다」가 화면에서 확인 가능한 주장이 된다.
+ *
+ * **데모 모드에서는 쪽지를 보낼 수 없다.** 쿠키 4KB 에 1,000자짜리 쪽지를 담기
+ * 시작하면 몇 통 만에 넘치고, 브라우저는 넘친 쿠키를 조용히 통째로 버린다.
+ * 방금 보낸 쪽지가 새로고침하면 사라지는 화면은 없는 것만 못하다
+ * (getHandoverNotes 와 같은 판단이다). 화면은 canMutate 로 쓰는 칸 자체를
+ * 그리지 않으므로, 적을 곳이 있는데 안 저장되는 상태는 생기지 않는다.
+ */
+function withPeople(n: Note): NoteWithPeople {
+  return {
+    ...n,
+    author: requireProfile(n.author_id),
+    recipient: requireProfile(n.recipient_id),
+  };
+}
+
+/** 이 사람이 이 쪽지를 읽을 수 있는가 — 0019 의 note_select 정책과 같은 규칙. */
+async function canReadNote(n: Note, viewer: Profile): Promise<boolean> {
+  if (n.author_id === viewer.id || n.recipient_id === viewer.id) return true;
+  const work = works.find((w) => w.id === n.work_id);
+  if (!work) return false;
+  const state = await getDemoState();
+  return canRead(work, viewer, overlayMembers(work.id, membersOf(work.id), state));
+}
+
+export async function listNoteThreads(viewer: Profile): Promise<NoteThread[]> {
+  const mine = notes.filter(
+    (n) => !n.deleted_at && (n.author_id === viewer.id || n.recipient_id === viewer.id),
+  );
+  const titles = new Map(works.map((w) => [w.id, w.title]));
+  return groupThreads(
+    mine.map(withPeople),
+    viewer.id,
+    (id) => titles.get(id) ?? "업무",
+  );
+}
+
+export async function getWorkNoteThreads(
+  workId: string,
+  viewer: Profile,
+  workTitle: string,
+): Promise<NoteThread[]> {
+  const here = notes.filter((n) => n.work_id === workId && !n.deleted_at);
+  const allowed: Note[] = [];
+  for (const n of here) {
+    if (await canReadNote(n, viewer)) allowed.push(n);
+  }
+  return groupThreads(allowed.map(withPeople), viewer.id, () => workTitle);
 }
 
 export async function getAttachments(workId: string): Promise<AttachmentWithUploader[]> {

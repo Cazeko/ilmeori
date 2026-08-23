@@ -56,6 +56,25 @@ export const gatherForWorks = (workIds: string[]) =>
 export const listProfiles = () => impl.listProfiles();
 
 /**
+ * 쪽지 — 두 함수가 서로 다른 것을 묻는다.
+ *
+ *   listNoteThreads    「내가 주고받은 것」  → 쪽지함
+ *   getWorkNoteThreads 「이 업무에 오간 것」 → 업무 상세의 「바깥에 물어본 것」
+ *
+ * 후자에는 내가 낀 적 없는 실도 나온다. 그게 맞다 — 쪽지는 사적 대화가 아니라
+ * **업무 기록**이고, 그래야 주담당이 인계서를 뽑을 때 그 문답이 실린다
+ * (supabase/migrations/0019 의 note_select 정책과 같은 규칙).
+ */
+export const listNoteThreads = (viewer: Profile) => impl.listNoteThreads(viewer);
+
+export const getWorkNoteThreads = (
+  workId: string,
+  viewer: Profile,
+  workTitle: string,
+) => impl.getWorkNoteThreads(workId, viewer, workTitle);
+
+
+/**
  * 결재.
  *
  * 두 구현 모두 **뷰어를 첫 인자로 받는다.** 대화·첨부와 달리 「누가 보는가」에
@@ -116,6 +135,15 @@ export const getHandoverNotes = (
   handoverId: string,
 ): Promise<HandoverNoteWithAuthor[]> =>
   isSupabaseConfigured ? db.getHandoverNotes(handoverId) : Promise.resolve([]);
+
+/**
+ * 실을 열면 읽음으로 표시한다. 목업에는 찍을 곳이 없다 — 데모 모드는 쪽지를
+ * 보내지도 읽음 표시를 남기지도 않는다(logAccess 와 같은 판단).
+ */
+export const markThreadRead = (threadId: string, viewerId: string) =>
+  isSupabaseConfigured
+    ? db.markThreadRead(threadId, viewerId)
+    : Promise.resolve();
 
 export const listAccessLogs = (viewer: Profile, limit?: number) =>
   impl.listAccessLogs(viewer, limit);

@@ -11,6 +11,7 @@ import {
   ArrowLeftRight,
   Columns3,
   LayoutDashboard,
+  Mail,
   Menu,
   Repeat,
   ScrollText,
@@ -48,6 +49,10 @@ const NAV: Array<{ heading: string; items: NavItem[] }> = [
       { href: "/", label: "홈", icon: LayoutDashboard },
       { href: "/works", label: "업무 보드", icon: Columns3 },
       { href: "/approvals", label: "결재", icon: Stamp },
+      // 결재 옆에 둔다. 둘 다 「함」이다 — 와 있는 것을 확인하는 자리.
+      // 인계·인수는 맨 뒤를 지킨다. 이 제품의 마지막 한 방이라 순서에서 밀리면
+      // 안 된다(docs/plans/2026-08-23-쪽지-알림-design.md §6).
+      { href: "/notes", label: "쪽지", icon: Mail },
       { href: "/handover", label: "인계·인수", icon: ArrowLeftRight },
     ],
   },

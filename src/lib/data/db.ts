@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { approvalProgress, byRecent } from "@/lib/approval";
+import { groupThreads } from "@/lib/note";
 import { daysUntil } from "@/lib/format";
 import {
   derivedStatus,
@@ -19,6 +20,8 @@ import {
   type Handover,
   type HandoverNoteWithAuthor,
   type MemberWithProfile,
+  type NoteThread,
+  type NoteWithPeople,
   type Profile,
   type ProfileWithDepartment,
   type Work,
@@ -332,6 +335,92 @@ export async function getComments(workId: string): Promise<CommentWithAuthor[]> 
     .order("created_at");
   if (error) throw error;
   return (data ?? []) as unknown as CommentWithAuthor[];
+}
+
+/**
+ * 쪽지.
+ *
+ * RLS 가 읽는 사람을 셋으로 열어 둔다 — 보낸 사람 · 받은 사람 · **그 업무를
+ * 읽을 수 있는 사람**(0019). 그래서 아래 두 함수는 서로 다른 것을 묻는다.
+ *
+ *   listNoteThreads   「내가 주고받은 것」  → 쪽지함
+ *   getWorkNoteThreads「이 업무에 오간 것」 → 업무 상세의 「바깥에 물어본 것」
+ *
+ * 후자에는 내가 낀 적 없는 실도 나온다. 그게 맞다 — 쪽지는 사적 대화가 아니라
+ * 업무 기록이고, 그래야 주담당이 인계서를 뽑을 때 그 문답이 실린다.
+ */
+const NOTE_SELECT = `*, author:author_id ( ${PROFILE_SELECT} ), recipient:recipient_id ( ${PROFILE_SELECT} )`;
+
+/** 쪽지함이 한 번에 보는 상한. 결재함(100)과 같은 규약이고 화면이 그 사실을 적는다. */
+export const NOTE_LIMIT = 100;
+
+export async function listNoteThreads(viewer: Profile): Promise<NoteThread[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("note")
+    .select(`${NOTE_SELECT}, work:work_id ( id, title )`)
+    // 이 파일 머리글이 or(...) 를 경계하는 이유는 **검색어 같은 자유 문자열**이
+    // 질의를 깨기 때문이다. 여기 들어가는 것은 세션에서 온 uuid 하나뿐이라
+    // 쉼표도 괄호도 들어올 수 없다.
+    .or(`author_id.eq.${viewer.id},recipient_id.eq.${viewer.id}`)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(NOTE_LIMIT);
+  if (error) throw error;
+
+  const rows = (data ?? []) as unknown as Array<
+    NoteWithPeople & { work: { id: string; title: string } | null }
+  >;
+  const titles = new Map(rows.map((r) => [r.work_id, r.work?.title ?? "업무"]));
+  return groupThreads(rows, viewer.id, (id) => titles.get(id) ?? "업무");
+}
+
+export async function getWorkNoteThreads(
+  workId: string,
+  viewer: Profile,
+  workTitle: string,
+): Promise<NoteThread[]> {
+  if (!UUID.test(workId)) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("note")
+    .select(NOTE_SELECT)
+    .eq("work_id", workId)
+    .is("deleted_at", null)
+    .order("created_at");
+  if (error) throw error;
+
+  return groupThreads(
+    (data ?? []) as unknown as NoteWithPeople[],
+    viewer.id,
+    () => workTitle,
+  );
+}
+
+/**
+ * 실을 열면 나에게 온 안 읽은 쪽지에 읽음 시각을 찍는다.
+ *
+ * 화면을 그리는 중에 부른다 — `logAccess` 가 같은 자리에서 같은 방식으로
+ * 돈다. 실패해도 삼킨다. 읽음 표시 하나 때문에 쪽지를 못 보게 될 이유가 없다.
+ *
+ * `is("read_at", null)` 이 있어야 **처음 읽은 시각**이 남는다. 다시 열 때마다
+ * 덮어쓰면 그 값은 「마지막으로 본 때」가 되는데, 보낸 사람이 보는 표시는
+ * 「언제 읽었나」다(0019 의 칸 잠금도 되돌리기를 막는다).
+ */
+export async function markThreadRead(threadId: string, viewerId: string) {
+  if (!UUID.test(threadId)) return;
+  try {
+    const supabase = await createClient();
+    await supabase
+      .from("note")
+      .update({ read_at: new Date().toISOString() })
+      .eq("thread_id", threadId)
+      .eq("recipient_id", viewerId)
+      .is("read_at", null);
+  } catch {
+    // 무시
+  }
 }
 
 export async function getAttachments(

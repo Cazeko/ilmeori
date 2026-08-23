@@ -227,6 +227,27 @@ export interface Comment {
   created_at: string;
 }
 
+/**
+ * 쪽지 — 메신저가 아니라 **업무를 물고 다니는 문의**다.
+ *
+ * `work_id` 가 optional 이 아닌 것이 이 타입의 전부다. 업무 없는 쪽지를
+ * 허용하는 순간 지식이 업무 밖으로 새는 통로가 열린다
+ * (docs/plans/2026-08-23-쪽지-알림-design.md §1, supabase/migrations/0019).
+ */
+export interface Note {
+  id: string;
+  work_id: string;
+  /** 첫 쪽지의 id. 답장이 같은 실에 묶인다. 뿌리 쪽지는 thread_id = id. */
+  thread_id: string;
+  author_id: string;
+  recipient_id: string;
+  body: string;
+  /** 받은 사람이 연 시각. 보낸 사람 화면에 「보냄」 → 「읽음」으로 나타난다. */
+  read_at: string | null;
+  deleted_at: string | null;
+  created_at: string;
+}
+
 export interface Handover {
   id: string;
   from_profile_id: string;
@@ -338,6 +359,30 @@ export interface ActivityWithActor extends Activity {
 
 export interface CommentWithAuthor extends Comment {
   author: Profile;
+}
+
+export interface NoteWithPeople extends Note {
+  author: Profile;
+  recipient: Profile;
+}
+
+/**
+ * 쪽지 실 하나. 쪽지함의 한 줄이자 업무 상세의 한 덩어리다 — 같은 것을 두
+ * 자리에서 보는 것이지 복사가 아니다.
+ */
+export interface NoteThread {
+  thread_id: string;
+  work: { id: string; title: string };
+  /**
+   * 보는 사람 기준의 상대. 쪽지함에서 「누구와의 대화인가」다.
+   * 업무 상세처럼 제3자가 볼 때는 뿌리 쪽지를 **받은** 사람이 온다 —
+   * 그 화면에서 궁금한 것은 「바깥의 누구에게 물었나」이기 때문이다.
+   */
+  counterpart: Profile;
+  notes: NoteWithPeople[];
+  /** 나에게 온 것 중 아직 안 읽은 수. 제3자에게는 언제나 0이다. */
+  unread: number;
+  last_at: string;
 }
 
 export interface AttachmentWithUploader extends Attachment {
