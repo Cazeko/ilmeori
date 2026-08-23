@@ -22,6 +22,8 @@ import {
   type MemberWithProfile,
   type NoteThread,
   type NoteWithPeople,
+  type AppNotification,
+  type NotificationWithActor,
   type Profile,
   type ProfileWithDepartment,
   type Work,
@@ -436,6 +438,70 @@ export async function markThreadRead(threadId: string, viewerId: string) {
   } catch {
     // 무시
   }
+}
+
+/**
+ * 알림.
+ *
+ * RLS 가 `recipient_id = auth.uid()` 로 잠가 두었으므로 여기서 다시 거르지
+ * 않는다(이 파일 머리글의 규칙). 만드는 길은 `app.notify` 하나뿐이라 앱에는
+ * insert 경로가 아예 없다.
+ */
+export async function listNotifications(
+  _viewer: Profile,
+  limit: number,
+): Promise<NotificationWithActor[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("notification")
+    .select(`*, actor:actor_id ( ${PROFILE_SELECT} )`)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as unknown as NotificationWithActor[];
+}
+
+/** 배지에 쓰는 수. 부분 색인(notification_unread_idx)을 탄다. */
+export async function countUnreadNotifications(_viewer: Profile): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("notification")
+    .select("id", { count: "exact", head: true })
+    .is("read_at", null);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/**
+ * 하나만 읽음으로. 눌린 알림의 목적지를 함께 돌려준다.
+ *
+ * 「종을 열었다」와 「읽었다」는 다르다. 열어 보고 "나중에 봐야지" 하는 것이
+ * 정상 동선이므로, 여는 것만으로는 아무것도 안 지운다.
+ */
+export async function markNotificationRead(
+  id: number,
+): Promise<AppNotification | null> {
+  const supabase = await createClient();
+  // 이미 읽은 것에 다시 시각을 쓰지 않는다 — 처음 읽은 때가 기록이다.
+  await supabase
+    .from("notification")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("read_at", null);
+  const { data } = await supabase
+    .from("notification")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  return (data as unknown as AppNotification) ?? null;
+}
+
+export async function markAllNotificationsRead(_viewer: Profile): Promise<void> {
+  const supabase = await createClient();
+  await supabase
+    .from("notification")
+    .update({ read_at: new Date().toISOString() })
+    .is("read_at", null);
 }
 
 export async function getAttachments(

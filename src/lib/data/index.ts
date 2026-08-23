@@ -145,6 +145,21 @@ export const markThreadRead = (threadId: string, viewerId: string) =>
     ? db.markThreadRead(threadId, viewerId)
     : Promise.resolve();
 
+/**
+ * 알림 — 사건만 담는다. 「내 차례 결재」처럼 처리해야 사라지는 것은 여기 없다
+ * (supabase/migrations/0021 머리글).
+ */
+export const listNotifications = (viewer: Profile, limit: number) =>
+  impl.listNotifications(viewer, limit);
+
+export const countUnreadNotifications = (viewer: Profile) =>
+  impl.countUnreadNotifications(viewer);
+
+export const markNotificationRead = (id: number) => impl.markNotificationRead(id);
+
+export const markAllNotificationsRead = (viewer: Profile) =>
+  impl.markAllNotificationsRead(viewer);
+
 export const listAccessLogs = (viewer: Profile, limit?: number) =>
   impl.listAccessLogs(viewer, limit);
 

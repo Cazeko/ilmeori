@@ -2043,6 +2043,110 @@ console.log("\n[부르기] 참여자만 부를 수 있다");
 }
 
 // ---------------------------------------------------------------------------
+// 알림 (0021)
+// ---------------------------------------------------------------------------
+//
+// 「처리해야 사라지는 것은 알림이 아니다」가 이 표의 규칙이다. 여기서 재는
+// 것은 그 규칙이 아니라 **소음과 권한** 셋이다.
+//
+//   ① 만드는 길은 app.notify 하나뿐이다 — 사람이 남에게 꽂아 넣을 수 없다
+//   ② 내가 한 일은 나에게 안 온다
+//   ③ 안 읽은 work_touched 는 묶인다 (안 묶으면 하루에 스무 줄이 쌓인다)
+console.log("\n[알림] 소음과 권한");
+{
+  const inbox = async (userId) => {
+    const r = await as(userId, `select count(*)::int n from notification`);
+    return r.ok ? r.rows[0].n : -1;
+  };
+
+  // 박협업을 wDept 참여자로 이미 넣어 두었다(위 [부르기]). 그 블록이 이미
+  // 안 읽은 work_touched 를 하나 만들어 두었으므로, **먼저 다 읽는다** —
+  // 안 그러면 첫 건드림이 그 줄에 묶여 「줄이 안 늘었다」로 보인다.
+  // (앞 시나리오의 부산물을 전제로 쓰지 않는다는 규칙을 여기서도 지킨다)
+  await as(park, `update notification set read_at = now() where read_at is null`);
+  const before = await inbox(park);
+  const mineBefore = await inbox(kim);
+
+  const c = await as(
+    kim,
+    `insert into comment (work_id, author_id, body) values ($1, $2, '진행 상황 공유합니다') returning id`,
+    [wDept.id, kim],
+  );
+  check("대화를 남긴다 (알림의 방아쇠)", c.ok, c.error ?? "");
+
+  const after = await inbox(park);
+  check("★ 참여자에게 알림이 간다", after === before + 1, `${before} → ${after}`);
+  check(
+    "★ 내가 한 일은 나에게 안 온다",
+    (await inbox(kim)) === mineBefore,
+  );
+
+  // ③ 한 번 더 건드려도 안 읽은 것이 있으면 줄이 안 는다.
+  await as(
+    kim,
+    `insert into comment (work_id, author_id, body) values ($1, $2, '하나 더') returning id`,
+    [wDept.id, kim],
+  );
+  const merged = await inbox(park);
+  check("★ 안 읽은 것이 있으면 묶인다 (줄이 안 는다)", merged === after, `${after} → ${merged}`);
+  const cnt = await as(
+    park,
+    `select count from notification where kind = 'work_touched' and work_id = $1 and read_at is null`,
+    [wDept.id],
+  );
+  check("묶인 개수가 오른다", cnt.ok && cnt.rows[0]?.count >= 2, JSON.stringify(cnt.rows));
+
+  // ① 남에게 꽂아 넣기.
+  check(
+    "★ 사람이 알림을 만들 수 없다",
+    await denied(
+      kim,
+      `insert into notification (recipient_id, kind, summary) values ($1, 'mention', '가짜')`,
+      [park],
+    ),
+  );
+  check(
+    "알림을 지울 수 없다",
+    await denied(park, `delete from notification where recipient_id = $1`, [park]),
+  );
+
+  // 남의 알림은 안 보인다.
+  const mine = await as(
+    lee,
+    `select count(*)::int n from notification where recipient_id = $1`,
+    [park],
+  );
+  check("남의 알림은 못 읽는다", mine.ok && mine.rows[0].n === 0);
+
+  // 고칠 수 있는 것은 read_at 뿐.
+  check(
+    "요약을 고칠 수 없다",
+    await denied(park, `update notification set summary = '조작' where recipient_id = $1`, [
+      park,
+    ]),
+  );
+  const read = await as(
+    park,
+    `update notification set read_at = now() where recipient_id = $1 and read_at is null returning id`,
+    [park],
+  );
+  check("읽음으로 표시한다", read.ok && read.rows.length > 0, read.error ?? "");
+
+  // 묶임은 **안 읽은 것**에만 붙는다. 다 읽은 뒤에 또 움직이면 새 줄이 생겨야
+  // 한다 — 안 그러면 읽고 나서 벌어진 일이 조용히 사라진다.
+  const afterRead = await inbox(park);
+  await as(
+    kim,
+    `insert into comment (work_id, author_id, body) values ($1, $2, '읽은 뒤에 하나 더') returning id`,
+    [wDept.id, kim],
+  );
+  check(
+    "★ 다 읽은 뒤에 움직이면 새 줄이 생긴다",
+    (await inbox(park)) === afterRead + 1,
+  );
+}
+
+// ---------------------------------------------------------------------------
 await db.close();
 console.log(`\n${pass}개 통과 · ${fail}개 실패`);
 if (fail) {

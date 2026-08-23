@@ -24,6 +24,7 @@ import {
   handoverItems,
   handovers,
   notes,
+  notifications,
   workMembers,
   works,
 } from "@/lib/mock/works";
@@ -55,6 +56,8 @@ import {
   type Note,
   type NoteThread,
   type NoteWithPeople,
+  type AppNotification,
+  type NotificationWithActor,
   type Profile,
   type ProfileWithDepartment,
   type Work,
@@ -355,6 +358,44 @@ export async function getWorkNoteThreads(
     if (await canReadNote(n, viewer)) allowed.push(n);
   }
   return groupThreads(allowed.map(withPeople), viewer.id, () => workTitle);
+}
+
+/**
+ * 알림 — 목업에는 **만드는 길이 없다.**
+ *
+ * 알림은 트리거가 만든다. 데모 모드에는 트리거가 도는 DB 가 없고, 쿠키에
+ * 담기에는 갈래도 많고 수도 많다. 그래서 시드로 넣어 둔 것만 보인다 —
+ * 화면이 어떻게 생겼는지는 그것으로 충분히 보이고, 「읽음」이 쿠키에 안 남는
+ * 것은 데모의 다른 자리들과 같은 성질이다.
+ */
+export async function listNotifications(
+  viewer: Profile,
+  limit: number,
+): Promise<NotificationWithActor[]> {
+  return notifications
+    .filter((n) => n.recipient_id === viewer.id)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, limit)
+    .map((n) => ({
+      ...n,
+      actor: n.actor_id ? requireProfile(n.actor_id) : null,
+    }));
+}
+
+export async function countUnreadNotifications(viewer: Profile): Promise<number> {
+  return notifications.filter((n) => n.recipient_id === viewer.id && !n.read_at)
+    .length;
+}
+
+export async function markNotificationRead(
+  id: number,
+): Promise<AppNotification | null> {
+  // 데모에는 찍을 곳이 없다. 목적지만 돌려준다 — 눌렀을 때 이동은 되어야 한다.
+  return notifications.find((n) => n.id === id) ?? null;
+}
+
+export async function markAllNotificationsRead(_viewer: Profile): Promise<void> {
+  // 데모에는 찍을 곳이 없다.
 }
 
 export async function getAttachments(workId: string): Promise<AttachmentWithUploader[]> {

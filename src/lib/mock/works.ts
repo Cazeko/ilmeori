@@ -17,6 +17,7 @@
 
 import type {
   AccessLog,
+  AppNotification,
   Activity,
   Approval,
   ApprovalKind,
@@ -1466,6 +1467,68 @@ export const notes: Note[] = NOTE_SEEDS.map(
     body,
     read_at: readAt,
     deleted_at: null,
+    created_at: at,
+  }),
+);
+
+/* -----------------------------------------------------------------------------
+ * 알림 — 사건만
+ *
+ * 실물에서는 트리거가 만든다(0021). 데모에는 트리거가 도는 DB 가 없으므로
+ * 화면이 어떻게 생기는지 보일 만큼만 시드로 둔다.
+ *
+ * 「지금 내 차례 결재」가 여기 **없는 것**이 이 목록의 요점이다 — 그것은 상태라
+ * 결재함에 있고, 알림은 읽으면 끝나는 것만 담는다.
+ * -------------------------------------------------------------------------- */
+
+/** [n, 받는이, 갈래, 업무 n | null, 대상 id | null, 행위자, 시각, 읽은 시각 | null, 요약] */
+type NotiSeed = [
+  number,
+  string,
+  AppNotification["kind"],
+  number | null,
+  string | null,
+  string,
+  string,
+  string | null,
+  string,
+];
+
+const NOTI_SEEDS: NotiSeed[] = [
+  [
+    1, "김서연", "note", 1, noteId(6), "최민재",
+    "2026-08-07T09:05:00+09:00", null,
+    "최민재 팀장 님이 쪽지를 보냈습니다.",
+  ],
+  [
+    2, "김서연", "mention", 2, cmtId(24), "정유진",
+    "2026-08-04T11:16:00+09:00", null,
+    "정유진 주무관 님이 대화에서 회원님을 불렀습니다.",
+  ],
+  [
+    3, "김서연", "work_touched", 3, null, "한지우",
+    "2026-08-05T14:22:00+09:00", "2026-08-05T18:00:00+09:00",
+    "첨부파일 「수송대책_노선안_1안2안_대비표.xlsx」이(가) 등록되었습니다.",
+  ],
+  [
+    4, "박준호", "note", 5, noteId(4), "윤가온",
+    "2026-07-30T09:30:00+09:00", "2026-07-30T10:02:00+09:00",
+    "윤가온 주무관 님이 쪽지를 보냈습니다.",
+  ],
+];
+
+export const notifications: AppNotification[] = NOTI_SEEDS.map(
+  ([n, to, kind, w, target, actor, at, readAt, summary]) => ({
+    id: n,
+    recipient_id: person(to).id,
+    kind,
+    work_id: w === null ? null : workId(w),
+    target_id: target,
+    actor_id: person(actor).id,
+    summary,
+    // 묶임은 실물 트리거의 일이다. 시드는 낱개로 둔다.
+    count: 1,
+    read_at: readAt,
     created_at: at,
   }),
 );

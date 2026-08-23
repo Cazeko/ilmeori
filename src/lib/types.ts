@@ -248,6 +248,41 @@ export interface Note {
   created_at: string;
 }
 
+/**
+ * 알림 — **사건만** 담는다.
+ *
+ * 「처리해야 사라지는 것은 알림이 아니다」가 이 타입의 규칙이다. 「지금 내 차례
+ * 결재」는 여기 없다 — 읽음 처리된 순간 목록에서 사라지는데 일은 그대로 남기
+ * 때문이다(supabase/migrations/0021).
+ *
+ * 이름이 `Notification` 이 아닌 것은 브라우저 전역 `Notification` 과 겹치기
+ * 때문이다. 겹치면 타입은 통과하고 런타임에 엉뚱한 것을 잡는다.
+ */
+export type NotificationKind =
+  | "mention"
+  | "note"
+  | "work_touched"
+  | "approval_decided";
+
+export interface AppNotification {
+  id: number;
+  recipient_id: string;
+  kind: NotificationKind;
+  work_id: string | null;
+  /** comment.id · note.thread_id · approval.id — kind 와 함께 주소를 만든다. */
+  target_id: string | null;
+  actor_id: string | null;
+  summary: string;
+  /** 묶인 개수. work_touched 만 1보다 커진다. */
+  count: number;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface NotificationWithActor extends AppNotification {
+  actor: Profile | null;
+}
+
 export interface Handover {
   id: string;
   from_profile_id: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState, useSyncExternalStore } from "react";
 import { AtSign } from "lucide-react";
 import { Field, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
@@ -41,6 +41,22 @@ function given(name: string) {
   return name.length >= 3 ? name.slice(1) : name;
 }
 
+/**
+ * 스크립트가 붙었는가 — 서버에서는 false, 하이드레이션 뒤에는 true.
+ *
+ * `useEffect(() => setState(true))` 로도 되지만 그것은 마운트마다 한 번씩
+ * 덤 렌더를 만들고 `react-hooks/set-state-in-effect` 가 잡는다.
+ * `useSyncExternalStore` 는 서버 스냅숏을 따로 받으므로 그 자리를 위해 있는
+ * 물건이다. 구독은 아무 일도 하지 않는다 — 이 값은 한 번 켜지면 안 바뀐다.
+ */
+const NEVER_CHANGES = () => () => {};
+const useHydrated = () =>
+  useSyncExternalStore(
+    NEVER_CHANGES,
+    () => true,
+    () => false,
+  );
+
 export function MentionBox({
   id,
   name = "body",
@@ -72,8 +88,7 @@ export function MentionBox({
    * 오지 않는 브라우저에서 그것이 유일한 부르는 수단이기 때문이다. 마운트 뒤에만
    * 칩으로 접는다. 처음부터 접어 두면 스크립트가 죽은 순간 부를 길이 사라진다.
    */
-  const [ready, setReady] = useState(false);
-  useEffect(() => setReady(true), []);
+  const ready = useHydrated();
 
   const matches =
     query === null
