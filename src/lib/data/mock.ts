@@ -30,6 +30,8 @@ import {
 } from "@/lib/mock/works";
 import { departments, profiles } from "@/lib/mock/org";
 import { getDemoState, type DemoState } from "@/lib/demo-state";
+import { searchTerm } from "@/lib/search-term";
+import { WORKS_LIMIT } from "./types";
 import type {
   ApprovalSummary,
   HandoverView,
@@ -204,10 +206,21 @@ function toListItem(raw: Work, state: DemoState): WorkListItem {
 // 조회
 // ---------------------------------------------------------------------------
 
-export async function listWorks(viewer: Profile, filter: WorkFilter = {}) {
-  const state = await getDemoState();
-  const q = filter.q?.trim().toLowerCase();
-
+/**
+ * 조건에 맞는 업무 — 상한을 걸기 **전**까지.
+ *
+ * 목록과 「지연 N건」이 같은 조건을 보게 한 자리다. 둘이 갈라지면 화면이
+ * 「지연 3건」이라 적어 놓고 세 장이 아닌 목록을 보여 준다. Supabase 구현도
+ * 같은 이유로 조건을 한 함수에 모아 뒀다(db.ts 의 worksFiltered).
+ */
+function matching(
+  viewer: Profile,
+  filter: WorkFilter,
+  state: Awaited<ReturnType<typeof getDemoState>>,
+) {
+  // Supabase 구현과 **같은 함수**로 검색어를 다듬는다. 여기만 날 검색어를
+  // 쓰면 같은 입력에 두 구현이 다른 답을 한다(search-term.ts 머리말).
+  const q = searchTerm(filter.q)?.toLowerCase() ?? null;
   return works
     .filter((w) => (filter.archived ? Boolean(w.archived_at) : !w.archived_at))
     .map((w) => toListItem(w, state))
@@ -220,8 +233,38 @@ export async function listWorks(viewer: Profile, filter: WorkFilter = {}) {
         w.title.toLowerCase().includes(q) ||
         (w.description ?? "").toLowerCase().includes(q),
     )
-    .filter((w) => !filter.overdueOnly || w.derived === "overdue")
-    .sort(byUrgency);
+    .filter((w) => !filter.overdueOnly || w.derived === "overdue");
+}
+
+/**
+ * 업무 목록.
+ *
+ * 목업은 지어낸 스물몇 건이라 상한에 걸릴 일이 없다. 그래도 **자르는 자리는
+ * 둔다** — 두 구현이 같은 서명과 같은 규칙을 갖고 있어야 화면이 어느 쪽을
+ * 쓰든 같은 답을 받는다(data/index.ts 의 약속). 여기만 상한이 없으면
+ * 「데모에서는 되는데 실서비스에서는 안 보인다」가 생긴다.
+ */
+export async function listWorks(
+  viewer: Profile,
+  filter: WorkFilter = {},
+  limit = WORKS_LIMIT,
+) {
+  const state = await getDemoState();
+  return matching(viewer, filter, state).sort(byUrgency).slice(0, limit);
+}
+
+/**
+ * 「기한이 지난 업무 N건」의 N — 상한과 무관하게 전부 센다.
+ *
+ * 목록을 세지 않고 따로 세는 이유는 Supabase 구현과 같다. 목록은 100건에서
+ * 잘리므로 101번째 지연 업무가 수에서 빠진다.
+ */
+export async function countOverdueWorks(
+  viewer: Profile,
+  filter: WorkFilter = {},
+): Promise<number> {
+  const state = await getDemoState();
+  return matching(viewer, { ...filter, overdueOnly: true }, state).length;
 }
 
 /**

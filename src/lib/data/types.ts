@@ -17,6 +17,18 @@ import type {
  * 어느 쪽 구현을 쓰든 화면은 같은 모양을 받는다.
  */
 
+/**
+ * 업무 목록 한 번에 받는 최대 행 수.
+ *
+ * 결재함이 쓰는 값과 같다(listApprovals 의 limit 기본값). 두 화면이 다른 수를
+ * 쓸 이유가 없고, 같은 수를 두 곳에 적어 두면 한쪽만 바뀌는 날이 온다.
+ *
+ * **상한을 두면 화면이 그 사실을 말해야 한다.** 말하지 않는 상한은 「전부 다
+ * 봤다」로 읽힌다 — 결재함이 이미 세워 둔 규약이고, 업무 보드도 그 규약을
+ * 따른다(works/page.tsx 의 잘림 안내).
+ */
+export const WORKS_LIMIT = 100;
+
 export type WorkFilter = {
   /** 부서 id. 없으면 전체 */
   departmentId?: string;

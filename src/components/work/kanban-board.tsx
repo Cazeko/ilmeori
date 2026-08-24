@@ -104,7 +104,16 @@ export function KanbanBoard({
                색만 넷 늘었다. 칸반에서 튀어야 하는 것은 **지연된 카드 한 장**
                이지 열이 아니다. 띠는 남기되 넷 다 같은 회색으로 둔다 — 열의
                윗변을 긋는 일만 하게 한다. */
-            className="rounded-sm border border-t-3 border-rule-hair bg-gray-10"
+            /* 둥글기를 걷었다. 3px 윗선이 4px 둥글기와 만나면 모서리에서
+               선이 가늘어지며 테이퍼가 보인다 — 굵은 선과 둥근 모서리는 같은
+               자리에서 서로를 방해한다.
+
+               둘 중 둥글기를 버린 것은 취향이 아니라 규칙이다. globals.css 의
+               둥글기 주석은 「서식에 둥근 모서리는 없다 — 문서·표·판은 각지게
+               둔다. 남기는 것은 손으로 누르는 것 둘뿐이다」이고, 열은 누르는
+               것이 아니라 담는 것이다. 안에 든 카드는 누르는 것이라 둥근 채로
+               둔다 — 그 대비가 「무엇이 눌리는가」를 말한다. */
+            className="border border-t-3 border-rule-hair bg-gray-10"
           >
             {/* 높이를 못박는다(min-h-12 = 48px).
                 「지연 N」 배지는 지연이 있는 열에만 붙는데, 배지에 위아래 여백이
@@ -115,8 +124,27 @@ export function KanbanBoard({
             {/* 열 이름은 「조용」 등급이다(card.tsx 의 세 등급 참조). 보드에서
                 먼저 읽혀야 하는 것은 카드이지 열 이름이 아니다. gray-80 →
                 gray-60 으로 한 단계 물린다. */}
+            {/* ── 소리로 들으면 「대기5지연 2」였다 ────────────────────────
+                상태 이름·카드 수·지연 수가 각각 다른 요소라, 사이에 공백을
+                만드는 것이 화면에서는 flex 의 gap 이다. gap 은 눈에만 있고
+                낭독에는 없어서 셋이 한 덩어리로 붙어 읽혔다.
+
+                이 자리는 aria-label 로 푼다. work-card.tsx 는 같은 문제(아이콘
+                옆 숫자)를 sr-only 글자로 풀면서 「role 없는 span 에 aria-label
+                을 붙이는 것은 ARIA 규칙 위반」이라고 적어 두었는데, 그것은 span
+                이야기다. h2 는 heading 역할을 이미 갖고 있어 이름을 직접 줄 수
+                있다. 여는 태그 하나로 끝나므로 글자를 심는 것보다 낫다.
+
+                이 이름은 위 <section aria-labelledby> 가 그대로 물려받는다 —
+                열을 건너뛰며 훑는 사람에게 「대기 5건, 그중 지연 2건」이 한
+                번에 들린다. */}
             <h2
               id={`col-${status}`}
+              aria-label={
+                overdue > 0
+                  ? `${STATUS_LABEL[status]} ${items.length}건, 그중 지연 ${overdue}건`
+                  : `${STATUS_LABEL[status]} ${items.length}건`
+              }
               className="flex min-h-12 items-center gap-2 px-3 text-body-sm font-bold text-gray-60"
             >
               {/* 점은 장식이 아니라 스캔 속도를 위한 것 — 카드 안의 상태 배지가
