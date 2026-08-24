@@ -48,7 +48,12 @@ next-env.d.ts
 *.key
 *.pem
 secrets/
+
+# 코딩 에이전트가 각자 만드는 설정·훅. 저장소의 것이 아니라 **그 기계의 것**이고,
+# 사람마다 쓰는 도구가 다르다. 커밋되면 남의 훅이 내 기계에서 돈다.
+# (.agents/ · .opencode/ 도 같은 부류다 — 생기면 여기에 보탠다)
 .claude/
+.codex/
 
 # KRDS 공식 컴포넌트 킷 (제3자 참조 자료. src/styles/krds-tokens.css로 필요한 부분만 복사해 사용)
 /design/krds/
