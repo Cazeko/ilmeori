@@ -26,15 +26,28 @@ import { STATUS_LABEL, type DerivedStatus } from "@/lib/types";
  * 색이 아니라 명도로 나누면 위계가 「무엇이 급한가」 축에 정렬된다. 그리고
  * 화면에 붉은 것이 하나뿐이면, 그것이 곧 유일한 신호가 된다.
  *
- * 대비는 tests/contrast.test.mjs 가 잰다(전부 4.5:1 이상).
+ * ── 면을 걷어냈다 ──────────────────────────────────────────────────────────
+ *
+ * 명도로 나누는 데까지 왔으면서도 **네 상태 모두 옅은 회색 면을 깔고 있었다.**
+ * 그러면 위계가 두 번 말해진다 — 글자색으로 한 번, 바탕으로 또 한 번. 그리고
+ * 보드 한 화면에 그 네모가 서른 개 서면, 눈에 남는 것은 상태가 아니라 **네모의
+ * 격자**다. 「무엇이 핵심이고 무엇이 보조인지 시선이 안 간다」는 말이 이 자리에도
+ * 걸린다. 면은 화면에서 가장 비싼 표현 수단이라, 상태 같은 곁정보가 쓸 것이 아니다.
+ *
+ * 면을 지우면 명도 사다리가 유일한 축이 되고, 그래서 한 칸씩 더 벌렸다
+ * (90 · 80 · 70 · 60). 배지는 이제 점 하나와 글자다.
+ *
+ * 대비는 tests/contrast.test.mjs 가 잰다. 재는 바탕이 바뀌었다 — 예전에는 자기
+ * 채움(gray-5·gray-10) 위에서 쟀지만, 이제는 판(surface)과 본문 바탕(gray-5)
+ * 위에 그대로 얹히므로 **그 둘 위에서** 잰다.
  */
 
 const TONE: Record<DerivedStatus, string> = {
-  todo: "bg-gray-5 text-gray-70", //   7.68:1
-  doing: "bg-gray-10 text-gray-90", // 13.17:1
-  review: "bg-gray-10 text-gray-70", //  7.07:1
-  done: "bg-gray-5 text-gray-60", //     5.57:1
-  overdue: "bg-status-overdue-bg text-status-overdue-text", // 5.34:1 — 유일한 색
+  todo: "text-gray-70",
+  doing: "text-gray-90",
+  review: "text-gray-80",
+  done: "text-gray-60",
+  overdue: "text-status-overdue-text", // 유일한 색
 };
 
 export function StatusBadge({
@@ -47,8 +60,8 @@ export function StatusBadge({
   return (
     <span
       className={[
-        "inline-flex items-center gap-2 rounded-xs font-bold whitespace-nowrap",
-        size === "sm" ? "px-chip-x py-chip-y text-body-xs" : "px-2 py-1 text-body-sm",
+        "inline-flex items-center gap-2 font-bold whitespace-nowrap",
+        size === "sm" ? "text-body-xs" : "text-body-sm",
         TONE[status],
       ].join(" ")}
     >

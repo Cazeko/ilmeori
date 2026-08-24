@@ -175,12 +175,31 @@ contrast("gray-0", "primary-hover", 4.5, "기본 단추 hover");
 contrast("gray-0", "danger", 4.5, "위험 단추");
 contrast("gray-0", "status-overdue", 4.5, "지연 채움");
 
-console.log("\n상태 배지 — 지연만 색을 쓰고 나머지는 명도로 나뉜다");
-contrast("status-overdue-text", "status-overdue-bg", 4.5, "지연");
-contrast("gray-90", "gray-10", 4.5, "진행중");
-contrast("gray-70", "gray-10", 4.5, "검토");
-contrast("gray-70", "gray-5", 4.5, "대기");
-contrast("gray-60", "gray-5", 4.5, "완료");
+// ---------------------------------------------------------------------------
+console.log("\n상태 배지 — 채움이 없다. 판과 바탕 **양쪽** 위에서 잰다");
+// ---------------------------------------------------------------------------
+/*
+ * 배지에서 면을 걷어냈다(status-badge.tsx 의 머리말). 그 전에는 저마다 옅은
+ * 채움을 깔고 있어서 여기서도 그 채움 위에서 쟀는데, 이제 배지 글자는 **자기가
+ * 놓인 자리의 바탕에 그대로 얹힌다.** 배지가 서는 자리는 두 가지다.
+ *
+ *   판(surface)   업무 카드·결재 줄 안
+ *   바탕(gray-5)  칸반 열 머리처럼 판 밖
+ *
+ * 둘 중 어두운 쪽(gray-5)이 더 빡빡하므로 그쪽이 통과하면 판 위는 자동이지만,
+ * **둘 다 적어 둔다** — 다음 사람이 배지를 어디에 두든 이 표에서 답을 찾는다.
+ */
+for (const on of ["surface", "gray-5"]) {
+  contrast("gray-90", on, 4.5, `진행중 (${on})`);
+  contrast("gray-80", on, 4.5, `검토 (${on})`);
+  contrast("gray-70", on, 4.5, `대기 (${on})`);
+  contrast("gray-60", on, 4.5, `완료 (${on})`);
+  contrast("status-overdue-text", on, 4.5, `지연 (${on})`);
+  // 채움이 사라지면서 판 위로 올라온 나머지 칩 글자들. 「인계 완료」가
+  // success(4.38) 로 미달이던 것을 여기서 잡았다 — done-text 로 옮겼다.
+  contrast("status-done-text", on, 4.5, `인계 완료 (${on})`);
+  contrast("accent-text", on, 4.5, `내 차례·연간 반복 (${on})`);
+}
 
 console.log("\n지연은 화면에서 유일하게 튀어야 한다");
 // 지연 배지가 나머지 넷보다 확실히 세게 읽히는지 — 색을 줄인 뒤의 핵심 전제다.

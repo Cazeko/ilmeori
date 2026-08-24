@@ -198,7 +198,6 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
       {overdueCount > 0 && !overdueOnly && !archived && !selecting ? (
         <Link
           href={linkWith({ overdue: "1", mine: null })}
-          data-variant="plain"
           className={cn(
             "mb-4 flex min-h-11 items-center gap-2 border-l-3 border-l-rule-alarm px-3",
             "text-body font-bold text-status-overdue-text",
@@ -240,7 +239,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
           <Filter aria-hidden className="size-4 text-gray-40" />
           검색어·부서로 좁히기
           {q || departmentId ? (
-            <span className="rounded-xs bg-primary-5 px-chip-x py-chip-y text-body-xs text-primary">
+            <span className="text-body-xs text-primary">
               걸림
             </span>
           ) : null}
@@ -321,7 +320,6 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
             <li key={c.label}>
               <Link
                 href={c.href}
-                data-variant="plain"
                 aria-current={c.on ? "true" : undefined}
                 className={cn(
                   "inline-flex min-h-11 items-center gap-2 rounded-sm border px-3 text-body-sm font-bold transition-colors duration-150",

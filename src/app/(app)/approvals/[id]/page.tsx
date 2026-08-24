@@ -131,7 +131,7 @@ export default async function ApprovalDetailPage({
       <header className="mb-5">
         <div className="flex flex-wrap items-center gap-2">
           <ApprovalBadge state={approval.state} steps={approval.steps} />
-          <span className="rounded-xs bg-gray-5 px-chip-x py-chip-y text-body-xs font-bold text-gray-60">
+          <span className="text-body-xs font-bold text-gray-60">
             {APPROVAL_FORM_LABEL[approval.form]}
           </span>
           {/* 결재함 목록(approval-row.tsx)의 같은 칩과 **같은 모양이어야 한다.**
@@ -147,7 +147,7 @@ export default async function ApprovalDetailPage({
             </span>
           ) : (
             <span className="text-body-xs text-gray-60">
-              문서번호 없음 — 상신할 때 붙습니다
+              문서번호 없음. 상신할 때 붙습니다
             </span>
           )}
         </div>
@@ -293,7 +293,7 @@ export default async function ApprovalDetailPage({
             // 열어 보면 아무것도 없는 화면이 된다.
             <Notice tone="info" title="지금 내 차례입니다">
               {APPROVAL_KIND_LABEL[turn.kind]}란에 서명하거나 반려할 차례입니다.
-              데이터베이스에 연결되지 않은 상태에서는 서명할 수 없습니다 —
+              데이터베이스에 연결되지 않은 상태에서는 서명할 수 없습니다.
               서명은 절차(sign_approval)로만 찍히고, 그 절차는 DB 안에 있습니다.
             </Notice>
           )
@@ -340,7 +340,7 @@ export default async function ApprovalDetailPage({
               <div className="border-t border-rule-hair px-4 py-4">
                 <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
                   아직 상신되지 않았으므로 아무 기록도 남기지 않고 지울 수
-                  있습니다. 상신한 뒤에는 지울 수 없습니다 — 결재는 증빙이고,
+                  있습니다. 상신한 뒤에는 지울 수 없습니다. 결재는 증빙이고,
                   지울 수 있는 증빙은 증빙이 아닙니다.
                 </p>
                 <form action={deleteApproval}>

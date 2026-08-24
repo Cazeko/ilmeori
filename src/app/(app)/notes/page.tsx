@@ -89,8 +89,7 @@ export default async function NotesPage({ searchParams }: PageProps<"/notes">) {
                       <span className="text-body font-bold text-gray-90">
                         <Link
                           href={`/notes/${t.thread_id}`}
-                          data-variant="plain"
-                          className="after:absolute after:inset-0 hover:underline"
+                          className="after:absolute after:inset-0"
                         >
                           {t.counterpart.name}
                           {t.counterpart.position ? (

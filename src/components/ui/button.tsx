@@ -77,7 +77,6 @@ export function ButtonLink({
 }: ComponentProps<typeof Link> & ButtonVariants) {
   return (
     <Link
-      data-variant="button"
       className={cn(button({ variant, size, block }), className)}
       {...props}
     />

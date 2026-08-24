@@ -198,8 +198,7 @@ export function WorkCard({
         ) : (
           <Link
             href={`/works/${work.id}`}
-            data-variant="plain"
-            className="after:absolute after:inset-0 hover:underline"
+            className="after:absolute after:inset-0"
           >
             <span className="line-clamp-2">{work.title}</span>
             {/* 카드는 글자가 많아 점 하나로는 눌린 것이 안 보인다.
@@ -214,19 +213,21 @@ export function WorkCard({
           <Building2 aria-hidden className="size-3.5" />
           {work.department.name}
         </span>
-        {/* 두 칩은 예전에 각각 파랑(primary-5/primary)과 주황(accent-bg/
-            accent-text)이었다. 카드 한 장에 색이 둘 더 붙는 셈이었는데, 둘 다
-            「알아 두면 좋은 것」이지 「지금 해야 할 것」이 아니다. 무채색으로
-            내리고 구분은 아이콘과 글자에 맡긴다 — 카드에서 색이 뜨는 자리는
-            왼쪽 띠(지연·임박) 하나로 족하다. */}
+        {/* 이 둘은 두 번 물러났다. 처음에는 각각 파랑(primary-5/primary)과
+            주황(accent-bg/accent-text)이었다 — 카드 한 장에 색이 둘 더 붙는
+            셈이었고, 둘 다 「알아 두면 좋은 것」이지 「지금 해야 할 것」이
+            아니라 무채색으로 내렸다. 그래도 옅은 회색 네모는 남아 있었는데,
+            보드 한 화면에 카드가 열넉 장이면 그 네모가 서른 개다. 면까지
+            걷어내고 아이콘과 글자에만 맡긴다 — 카드에서 무엇이든 튀어야 하는
+            자리는 왼쪽 띠(지연·임박) 하나뿐이다. */}
         {cross ? (
-          <span className="inline-flex items-center gap-1 rounded-xs bg-gray-10 px-chip-x py-chip-y font-bold text-gray-70">
+          <span className="inline-flex items-center gap-1 font-bold text-gray-70">
             <Users aria-hidden className="size-3" />
             {work.department_count}개 부서
           </span>
         ) : null}
         {work.previous_year ? (
-          <span className="inline-flex items-center gap-1 rounded-xs bg-gray-10 px-chip-x py-chip-y font-bold text-gray-70">
+          <span className="inline-flex items-center gap-1 font-bold text-gray-70">
             <RotateCcw aria-hidden className="size-3" />
             작년 판 있음
           </span>

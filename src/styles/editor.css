@@ -125,9 +125,22 @@
   padding: var(--ilm-page-pad);
   background: #fff;
   color: #000;
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.06),
-    0 8px 24px rgb(0 0 0 / 0.08);
+  /* ── 종이는 떠 있지 않다. 놓여 있다 ─────────────────────────────────────
+     여기에 `0 1px 2px` + `0 8px 24px` 두 겹 드롭섀도우가 있었다. 이 저장소는
+     **깊이가 아니라 선 굵기로 위계를 낸다**고 정해 놓았고(DESIGN.md §0,
+     globals.css 의 --color-rule-*), ui/card.tsx 는 「`--shadow-*` 토큰은 만들지
+     않는다. 만들면 쓰인다」고까지 적어 두었다. 그런데 이 파일만 그 규칙 밖에
+     있었다 — 앱에서 그림자가 남아 있던 마지막 자리다.
+
+     종이를 바탕에서 떼어 놓는 일은 frame 선 한 줄이 한다. 실제로 서식이
+     책상 위에서 구분되는 이유도 그림자가 아니라 종이의 **가장자리**다.
+
+     ※ `border` 가 아니라 퍼짐 0 의 그림자로 긋는다. border-box 라 바깥 폭은
+       그대로지만 border 는 **안쪽 내용 폭을 2px 먹는다** — 이 요소는 A4 를
+       실치수로 그린다고 약속한 자리라(위 flex:none 주석) 1px 도 줄이면 안 된다.
+       0 0 0 1px 은 흐림도 치우침도 없으니 깊이를 만들지 않는다. 이 파일이
+       이미 쓰는 방식이다(.ilm-peer 의 테두리, .ilm-cmcard-on 의 고른 표시). */
+  box-shadow: 0 0 0 1px var(--color-rule-frame);
   font-size: 13.33px; /* 10pt */
   line-height: 1.6;
   word-break: keep-all;
@@ -171,7 +184,9 @@
   width: 100%;
   min-height: 0;
   padding: 28px 32px;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  /* 미리보기는 이미 .ilm-previewbox 안에 들어가 있다. 위 선을 그대로 두면
+     선이 두 겹이 되므로 여기서만 지운다. */
+  box-shadow: none;
 }
 .ilm-sheet-fluid::before {
   display: none;
@@ -626,10 +641,11 @@
   flex-direction: column;
   gap: 2px;
   padding: 6px;
-  border: 1px solid var(--color-gray-20);
+  /* 떠 있는 메뉴다. 그림자로 띄우지 않고 frame 선으로 끊는다 —
+     이 파일에서 그림자를 걷어낸 것과 같은 이유(위 .ilm-sheet 주석). */
+  border: 1px solid var(--color-rule-frame);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
-  box-shadow: 0 6px 18px rgb(0 0 0 / 0.12);
 }
 .ilm-sw {
   display: flex;

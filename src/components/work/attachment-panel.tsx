@@ -129,7 +129,7 @@ export function AttachmentPanel({
                   data-download=""
                   // 보이는 글자(파일 이름)를 접근성 이름에 그대로 품는다.
                   aria-label={`${fileName} 내려받기`}
-                  className="flex min-h-11 items-center gap-2 text-body-sm font-bold break-all text-gray-80 underline-offset-2 hover:text-primary hover:underline"
+                  className="flex min-h-11 items-center gap-2 text-body-sm font-bold break-all text-gray-80 hover:text-primary"
                 >
                   <Paperclip
                     aria-hidden
@@ -173,7 +173,7 @@ export function AttachmentPanel({
                               href={`/works/${workId}/files/${v.id}`}
                               data-download=""
                               aria-label={`${fileName} ${no}판 내려받기`}
-                              className="flex min-h-11 items-center gap-2 text-body-xs font-bold text-primary underline-offset-2 hover:underline"
+                              className="flex min-h-11 items-center gap-2 text-body-xs font-bold text-primary"
                             >
                               <Download aria-hidden className="size-3.5" />
                               {no}판 내려받기

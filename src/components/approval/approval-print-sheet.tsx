@@ -161,10 +161,10 @@ export function ApprovalPrintSheet({ ex }: { ex: ApprovalExport }) {
 
       <footer className="avoid-break mt-6 border-t border-black pt-2">
         <p>
-          근거 꼬리표는 「일머리」에 쌓인 기록 — 결재란 {ex.evidence.steps}칸 ·
+          근거 꼬리표는 「일머리」에 쌓인 기록(결재란 {ex.evidence.steps}칸 ·
           의견 {ex.evidence.opinions}건 · 업무 문서 항목 {ex.evidence.sections}개
           · 대화 {ex.evidence.comments}건 중 {ex.evidence.quotedComments}건 ·
-          첨부 {ex.evidence.attachments}건 — 에서 규칙이 뽑아 붙인 것입니다.
+          첨부 {ex.evidence.attachments}건)에서 규칙이 뽑아 붙인 것입니다.
           문장을 지어낸 곳은 없으며, 인용은 원문 그대로입니다.
         </p>
         <p className="mt-1">

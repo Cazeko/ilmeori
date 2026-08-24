@@ -4,7 +4,7 @@ import {
   PenLine,
   Plus,
   Save,
-  Sparkles,
+  Cog,
   Trash2,
   X,
 } from "lucide-react";
@@ -110,7 +110,7 @@ export function DocSections({
                 {(p) => <Input {...p} name="title" maxLength={120} />}
               </Field>
               <SubmitButton block className="mt-3">
-                <Sparkles aria-hidden className="size-4" />
+                <Cog aria-hidden className="size-4" />
                 서식 문서 만들기
               </SubmitButton>
               <SubmitButton
@@ -123,10 +123,9 @@ export function DocSections({
                 항목 문서로 만들기
               </SubmitButton>
               <p className="mt-2 text-body-xs leading-relaxed break-keep text-gray-60">
-                <b className="font-bold">서식 문서</b>는 한/글처럼 굵게·표·번호를
-                쓰고 여럿이 동시에 고칠 수 있습니다. <b className="font-bold">항목
-                문서</b>는 항목마다 한 사람씩 잠그고 쓰는 방식으로, 스크립트 없는
-                환경에서도 똑같이 동작합니다.
+                <b className="font-bold">서식 문서</b>는 여럿이 동시에,{" "}
+                <b className="font-bold">항목 문서</b>는 항목마다 한 사람씩
+                잠그고 씁니다.
               </p>
             </form>
           ) : undefined
@@ -153,25 +152,22 @@ export function DocSections({
               정보이고, 접어 두면 아무도 못 찾는다. */}
           <div className="rounded-sm border border-primary-10 bg-primary-5 px-4 py-4">
             <p className="flex items-center gap-2 text-body-sm font-bold text-primary">
-              <Sparkles aria-hidden className="size-4" />
+              <Cog aria-hidden className="size-4" />
               서식 편집기로 옮길 수 있습니다
             </p>
+            {/* 세 문단이 있었다 — 무엇이 좋아지는가, 무엇이 어떻게 바뀌는가,
+                무엇이 남는가. 누르기 전에 알아야 하는 것은 **되돌릴 수 없다**
+                하나뿐이다. 나머지는 옮기고 나면 화면이 직접 보여 준다. */}
             <p className="mt-2 text-body-sm leading-relaxed break-keep text-gray-70">
-              굵게·표·번호 매기기를 쓰고, 여럿이 <b className="font-bold">동시에</b>{" "}
-              한 문서를 고칠 수 있게 됩니다. 항목 제목은 「큰 항목」으로, 「-」나
-              「1.」로 시작하는 줄은 목록으로 바뀝니다.
-            </p>
-            <p className="mt-2 text-body-xs leading-relaxed break-keep text-gray-60">
-              지금 항목 {sections.length}개는 <b className="font-bold">지우지 않고</b>{" "}
-              그대로 남습니다. 옮긴 결과가 원본과 다르면 그것으로 확인하실 수
-              있습니다. 다만 화면은 서식 문서 하나만 보여 주므로,{" "}
+              굵게·표·번호를 쓰고 여럿이 <b className="font-bold">동시에</b> 한
+              문서를 고칠 수 있게 됩니다.{" "}
               <b className="font-bold">되돌리는 단추는 없습니다.</b>
             </p>
             <form action={convertToRichDoc} className="mt-3">
               <input type="hidden" name="workId" value={workId} />
               <input type="hidden" name="documentId" value={doc.id} />
               <SubmitButton size="sm">
-                <Sparkles aria-hidden className="size-4" />
+                <Cog aria-hidden className="size-4" />
                 서식 편집기로 옮기기
               </SubmitButton>
             </form>
@@ -262,7 +258,12 @@ export function DocSections({
 
                   {heldByOther ? (
                     <p className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-2 rounded-xs bg-status-doing px-2 py-1 text-body-xs font-bold text-white">
+                      {/* 파란 면에 흰 글자였다. 면을 걷어내고 글자만 남긴다 —
+                          알아야 하는 것은 「남이 잡고 있다」이고, 그 말을 나르는
+                          것은 자물쇠와 이름이지 네모가 아니다.
+                          status-doing(#0b78cb)은 판 위에서 4.41:1 이라 글자색으로
+                          쓸 수 없다. 「지금 여기」를 뜻하는 primary 로 간다. */}
+                      <span className="inline-flex items-center gap-2 text-body-xs font-bold text-primary">
                         <Lock aria-hidden className="size-3" />
                         {s.locked_by_profile?.name ?? "다른 사람"}님 편집 중
                       </span>
@@ -276,7 +277,10 @@ export function DocSections({
                       ) : null}
                     </p>
                   ) : mine ? (
-                    <p className="inline-flex items-center gap-2 rounded-xs bg-primary-5 px-2 py-1 text-body-xs font-bold text-primary">
+                    /* 내가 잡고 있는 것은 내가 이미 안다. 남이 잡고 있을 때보다
+                       한 등급 물러난다 — 둘 다 파랗게 두면 어느 쪽이 알려야 할
+                       소식인지가 사라진다. */
+                    <p className="inline-flex items-center gap-2 text-body-xs font-bold text-gray-60">
                       <Lock aria-hidden className="size-3" />
                       <span>내가 편집 중</span>
                     </p>

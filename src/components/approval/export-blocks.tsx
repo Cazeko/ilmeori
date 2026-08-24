@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Cog } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { ExportBlock } from "@/lib/approval-export";
 
@@ -41,7 +41,7 @@ export function ExportBlocks({ blocks }: { blocks: readonly ExportBlock[] }) {
                 </p>
                 {line.source ? (
                   <p className="mt-1 flex items-start gap-2 text-body-xs leading-relaxed break-keep text-gray-60">
-                    <Sparkles
+                    <Cog
                       aria-hidden
                       className="mt-1 size-3 shrink-0 text-accent-text"
                     />

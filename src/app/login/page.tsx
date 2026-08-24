@@ -98,7 +98,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             <span aria-hidden className="text-gray-30">
               ·
             </span>
-            <span>지정과제 N7 — 부서 간 협업 업무공유</span>
+            <span>지정과제 N7: 부서 간 협업 업무공유</span>
           </p>
 
           {/* dl로 두면 dt·dd가 감싸는 div 두 겹 아래로 내려가 정의 목록으로 읽히지 않는다.
@@ -206,7 +206,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
                 {isWorkPath(next) ? (
                   <>
                     {" "}
-                    그 업무를 볼 수 없는 계정을 고르면 「없습니다」라고 답합니다 —
+                    그 업무를 볼 수 없는 계정을 고르면 「없습니다」라고 답합니다.
                     권한이 없다고 말하지 않습니다.
                   </>
                 ) : null}

@@ -97,7 +97,7 @@ function Cell({
             <line x1="4" y1="36" x2="36" y2="4" />
           </svg>
           <span className="sr-only">
-            {step.approver.name} — 전결로 끝나 결재하지 않았습니다
+            {step.approver.name}: 전결로 끝나 결재하지 않았습니다
           </span>
         </>
       ) : (

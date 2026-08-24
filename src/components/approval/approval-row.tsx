@@ -46,7 +46,7 @@ export function ApprovalRow({
     >
       <div className="flex flex-wrap items-center gap-2">
         <ApprovalBadge state={approval.state} steps={approval.steps} size="sm" />
-        <span className="rounded-xs bg-gray-5 px-chip-x py-chip-y text-body-xs font-bold text-gray-60">
+        <span className="text-body-xs font-bold text-gray-60">
           {APPROVAL_FORM_LABEL[approval.form]}
         </span>
         {/* 대외비는 황토색 칩이었다. 색을 걷어내되 다른 칩에 묻히면 안 되는
@@ -62,7 +62,7 @@ export function ApprovalRow({
             알림), 결재함에서 그것은 「지금 내 차례」다. 파랑은 「누를 수 있는
             것」이라 목록의 모든 줄이 이미 파랑이다. */}
         {mine && pending ? (
-          <span className="inline-flex items-center gap-1 rounded-xs bg-accent-bg px-chip-x py-chip-y text-body-xs font-bold text-accent-text">
+          <span className="inline-flex items-center gap-1 text-body-xs font-bold text-accent-text">
             <Hourglass aria-hidden className="size-3" />
             지금 내 차례 · {APPROVAL_KIND_LABEL[pending.kind]}
           </span>
@@ -82,8 +82,7 @@ export function ApprovalRow({
             업무 카드·열람기록과 제목 모양이 갈린다. */}
         <Link
           href={`/approvals/${approval.id}`}
-          data-variant="plain"
-          className="after:absolute after:inset-0 hover:underline"
+          className="after:absolute after:inset-0"
         >
           {approval.title}
           <LinkPendingMark />

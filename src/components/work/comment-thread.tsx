@@ -71,7 +71,7 @@ export function CommentThread({
                       ) : null}
                     </span>
                     {mine ? (
-                      <span className="rounded-xs bg-accent-bg px-chip-x py-chip-y text-body-xs font-bold text-accent-text">
+                      <span className="text-body-xs font-bold text-accent-text">
                         나
                       </span>
                     ) : null}
@@ -117,7 +117,7 @@ export function CommentThread({
                           key={m.id}
                           className={
                             m.id === viewer.id
-                              ? "rounded-xs bg-accent-bg px-chip-x py-chip-y font-bold text-accent-text"
+                              ? "font-bold text-accent-text"
                               : "font-bold text-gray-70"
                           }
                         >
@@ -132,26 +132,22 @@ export function CommentThread({
           })}
         </ol>
       ) : (
-        <EmptyState
-          icon={MessageSquare}
-          title="아직 대화가 없습니다"
-          description="이 업무에 대해 오간 이야기를 여기에 남기면, 담당자가 바뀌어도 함께 넘어갑니다."
-        />
+        <EmptyState icon={MessageSquare} title="아직 대화가 없습니다" />
       )}
 
       <form action={postComment} className="mt-6 border-t border-rule-hair pt-5">
           <input type="hidden" name="workId" value={workId} />
+          {/* 입력칸 밑에 두 문장짜리 안내가 있었다. 「업무와 함께 보관되며
+              담당자가 바뀌어도 넘어간다」는 이 제품의 전제이지 이 칸의 사용법이
+              아니고, 「지운 사실은 이력에 남는다」는 지우기를 누를 때 알면 되는
+              것이다. 글을 남기려는 사람에게 지금 필요한 말은 하나도 없었다. */}
           <MentionBox
             id="comment-body"
             label="대화 남기기"
             maxLength={240}
             placeholder="결정한 내용이나 확인이 필요한 사항을 적어 주세요."
             people={members}
-            hint={
-              canMutate
-                ? "남긴 글은 업무와 함께 보관되며, 담당자가 바뀌어도 그대로 넘어갑니다. 내가 남긴 글은 지울 수 있지만 지웠다는 사실은 이력에 남습니다."
-                : "시연용입니다. 남긴 글은 이 브라우저에만 저장되며 최근 3개까지 유지됩니다."
-            }
+            hint={canMutate ? undefined : "시연용. 이 브라우저에만 최근 3개까지 남습니다."}
           />
         <div className="mt-3 flex justify-end">
           <SubmitButton>

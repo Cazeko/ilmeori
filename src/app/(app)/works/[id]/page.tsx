@@ -275,7 +275,7 @@ export default async function WorkDetailPage({
             {work.fiscal_year}년도 · {VISIBILITY_LABEL[work.visibility]}
           </span>
           {work.archived_at ? (
-            <span className="inline-flex items-center gap-1 rounded-xs bg-gray-5 px-chip-x py-chip-y text-body-xs font-bold text-gray-60">
+            <span className="inline-flex items-center gap-1 text-body-xs font-bold text-gray-60">
               <Archive aria-hidden className="size-3" />
               보관됨
             </span>

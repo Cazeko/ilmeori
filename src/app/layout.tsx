@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "일머리 — 부서 간 협업 업무공유 플랫폼",
+    default: "일머리 | 부서 간 협업 업무공유 플랫폼",
     template: "%s · 일머리",
   },
   // 한 줄 소개. 로그인 화면·README·발표 대본과 **같은 문장**이다 —

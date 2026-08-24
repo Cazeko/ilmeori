@@ -113,7 +113,7 @@ export function PlainEditor({
                     <span className="font-normal">{clampIndent(b.indent)}단 들여씀</span>
                   ) : null}
                   {notes > 0 ? (
-                    <span className="rounded-xs bg-accent-bg px-chip-x py-chip-y text-accent-text">
+                    <span className="text-accent-text">
                       의견 {notes}
                     </span>
                   ) : null}
@@ -199,7 +199,7 @@ export function PlainEditor({
                           </span>
                           <input type="hidden" name="kind" value="table" />
                           <span className="inline-flex min-h-11 items-center text-body-sm text-gray-70">
-                            표 — 이 화면에서는 갈래를 바꿀 수 없습니다
+                            표. 이 화면에서는 갈래를 바꿀 수 없습니다
                           </span>
                         </p>
                       ) : (
@@ -400,7 +400,7 @@ function BlockPreview({
   }
   if (kind === "pagebreak") {
     return (
-      <p className="px-3 py-2 text-body-xs text-gray-60">— 여기서 쪽이 나뉩니다 —</p>
+      <p className="px-3 py-2 text-body-xs text-gray-60">여기서 쪽이 나뉩니다</p>
     );
   }
   if (kind === "spacer") {

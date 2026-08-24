@@ -53,7 +53,6 @@ export function TabNav({
             <li key={t.key} className="shrink-0">
               <Link
                 href={t.href}
-                data-variant="plain"
                 aria-current={current ? "page" : undefined}
                 className={cn(
                   "flex min-h-11 items-center gap-2 rounded-sm px-3 text-body-sm font-bold transition-colors duration-150",

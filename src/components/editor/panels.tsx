@@ -82,7 +82,7 @@ export function TopBar({
             <>
               <span aria-hidden>·</span>
               <span className="font-bold text-status-review-text">
-                데모 — 고친 내용이 저장되지 않습니다
+                데모. 고친 내용이 저장되지 않습니다
               </span>
             </>
           ) : null}
@@ -143,11 +143,11 @@ export function TopBar({
       ) : null}
 
       <div className="flex shrink-0 flex-wrap items-center gap-2">
-        <a href={`${exportBase}/hwpx`} className="ilm-xbtn" data-variant="button">
+        <a href={`${exportBase}/hwpx`} className="ilm-xbtn">
           <FileDown aria-hidden className="size-4" />
           한/글 (.hwpx)
         </a>
-        <a href={`${exportBase}/docx`} className="ilm-xbtn" data-variant="button">
+        <a href={`${exportBase}/docx`} className="ilm-xbtn">
           <FileDown aria-hidden className="size-4" />
           워드 (.docx)
         </a>
@@ -167,7 +167,7 @@ export function TopBar({
           )}
           {copied === true ? "복사했습니다" : copied === false ? "복사 실패" : "통째로 복사"}
         </button>
-        <a href={`/works/${workId}?tab=doc`} className="ilm-xbtn" data-variant="button">
+        <a href={`/works/${workId}?tab=doc`} className="ilm-xbtn">
           업무로 돌아가기
         </a>
       </div>
@@ -277,7 +277,7 @@ export function CommentRail({
         {done.length > 0 ? (
           <button
             type="button"
-            className="ml-auto text-body-xs font-normal text-gray-60 underline"
+            className="ml-auto text-body-xs font-bold text-primary"
             onClick={() => setShowDone((v) => !v)}
           >
             {showDone ? "해결된 것 감추기" : `해결된 것 ${done.length}개 보기`}

@@ -75,7 +75,6 @@ export function NotificationBell({
                     실제로 그랬다 — 브라우저에게 맡기면 그냥 된다. */}
                 <a
                   href={`/notifications/${n.id}`}
-                  data-variant="plain"
                   className={cn(
                     "flex min-h-11 flex-col gap-1 px-4 py-3 hover:bg-gray-5 active:bg-primary-5",
                     n.read_at ? "text-gray-60" : "text-gray-90",

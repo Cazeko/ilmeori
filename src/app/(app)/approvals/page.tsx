@@ -24,7 +24,6 @@ import { canMutate } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
 import {
   APPROVAL_FORMS,
-  APPROVAL_FORM_DOC_LABEL,
   APPROVAL_FORM_LABEL,
 } from "@/lib/types";
 
@@ -112,7 +111,6 @@ export default async function ApprovalsPage({
       {todoCount > 0 && box !== "todo" ? (
         <Link
           href="/approvals"
-          data-variant="plain"
           className={cn(
             "mb-4 flex min-h-11 items-center gap-2 border-l-3 border-l-accent px-3",
             "text-body font-bold text-accent-text",
@@ -150,7 +148,7 @@ export default async function ApprovalsPage({
           <Info aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
           <span>
             지금은 <strong className="font-bold text-gray-70">읽기 전용</strong>
-            입니다 — 결재를 올리거나 서명할 수 없고, 결재함·결재란·진행률은
+            입니다. 결재를 올리거나 서명할 수 없고, 결재함·결재란·진행률은
             시연용 문서로 그대로 봅니다.
           </span>
         </p>
@@ -166,7 +164,6 @@ export default async function ApprovalsPage({
                 <li key={b} className="shrink-0">
                   <Link
                     href={b === "todo" ? "/approvals" : `/approvals?box=${b}`}
-                    data-variant="plain"
                     aria-current={on ? "page" : undefined}
                     className={cn(
                       "flex min-h-11 items-center gap-2 rounded-sm px-3 text-body-sm font-bold transition-colors duration-150",
@@ -305,34 +302,23 @@ export default async function ApprovalsPage({
               >
                 문서종류 고르기
               </h2>
-              <p className="mb-3 text-body-xs break-keep text-gray-60">
-                넷 다 <strong className="font-bold">같은 서식</strong>입니다 —
-                별지 제2호서식(내부결재문서). 고르는 것은 문서의 성격이고,
-                달라지는 것은 <strong className="font-bold">문서번호</strong>{" "}
-                하나입니다.
-              </p>
-              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {APPROVAL_FORMS.map((f) => (
                   <li key={f}>
                     <Link
                       href={`/approvals/new?form=${f}`}
-                      data-variant="plain"
                       className="flex h-full flex-col gap-1 rounded-sm border border-rule-frame bg-surface px-4 py-3 hover:border-primary-20 hover:bg-primary-5"
                     >
                       <span className="text-body-sm font-bold text-gray-90">
                         {APPROVAL_FORM_LABEL[f]}
                       </span>
+                      {/* 「HS-보고-…」 하는 문서번호 미리보기가 이 자리에 있었다.
+                          붙지도 않은 번호를 말줄임으로 보여 주는 것이라, 읽는
+                          사람에게는 고장 난 값처럼 보였다. 문서번호는 상신하는
+                          순간 붙고 그때 실제 값이 화면에 나온다 — 그 전에 자리만
+                          잡아 둘 이유가 없다. */}
                       <span className="text-body-xs text-gray-60">
                         {FORM_HINT[f]}
-                      </span>
-                      {/* 이 칸을 고르면 무엇이 달라지는가 — 그 답을 그대로 적는다.
-                          문서번호는 상신하는 순간 붙고 그 뒤로 움직이지 않는다. */}
-                      <span className="mt-auto pt-2 text-body-xs tabular-nums text-gray-60">
-                        HS-
-                        <strong className="font-bold text-gray-80">
-                          {APPROVAL_FORM_DOC_LABEL[f]}
-                        </strong>
-                        -…
                       </span>
                     </Link>
                   </li>

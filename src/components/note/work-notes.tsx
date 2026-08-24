@@ -14,11 +14,17 @@ import type {
 } from "@/lib/types";
 
 /**
- * 「바깥에 물어본 것」 — 업무 상세의 **대화 탭 안**에 산다.
+ * 「쪽지」 — 업무 상세의 **대화 탭 안**에 산다.
  *
  * 새 탭을 만들지 않았다. 이미 다섯 개고, 대개 비어 있을 여섯 번째 탭은
  * 소음이다. 그리고 여기 있는 편이 논지에 맞는다 — 안에서 한 대화와 밖에
  * 물어본 것이 **한 화면에 나란히** 있고, 인계서는 둘 다 읽는다.
+ *
+ * ── 이름은 「쪽지」 하나다 ─────────────────────────────────────────────────
+ *
+ * 한동안 이 구역의 이름이 「바깥에 물어본 것」이었다. 뜻은 정확한데 **이름이
+ * 아니라 설명**이라, 왼쪽 메뉴의 「쪽지」와 같은 물건이라는 것이 읽히지 않았다.
+ * 한 물건에 이름이 둘이면 사용자는 그것을 둘로 센다. 메뉴가 쓰는 말로 맞춘다.
  *
  * ── 고를 수 있는 사람에서 참여자를 뺀다 ────────────────────────────────────
  *
@@ -47,12 +53,8 @@ export function WorkNotes({
         id="work-notes-heading"
         className="text-h3 font-bold break-keep text-gray-90"
       >
-        바깥에 물어본 것
+        쪽지
       </h3>
-      <p className="mt-2 text-body-sm break-keep text-gray-60">
-        이 업무의 참여자가 아닌 사람에게 쪽지로 물은 것입니다. 오간 문답은 업무에
-        함께 남아 인계서까지 갑니다.
-      </p>
 
       {threads.length > 0 ? (
         <ul className="mt-4 divide-y divide-rule-hair rounded-sm border border-rule-frame bg-surface">
@@ -108,7 +110,7 @@ export function WorkNotes({
         </ul>
       ) : (
         <p className="mt-4 rounded-sm border border-dashed border-rule-hair px-4 py-6 text-center text-body-sm text-gray-60">
-          아직 바깥에 물어본 것이 없습니다.
+          주고받은 쪽지가 없습니다.
         </p>
       )}
 
@@ -119,7 +121,6 @@ export function WorkNotes({
             id="note-recipient"
             name="recipientId"
             label="누구에게 물어볼까요"
-            hint="이 업무의 참여자는 목록에 없습니다 — 그분들께는 위의 대화로 말하면 됩니다."
             people={candidates}
             required
           />
@@ -127,10 +128,10 @@ export function WorkNotes({
             id="note-body"
             label="물어볼 내용"
             className="mt-4"
-            /* 이 한 줄이 설계 §3 을 화면에서 지킨다. 받는 사람은 업무를 볼 수
-               없으므로, 맥락을 안 적으면 답을 받을 수 없다. 보내기 전에 알려
-               주지 않으면 사용자는 그 사실을 답이 안 올 때에야 알게 된다. */
-            hint="받는 사람은 이 업무를 열어 볼 수 없습니다. 업무 제목도 보이지 않으니 필요한 맥락을 본문에 적어 주세요."
+            /* 설명 세 줄을 한 줄로 줄였다. 남긴 한 줄은 지우면 안 되는
+               것이다 — 받는 사람이 업무를 못 본다는 사실을 모르고 보내면
+               답이 안 오고, 사용자는 그 이유를 끝내 모른다. */
+            hint="받는 사람은 이 업무를 볼 수 없습니다. 필요한 맥락을 본문에 적어 주세요."
           >
             {(p) => (
               <Textarea
@@ -156,8 +157,8 @@ export function WorkNotes({
           />
           <span>
             {canMutate
-              ? "이 업무는 전 직원이 참여하고 있어 밖에 물어볼 사람이 없습니다."
-              : "시연 화면에서는 쪽지를 보낼 수 없습니다. 쪽지 한 통이 1,000자까지라 브라우저 쿠키에 담기지 않기 때문입니다."}
+              ? "이 업무는 전 직원이 참여하고 있어 물어볼 사람이 없습니다."
+              : "시연 화면에서는 쪽지를 보낼 수 없습니다."}
           </span>
         </p>
       )}
