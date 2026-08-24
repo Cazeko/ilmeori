@@ -117,7 +117,7 @@ export function ApprovalLineEditor({
       {/* ── 결재선 가져오기 ────────────────────────────────────────────── */}
       {sources.length > 0 ? (
         <details className="rounded-sm border border-rule-frame bg-surface">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
             <Copy aria-hidden className="size-4 shrink-0 text-gray-40" />
             다른 결재의 결재선 그대로 쓰기
           </summary>

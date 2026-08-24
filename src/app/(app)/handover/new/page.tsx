@@ -75,7 +75,7 @@ export default async function StartHandoverPage({
           <li>
             <Link
               href="/handover"
-              className="inline-flex items-center font-bold hover:text-primary pointer-coarse:min-h-11"
+              className="inline-flex items-center font-bold transition-colors duration-150 hover:text-primary pointer-coarse:min-h-11"
             >
               인계·인수
             </Link>
@@ -169,7 +169,7 @@ export default async function StartHandoverPage({
                   <li key={w.id}>
                     {/* 줄 전체가 누르는 자리다. 작은 네모만 표적이면
                         태블릿에서 몇 번씩 헛손질하게 된다. */}
-                    <label className="flex min-h-11 cursor-pointer items-start gap-3 px-4 py-3 hover:bg-gray-5">
+                    <label className="flex min-h-11 cursor-pointer items-start gap-3 px-4 py-3 transition-colors duration-150 hover:bg-gray-5">
                       {/* size-4.5(18px)였다 — 여백 사다리의 **반단계**다.
                           globals.css 가 「반단계는 쓰지 않는다」고 못박았고,
                           예외에는 이름을 준다(--spacing-chip-x/y). 여기는

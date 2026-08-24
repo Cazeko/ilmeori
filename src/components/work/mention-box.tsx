@@ -234,7 +234,7 @@ export function MentionBox({
                   "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border px-3 text-body-sm transition-colors duration-150",
                   on
                     ? "border-accent-text bg-accent-bg font-bold text-accent-text"
-                    : "border-rule-frame bg-surface text-gray-70 hover:bg-gray-5",
+                    : "border-rule-frame bg-surface text-gray-70 hover:bg-gray-5 active:bg-primary-10 active:text-primary",
                 )}
               >
                 <input

@@ -527,8 +527,9 @@ console.log("\ngray-50 을 글자로 쓰지 않았는가");
  * 몰랐다. 지금은 그 시험이 gray-60 을 세 층에서 재고, 여기서는 gray-50 이
  * 글자로 돌아오지 못하게 막는다.
  *
- * 예외는 `disabled:` 하나다. 꺼진 조작기는 WCAG 1.4.3 의 대상이 아니고,
- * 「지금 누를 수 없다」를 옅기로 말하는 것이 맞다.
+ * 예외는 `disabled:` 하나로 남긴다 — 다만 그 예외의 근거는 아래에서 바뀌었다.
+ * 꺼진 조작기의 **글자색**은 여전히 골라 쓸 수 있지만, 「누를 수 없다」를
+ * **투명도**로 말하는 것은 더 이상 안 된다(바로 다음 검사).
  */
 const grayText = [];
 for (const { path, code } of tsxFiles) {
@@ -543,6 +544,39 @@ for (const { path, code } of tsxFiles) {
   });
 }
 ok("text-gray-50 은 disabled 뒤에서만 쓰인다", grayText);
+
+// ---------------------------------------------------------------------------
+console.log("\n「누를 수 없다」를 투명도로 말하지 않았는가");
+// ---------------------------------------------------------------------------
+/*
+ * `disabled:opacity-50` 은 두 가지를 한꺼번에 틀리게 한다.
+ *
+ * ① **색 언어가 거짓말을 한다.** 이 앱의 파랑은 갈래가 하나다 — 「누를 수 있는
+ *    것 · 지금 여기」(globals.css 의 4갈래). 투명도는 색을 **약하게** 만들 뿐
+ *    **다른 뜻으로** 바꾸지 못하므로, 옅어진 파랑은 여전히 「눌린다」고 말한다.
+ * ② **글자가 같이 흐려진다.** 흰 글자를 판 위에서 절반 섞으면 실측 2.78:1,
+ *    잠긴 카드의 제목(gray-90, opacity-60)은 4.29:1 로 본문 기준 미달이었다.
+ *    고를 수 없다는 것과 읽을 수 없다는 것은 다른 말이다.
+ *
+ * 그래서 투명도가 아니라 **색을 바꾼다**(ui/button.tsx 는 회색 채움 7.07:1,
+ * work-card.tsx 의 잠긴 카드는 바탕색으로 물러난다).
+ *
+ * 여기서 막는 것은 **변형(variant) 뒤에 붙은 투명도**뿐이다. `has-[…]:opacity-55`
+ * 처럼 「이동 중」을 말하는 잠깐의 흐림은 상태가 아니라 사건이라 그대로 둔다.
+ */
+const offByOpacity = [];
+for (const { path, code } of tsxFiles) {
+  code.split("\n").forEach((line, i) => {
+    const t = line.trimStart();
+    if (t.startsWith("*") || t.startsWith("//")) return;
+    for (const m of line.matchAll(/(?:aria-)?disabled:opacity-\d+/g)) {
+      offByOpacity.push(
+        `${path}:${i + 1}  ${m[0]} — 「못 누른다」는 투명도가 아니라 색으로 말한다`,
+      );
+    }
+  });
+}
+ok("disabled 를 투명도로 표현하지 않는다", offByOpacity);
 
 console.log(
   `\n${fails.length === 0 ? "전부 통과" : "실패"} — ${pass}건 통과, ${fails.length}건 실패`,

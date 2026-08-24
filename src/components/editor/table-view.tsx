@@ -234,7 +234,7 @@ function TableTools({
   if (!inside || !where) return null;
 
   const btn =
-    "inline-flex min-h-8 items-center gap-1 rounded-xs px-2 text-body-xs font-bold text-gray-70 hover:bg-gray-10 pointer-coarse:min-h-11";
+    "inline-flex min-h-8 items-center gap-1 rounded-xs px-2 text-body-xs font-bold text-gray-70 transition-colors duration-150 hover:bg-gray-10 pointer-coarse:min-h-11";
 
   return (
     <div className="ilm-tabletools" contentEditable={false}>

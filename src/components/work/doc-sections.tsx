@@ -218,7 +218,7 @@ export function DocSections({
                 <form action={deleteDocument} className="mt-3 flex justify-end">
                   <input type="hidden" name="workId" value={workId} />
                   <input type="hidden" name="documentId" value={doc.id} />
-                  <SubmitButton variant="danger">
+                  <SubmitButton pendingLabel="삭제하는 중…" variant="danger">
                     <Trash2 aria-hidden className="size-4" />
                     문서를 삭제합니다
                   </SubmitButton>
@@ -368,7 +368,7 @@ export function DocSections({
                         <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
                           이 항목이 문서에서 사라집니다. 되돌릴 수 없습니다.
                         </p>
-                        <SubmitButton variant="danger">
+                        <SubmitButton pendingLabel="삭제하는 중…" variant="danger">
                           <Trash2 aria-hidden className="size-4" />
                           항목을 삭제합니다
                         </SubmitButton>
