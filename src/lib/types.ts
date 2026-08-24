@@ -5,6 +5,11 @@
  * (실제 프로젝트 연결 후에는 `supabase gen types typescript`로 자동생성해 대체할 수 있다)
  */
 
+// 이 파일의 유일한 import 다. 「오늘」이 무엇인지는 아래 derivedStatus 가
+// 답해야 하는 물음인데, 시간대 상수는 format.ts 에 하나뿐이다. 여기에 두 번째
+// "Asia/Seoul" 을 적으면 그 둘이 갈라지는 날이 온다 — 실제로 한 번 갈라졌다.
+import { todayKST } from "./format";
+
 export type WorkStatus = "todo" | "doing" | "review" | "done";
 export type MemberRole = "owner" | "editor" | "viewer";
 export type WorkVisibility = "private" | "department" | "city";
@@ -640,25 +645,6 @@ export const ACTIVITY_TONE: Record<ActivityKind, ActivityTone> = {
 };
 
 /**
- * 「오늘」을 만드는 자리는 하나다.
- *
- * 지연 판정의 기준선이고, 화면(derivedStatus)과 DB 조회(data/db.ts 의
- * listWorks·countOverdueWorks)가 **같은 값**을 봐야 한다. 두 곳에서 각자
- * 만들면 자정 언저리에 목록과 개수가 갈린다.
- *
- * ⚠ 이 값은 **UTC 기준이다.** 한국은 UTC+9 이므로 00:00~09:00 KST 사이에는
- *   아직 어제 날짜가 나오고, 그동안 「오늘 마감」인 업무가 지연으로 넘어가지
- *   않는다. 이 저장소의 다른 자리(format.ts·activity-timeline)는 이미
- *   Asia/Seoul 을 쓰므로 여기만 규약 밖이다.
- *
- *   고치지 않고 그대로 옮겼다. 「무엇을 지연으로 볼 것인가」는 화면에 보이는
- *   제품 판단이라, 성능 작업에 끼워 조용히 바꿀 것이 아니다. 고칠 때는 이
- *   함수 한 줄만 바꾸면 화면과 DB 가 함께 따라온다 — 그러라고 여기 모았다. */
-export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-/**
  * 실제 표시할 상태를 계산한다.
  * '지연'은 DB에 저장하지 않는다. 저장하면 매일 밤 배치로 갱신해야 하고,
  * 그 배치가 실패하면 화면이 거짓말을 한다.
@@ -668,8 +654,30 @@ export function todayISO(): string {
  * 끝나지 않았고 · 기한이 있고 · 그 기한이 오늘보다 앞이다. 셋이 전부 참일
  * 때만 지연이다. `data/db.ts` 의 조회가 **같은 세 조건을 SQL 로** 옮겨 적고
  * 있고, 둘이 갈라지지 않는지는 `tests/overdue-rule.test.mjs` 가 잰다.
+ *
+ * ── 「오늘」이 한동안 두 개였다 ─────────────────────────────────────────────
+ *
+ * 이 자리에 `todayISO()` 가 따로 있었고 **UTC 기준**이었다. 그런데 카드에
+ * 찍히는 「28일 지남」은 `format.ts` 의 `daysUntil()` 이 만들고, 그쪽은
+ * 처음부터 `todayKST()`(Asia/Seoul)를 봤다. 한국은 UTC+9 라 **매일
+ * 00:00~09:00 KST 동안 두 값이 다른 날짜**였다.
+ *
+ * 그 아홉 시간 동안 어제 마감인 업무는 이렇게 보였다.
+ *
+ *     날짜 글자  「1일 지남」 (붉게)
+ *     배지       「진행중」            ← todayISO 가 아직 어제라서
+ *     지연 개수   제외
+ *
+ * 한 카드가 같은 사실을 두 가지로 말했다. 공무원 출근 시각이 정확히 그 창
+ * 안이라 9시가 지나면 조용히 맞아졌고, 그래서 버그로 신고되지 않고 「가끔
+ * 이상하다」로 남는 종류였다.
+ *
+ * **고르는 문제가 아니라 지우는 문제였다** — 옳은 쪽이 이미 있었다.
+ * 시간대 상수(TZ)가 format.ts 에 하나뿐이므로 「오늘」도 거기 하나만 둔다.
+ * 여기서 그것을 가져다 쓴다. 상수를 두 곳에 두면 같은 사고가 다시 난다.
  */
 export function derivedStatus(work: Pick<Work, "status" | "due_date">): DerivedStatus {
   if (work.status === "done" || !work.due_date) return work.status;
-  return work.due_date < todayISO() ? "overdue" : work.status;
+  return work.due_date < todayKST() ? "overdue" : work.status;
 }
+

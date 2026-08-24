@@ -19,7 +19,7 @@ type Tone = "info" | "warning" | "danger" | "success" | "ai";
 
 const TONE: Record<Tone, { box: string; icon: LucideIcon; iconColor: string }> = {
   info: {
-    box: "border-info/25 bg-info-bg",
+    box: "border-info/30 bg-info-bg",
     icon: Info,
     iconColor: "text-info",
   },
@@ -29,12 +29,12 @@ const TONE: Record<Tone, { box: string; icon: LucideIcon; iconColor: string }> =
     iconColor: "text-warning",
   },
   danger: {
-    box: "border-danger/25 bg-danger-bg",
+    box: "border-danger/30 bg-danger-bg",
     icon: AlertTriangle,
     iconColor: "text-danger",
   },
   success: {
-    box: "border-success/25 bg-success-bg",
+    box: "border-success/30 bg-success-bg",
     icon: CheckCircle2,
     iconColor: "text-success",
   },

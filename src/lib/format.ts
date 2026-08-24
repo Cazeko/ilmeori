@@ -111,6 +111,12 @@ export function formatNumber(n: number) {
 /**
  * 오늘을 Asia/Seoul 기준 YYYY-MM-DD로 얻는다.
  * 서버가 UTC로 돌면 한국 시각 오전 9시 이전에 하루가 밀린다.
+ *
+ * ⚠ **이 앱에서 「오늘」은 이 함수 하나뿐이다.** 날짜 글자(daysUntil)와
+ *   지연 판정(types.ts 의 derivedStatus)과 DB 조회(data/db.ts)가 전부 이것을
+ *   본다. 한동안 types.ts 에 UTC 기준 사본이 따로 있었고, 그 아홉 시간
+ *   (00:00~09:00 KST) 동안 같은 카드가 「1일 지남」이라고 적어 놓고 배지로는
+ *   「진행중」이라고 말했다. 두 번째 「오늘」을 만들지 않는다.
  */
 export function todayKST(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date());

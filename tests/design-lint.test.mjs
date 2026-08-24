@@ -479,6 +479,71 @@ for (const { path, code } of tsxFiles) {
 }
 ok("지운 토큰이 되살아나지 않았다", revived, `${GONE.length}개 감시`);
 
+// ---------------------------------------------------------------------------
+console.log("\n선 색을 불투명도로 만들지 않았는가");
+// ---------------------------------------------------------------------------
+/*
+ * DESIGN.md §3 은 선 굵기 네 단을 **「이 시스템의 주력 위계 축」**이라 부른다
+ * (hair / frame / head / alarm). 그런데 그 축을 비켜 가며 `border-info/25`
+ * 처럼 불투명도로 선 색을 만드는 자리가 **9개 파일 16곳**에 있었고, 알파값이
+ * 다섯 가지였다 — /20 /25 /30 /40 /60.
+ *
+ *   notice.tsx 한 파일 안에서만  info/25 · warning/30 · danger/25 ·
+ *                                success/25 · accent/30
+ *
+ * **어느 것이 25이고 어느 것이 30인지에 답이 없으면 그건 규칙이 아니다.**
+ * DESIGN.md §1 이 진단한 「고르게 무난해서 AI 같다」가 이런 모양으로 돌아온다.
+ *
+ * 색은 남긴다 — 알림 판의 테두리가 자기 갈래 색이면 뜻이 한 겹 더 실린다.
+ * 통일하는 것은 **알파 하나**뿐이다.
+ *
+ * 이 시험이 없으면 다음 사람이 `/25` 를 하나 더 만들고, 그때는 아무도 모른다.
+ */
+const ALPHA_OK = "30";
+const alphaOff = [];
+for (const { path, code } of tsxFiles) {
+  code.split("\n").forEach((line, i) => {
+    for (const m of line.matchAll(/border(?:-[a-z]+)?-[a-z][a-z0-9-]*\/(\d+)/g)) {
+      if (m[1] !== ALPHA_OK) {
+        alphaOff.push(`${path}:${i + 1}  ${m[0]} — 알파는 /${ALPHA_OK} 하나만 쓴다`);
+      }
+    }
+  });
+}
+ok("선 색의 불투명도가 한 값이다", alphaOff, `/${ALPHA_OK}`);
+
+// ---------------------------------------------------------------------------
+console.log("\ngray-50 을 글자로 쓰지 않았는가");
+// ---------------------------------------------------------------------------
+/*
+ * gray-50 이 글자로 설 수 있는 바탕은 이 앱에 **없다시피 하다.**
+ *
+ *     흰 종이 gray-0   4.51   기준선 위 0.01 — 여백이 아니라 운이다
+ *     판     surface   4.32   미달
+ *     바탕   gray-5    3.99   미달
+ *
+ * 그런데 네 곳에서 글자로 쓰이고 있었고(로그인의 출처 문단·편집기 두 곳),
+ * `tests/contrast.test.mjs` 는 gray-50 을 **테두리로만** 재고 있어서 아무도
+ * 몰랐다. 지금은 그 시험이 gray-60 을 세 층에서 재고, 여기서는 gray-50 이
+ * 글자로 돌아오지 못하게 막는다.
+ *
+ * 예외는 `disabled:` 하나다. 꺼진 조작기는 WCAG 1.4.3 의 대상이 아니고,
+ * 「지금 누를 수 없다」를 옅기로 말하는 것이 맞다.
+ */
+const grayText = [];
+for (const { path, code } of tsxFiles) {
+  code.split("\n").forEach((line, i) => {
+    for (const m of line.matchAll(/(^|[^:\w-])(text-gray-50)\b/g)) {
+      const before = line.slice(0, m.index + m[1].length);
+      if (/disabled:$/.test(before)) continue;
+      grayText.push(
+        `${path}:${i + 1}  text-gray-50 — 글자로는 4.5:1 을 못 넘는다(gray-60 을 쓴다)`,
+      );
+    }
+  });
+}
+ok("text-gray-50 은 disabled 뒤에서만 쓰인다", grayText);
+
 console.log(
   `\n${fails.length === 0 ? "전부 통과" : "실패"} — ${pass}건 통과, ${fails.length}건 실패`,
 );
