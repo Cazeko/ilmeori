@@ -245,7 +245,7 @@ export function DocSections({
                 className={cn(
                   "rounded-sm border bg-surface",
                   heldByOther
-                    ? "border-status-doing/40 bg-status-doing-bg/40"
+                    ? "border-status-doing/30 bg-status-doing-bg/40"
                     : editing
                       ? "border-primary-30"
                       : "border-rule-frame",

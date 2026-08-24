@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Download, FileQuestion, Printer } from "lucide-react";
+import { ChevronRight, Download, EyeOff, FileQuestion, Info, Printer } from "lucide-react";
 import { ApprovalBadge } from "@/components/approval/approval-badge";
 import { ApprovalPrintSheet } from "@/components/approval/approval-print-sheet";
 import { ExportBlocks } from "@/components/approval/export-blocks";
@@ -115,7 +115,10 @@ export default async function ApprovalExportPage({
             <li className="min-w-0">
               <Link
                 href={`/approvals/${approval.id}`}
-                className="line-clamp-1 hover:text-primary"
+                /* 다른 화면의 같은 마디에는 이 높이가 붙어 있는데
+                   여기만 빠져 있었다 — 과녁이 20px 라 WCAG 2.5.8
+                   (AA, 24×24) 아래였다. */
+                className="inline-flex min-h-11 items-center line-clamp-1 hover:text-primary"
               >
                 {approval.title}
               </Link>
@@ -147,7 +150,17 @@ export default async function ApprovalExportPage({
 
         {/* ── 내려받기 ───────────────────────────────────────────────────
             예전에는 이 단추 하나를 설명 상자 다섯 개가 둘러싸고 있었다.
-            먼저 받게 하고, 단서는 그 아래 한 문단으로 줄인다. */}
+            먼저 받게 하고, 단서는 그 아래 한 문단으로 줄인다.
+
+            **이 화면에서 채우는 판은 여기 하나뿐이다.** 한동안 셋이 연달아
+            섰다 — 이 상자(파랑) → 「아직 결재가 진행 중」(파랑) → 「근거는
+            규칙이 골랐습니다」(주황). 정작 이 화면의 물건인 「파일에 실릴
+            내용」은 그 아래 무채색 판이었다. 결재함이 같은 함정에서 빠져나온
+            자리이고(「이 화면에서 가장 무거운 덩어리가 안내문이었다」),
+            아래 둘은 여백 등급으로 내렸다.
+
+            테두리는 선 굵기 축을 쓴다. `border-primary/30` 은 불투명도로
+            만든 다섯 번째 선색이었고, 그런 값이 저장소에 열여섯 개 있었다. */}
         <div className="mb-5 rounded-sm border border-primary/30 bg-primary-5 px-5 py-4">
           <p className="mb-3 text-body-sm font-bold text-gray-90">
             한/글 파일로 내려받기
@@ -184,7 +197,7 @@ export default async function ApprovalExportPage({
 
               인쇄(A4) 폴백은 그대로 둔다. 폴백은 「안 열릴까 봐」만이 아니라
               「그 자리에 한/글이 없을 수도 있어서」 있는 것이고, 그건 여전하다. */}
-          <p className="mt-3 border-t border-primary/20 pt-3 text-body-xs leading-relaxed break-keep text-gray-70">
+          <p className="mt-3 border-t border-primary/30 pt-3 text-body-xs leading-relaxed break-keep text-gray-70">
             <strong className="font-bold text-gray-90">
               최종 결재권자의 서명은 「일머리」에서 받지 않습니다.
             </strong>{" "}
@@ -198,20 +211,38 @@ export default async function ApprovalExportPage({
           </p>
         </div>
 
+        {/* 아래 둘은 **여백 등급**이다. 채운 판을 이 화면에서 연달아 세 개
+            쌓지 않는다 — 위 내려받기 상자 하나가 채우는 자리를 이미 썼다.
+            둘 다 「지금 벌어진 일」이 아니라 「이 문서가 지금 어떤 상태인가」를
+            적는 말이라, 읽히기만 하면 되지 눈에 띌 필요가 없다. */}
         {running ? (
-          <Notice tone="info" title="아직 결재가 진행 중입니다" className="mb-5">
-            지금 받으면 서명이 덜 찍힌 결재란이 그대로 실립니다. 빈칸은 「아직
-            처리하지 않음」으로 적히므로 문서가 거짓말을 하지는 않습니다.
-          </Notice>
+          <p className="mb-5 flex items-start gap-2 border-l border-l-rule-hair py-2 pl-3 text-body-sm break-keep text-gray-60">
+            <Info aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
+            <span>
+              <strong className="font-bold text-gray-70">
+                아직 결재가 진행 중입니다.
+              </strong>{" "}
+              지금 받으면 서명이 덜 찍힌 결재란이 그대로 실립니다. 빈칸은 「아직
+              처리하지 않음」으로 적히므로 문서가 거짓말을 하지는 않습니다.
+            </span>
+          </p>
         ) : null}
 
         {!ex.workVisible ? (
-          <Notice tone="info" title="이 계정에서는 업무 기록을 볼 수 없습니다" className="mb-5">
-            결재선에 이름이 있어 문서 한 장은 보이지만 연결된 업무의 기록은 열람
-            권한이 없습니다. 근거 자료 항목이 비어 있는 것은{" "}
-            <strong className="font-bold">없는 것이 아니라 못 보는 것</strong>
-            이고, 파일에도 그렇게 적힙니다.
-          </Notice>
+          <p className="mb-5 flex items-start gap-2 border-l border-l-rule-hair py-2 pl-3 text-body-sm break-keep text-gray-60">
+            <EyeOff aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
+            <span>
+              <strong className="font-bold text-gray-70">
+                이 계정에서는 업무 기록을 볼 수 없습니다.
+              </strong>{" "}
+              결재선에 이름이 있어 문서 한 장은 보이지만 연결된 업무의 기록은
+              열람 권한이 없습니다. 근거 자료 항목이 비어 있는 것은{" "}
+              <strong className="font-bold text-gray-70">
+                없는 것이 아니라 못 보는 것
+              </strong>
+              이고, 파일에도 그렇게 적힙니다.
+            </span>
+          </p>
         ) : null}
 
         {/* ── 근거 집계 ───────────────────────────────────────────────────

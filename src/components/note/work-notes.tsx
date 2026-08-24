@@ -49,12 +49,17 @@ export function WorkNotes({
       aria-labelledby="work-notes-heading"
       className="mt-8 border-t border-rule-hair pt-6"
     >
-      <h3
+      {/* h3 였다. 이 구역이 붙는 자리(업무 상세의 대화 탭)에는 h2 가 없어서
+          제목 단계가 h1 → h3 로 한 칸 건너뛰었다 — 제목으로 훑는 사람에게는
+          「어딘가 h2 를 놓쳤나」로 들린다. 크기(text-h3)는 그대로 두고 태그만
+          한 단 올린다. 크기는 시각 위계이고 태그는 문서 구조라, 둘은 서로
+          다른 것을 말한다(page-header.tsx 의 같은 판단). */}
+      <h2
         id="work-notes-heading"
         className="text-h3 font-bold break-keep text-gray-90"
       >
         쪽지
-      </h3>
+      </h2>
 
       {threads.length > 0 ? (
         <ul className="mt-4 divide-y divide-rule-hair rounded-sm border border-rule-frame bg-surface">

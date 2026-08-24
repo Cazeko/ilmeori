@@ -320,7 +320,8 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
       {/* ── 빠른 조건 ───────────────────────────────────────────────────────
           이름 없는 링크 네 개가 떠 있었다. 스크린리더로 들으면 「전체 / 내 업무
           / 지연만 / 보관함」이 무엇의 목록인지 알 수 없다. nav 로 묶어 이름을
-          준다. 높이도 38px → 44px 로 올린다(손가락 목표). */}
+          준다. 높이도 38px → 44px 로 올린다
+          (2.5.5 AAA. AA 기준선인 2.5.8 은 24px 이고 그건 최소이지 목표가 아니다). */}
       <nav aria-label="업무 걸러 보기" className="mb-4">
         <ul className="flex flex-wrap items-center gap-2">
           {chips.map((c) => (

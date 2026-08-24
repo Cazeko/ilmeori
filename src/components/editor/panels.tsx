@@ -457,7 +457,7 @@ function CommentCard({
                 삭제
               </button>
             ) : null}
-            <span className="ml-auto text-body-xs text-gray-50">Ctrl+Enter</span>
+            <span className="ml-auto text-body-xs text-gray-60">Ctrl+Enter</span>
           </div>
         </div>
       ) : null}

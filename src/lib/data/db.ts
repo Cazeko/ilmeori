@@ -3,11 +3,10 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { approvalProgress, byRecent } from "@/lib/approval";
 import { NOTE_LIMIT, groupThreads } from "@/lib/note";
-import { daysUntil } from "@/lib/format";
+import { daysUntil, todayKST } from "@/lib/format";
 import { ilikePattern } from "@/lib/search-term";
 import {
   derivedStatus,
-  todayISO,
   type AccessLogWithActor,
   type ActivityWithActor,
   type ApprovalKind,
@@ -31,7 +30,7 @@ import {
   type Work,
   type WorkListItem,
 } from "@/lib/types";
-import { WORKS_LIMIT } from "./types";
+import { ACCESS_LOG_LIMIT, WORKS_LIMIT } from "./types";
 import type {
   ApprovalSummary,
   HandoverView,
@@ -345,7 +344,7 @@ function worksFiltered<T>(
     q = q
       .neq("status", "done")
       .not("due_date", "is", null)
-      .lt("due_date", todayISO());
+      .lt("due_date", todayKST());
   }
   return q as T;
 }
@@ -1344,7 +1343,7 @@ export async function getHandover(
 
 export async function listAccessLogs(
   _viewer: Profile,
-  limit = 50,
+  limit = ACCESS_LOG_LIMIT,
 ): Promise<AccessLogWithActor[]> {
   const supabase = await createClient();
   // 볼 수 없는 업무의 열람기록은 RLS가 애초에 돌려주지 않는다.
