@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronRight } from "lucide-react";
 import { CARD_SURFACE } from "@/components/ui/card";
 import { NoteThreadView } from "@/components/note/note-thread";
 import { ActionFeedback } from "@/components/ui/feedback";
@@ -55,6 +57,29 @@ export default async function NoteThreadPage({
 
   return (
     <PageContainer width="doc">
+      {/* 상세 화면에는 돌아갈 길이 화면 안에 있어야 한다. 업무 상세·결재
+          문서·새 업무·결재 올리기·문서 편집이 전부 이 줄을 두는데 쪽지 실만
+          없었다 — 좁은 화면에서는 옆줄이 접혀 있어 뒤로가기 말고는 길이
+          없었다. */}
+      <nav aria-label="현재 위치" className="mb-4">
+        <ol className="flex items-center gap-1 text-body-xs text-gray-60">
+          <li>
+            <Link
+              href="/notes"
+              className="inline-flex items-center font-bold hover:text-primary pointer-coarse:min-h-11"
+            >
+              쪽지
+            </Link>
+          </li>
+          <li aria-hidden>
+            <ChevronRight className="size-3.5" />
+          </li>
+          <li className="min-w-0">
+            <span className="line-clamp-1 text-gray-70">{counterpart} 님</span>
+          </li>
+        </ol>
+      </nav>
+
       {/* h1 은 화면마다 정확히 하나다(page-header.tsx). 그 하나를 여기 두고,
           아래 문서 등급 판의 제목은 h2 로 받는다 — 크기(27px)가 위계를 말하고
           태그는 문서 구조를 말한다. 둘은 서로 다른 것이다. */}

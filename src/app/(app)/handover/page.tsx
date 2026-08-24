@@ -109,6 +109,14 @@ export default async function HandoverPage({
         <PageHeader
           size="sm"
           title="업무인계·인수"
+          /* h1 이 아니다 — 이 화면의 h1 은 아래 서 있는 별지 제12호서식의
+             제목(「업무인계·인수서」)이다. 그 서식은 인쇄 전용이 아니라 화면에
+             그대로 보이므로 h1 이 둘이 되고, 제목으로 훑는 사람은 어느 것이
+             화면 이름인지 알 수 없게 된다.
+             이 파일이 이미 적어 둔 말과 같다 — 「이 화면의 「문서」는 아래에
+             실제로 서 있는 별지 제12호서식 그 자체이지, 「업무인계·인수」라는
+             글자가 아니다.」 */
+          as="p"
           /* 법령 조문을 제목 밑에 통째로 인용해 두었었다. 근거를 밝히는 것은
              맞지만 제목 바로 아래는 「이 화면이 무엇인가」를 말하는 자리이지
              출처를 대는 자리가 아니다. 서식 이름만 남기고 조문은 종이(인쇄본)에
@@ -499,7 +507,16 @@ export default async function HandoverPage({
                           물품·예산 항목은 비어 있어
                         </strong>{" "}
                         직접 적으셔야 합니다.{" "}
-                        <Link href={`#${handoverBlockAnchor("3-assets")}`}>
+                        {/* 클래스가 없었다. 전역에서 밑줄을 걷어낸 뒤(globals.css 의 `a`)
+                            이 링크에는 색·굵기·판 어느 축도 남지 않아 **주변
+                            글자와 완전히 같아 보였다** — WCAG 1.4.1.
+                            Notice 안의 링크는 [&_a] 가 칠해 주지만 여기는
+                            평범한 <p> 안이다. 이 앱의 인라인 링크 규약은
+                            「굵은 글자 + primary」다(globals.css 의 세 모양). */}
+                        <Link
+                          href={`#${handoverBlockAnchor("3-assets")}`}
+                          className="font-bold text-primary"
+                        >
                           그 항목으로 가기
                         </Link>
                       </p>
@@ -549,7 +566,7 @@ export default async function HandoverPage({
                       <summary className="flex min-h-11 cursor-pointer list-none items-center px-4 text-body-sm font-bold text-danger">
                         인계 실행
                       </summary>
-                      <div className="border-t border-danger/20 px-4 py-4">
+                      <div className="border-t border-danger/30 px-4 py-4">
                         <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
                           아래 업무의 주담당이 {to.name} {to.position}
                           {josa(to.position ?? to.name, "으로", "로")} 바뀌고,{" "}
@@ -694,9 +711,25 @@ async function HandoverStandby({
 
   return (
     <PageContainer>
+      {/* 이름표는 물러난다. 「인계·인수」는 왼쪽 메뉴에서 이미 켜져 있고, 같은
+          라우트의 진행 중 화면이 이미 size="sm" 이다 — 한 화면이 상태에 따라
+          제목 크기가 달라지고 있었다.
+
+          그리고 이 화면이 하러 온 일은 **인계를 시작하는 것**이다. 그 단추가
+          오른쪽 곁칸 설명 카드 맨 아래에 있었다 — 화면의 목적이 곁칸 각주에
+          들어가 있었던 셈이라, 머리 줄의 동작 자리로 올린다. */}
       <PageHeader
+        size="sm"
         title="인계·인수"
         description="시행규칙 별지 제12호서식을 그대로 따릅니다."
+        action={
+          canMutate && owned.length > 0 ? (
+            <ButtonLink href="/handover/new">
+              <FileSignature aria-hidden className="size-4" />
+              인계 시작하기
+            </ButtonLink>
+          ) : null
+        }
       />
       <ActionFeedback msg={msg} className="mb-4" />
 
@@ -717,23 +750,35 @@ async function HandoverStandby({
       ) : (
         <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
           <div className="min-w-0">
-            <Notice
-              tone="ai"
-              title="지금 인사이동이 나면 이만큼이 인계서에 실립니다"
-              className="mb-4"
-            >
-              아래 숫자는 예시가 아니라 {viewer.name} {viewer.position} 님이
-              주담당인 업무에서 <strong className="font-bold">지금 세어 본 것</strong>
-              입니다. 인계를 시작하면 이 기록이 별지 제12호서식의 순서대로 조립되고,
-              항목마다 어느 기록에서 나왔는지가 함께 붙습니다.{" "}
-              <strong className="font-bold text-gray-90">
-                인계서를 위해 따로 적어 둔 것은 한 줄도 없습니다.
-              </strong>
-            </Notice>
+            {/* ── 이 문단과 아래 숫자는 「여백」이다 ─────────────────────────
+                한동안 여기가 **주황 채움 판**이었고, 그 아래가 **통계 타일 넉
+                줄**이었다. 화면을 열면 그 둘이 가장 무거웠고, 정작 넘길 업무
+                목록은 그 아래로 밀렸다.
 
-            <Card className="mb-4">
-              <CardHeader title="지금 넘긴다면" as="h2" />
-              <CardBody>
+                DESIGN.md §5.1 이 못박은 것이 정확히 이것이다 — **「화면의
+                「문서」는 사용자가 누를 대상이어야 한다. 요약 배너·통계 타일은
+                아무리 커도 여백 등급이다.」** 업무 보드와 결재함이 같은 함정에서
+                이미 빠져나왔고, 이 화면만 남아 있었다.
+
+                말을 지우는 것이 아니라 무게를 맞춘다. 채움과 테두리를 걷고
+                왼쪽 선 하나만 남긴다. */}
+            <p className="mb-5 flex items-start gap-2 border-l border-l-rule-hair py-2 pl-3 text-body-sm leading-relaxed break-keep text-gray-60">
+              <Cog aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
+              <span>
+                아래 숫자는 예시가 아니라 {viewer.name} {viewer.position} 님이
+                주담당인 업무에서{" "}
+                <strong className="font-bold text-gray-70">지금 세어 본 것</strong>
+                입니다. 인계를 시작하면 이 기록이 별지 제12호서식의 순서대로
+                조립되고, 항목마다 어느 기록에서 나왔는지가 함께 붙습니다.{" "}
+                <strong className="font-bold text-gray-70">
+                  인계서를 위해 따로 적어 둔 것은 한 줄도 없습니다.
+                </strong>
+              </span>
+            </p>
+
+            <Card variant="quiet" className="mb-6">
+              <CardHeader variant="quiet" title="지금 넘긴다면" as="h2" />
+              <CardBody variant="quiet">
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
                   {/* 꼬리말은 그 숫자가 서식 어디로 가는지만 적는다.
                       「대화」에 「원문 그대로 실린다」고 적었다가 고쳤다 —
@@ -768,9 +813,11 @@ async function HandoverStandby({
                 </dl>
               </CardBody>
               {/* 「빠뜨리면 비싼 것」을 따로 말한다. 인계에서 가장 먼저 사라지는
-                  것이 지연 사유와 해마다 반복되는 일의 작년 맥락이기 때문이다. */}
+                  것이 지연 사유와 해마다 반복되는 일의 작년 맥락이기 때문이다.
+                  채움(bg-gray-5)을 걷고 선 하나로 끊는다 — 이 판 전체가 여백
+                  등급으로 내려왔으므로 안쪽에 다시 면을 깔면 도로 판이 된다. */}
               {overdue > 0 || repeating > 0 ? (
-                <div className="border-t border-rule-hair bg-gray-5 px-5 py-4">
+                <div className="mt-5 border-t border-rule-hair pt-4">
                   <ul className="flex flex-col gap-2">
                     {overdue > 0 ? (
                       <li className="flex gap-2 text-body-sm break-keep text-gray-70">
@@ -802,18 +849,36 @@ async function HandoverStandby({
               ) : null}
             </Card>
 
-            <Card>
-              <CardHeader
-                title={`넘길 수 있는 업무 ${owned.length}건`}
-                as="h2"
-                description={`${departments}개 부서 소관. 편집자·열람자로 참여만 한 업무는 주담당이 따로 있어 여기 없습니다.`}
-              />
+            {/* ── 이 화면의 「문서」 ─────────────────────────────────────────
+                위의 요약과 숫자가 여백으로 내려온 자리에 이것이 선다.
+                **인계에서 사람이 실제로 다루는 물건은 이 목록**이고, 여기서
+                「인계 시작하기」로 간다. 흰 종이 + 위쪽 2px 먹선 —
+                결재함·쪽지함·알림·열람기록이 이미 같은 모양이다. */}
+            <h2 className="mb-3 text-h3 font-bold text-gray-90">
+              넘길 수 있는 업무
+              <span className="ml-2 text-body-sm font-normal tabular-nums text-gray-60">
+                {owned.length}건
+              </span>
+            </h2>
+            <p className="mb-3 text-body-sm break-keep text-gray-60">
+              {departments}개 부서 소관. 편집자·열람자로 참여만 한 업무는 주담당이
+              따로 있어 여기 없습니다.
+            </p>
+            <div
+              data-rank="doc"
+              className={cn(
+                CARD_SURFACE.doc,
+                "divide-y divide-rule-hair overflow-hidden",
+              )}
+            >
               <ul className="divide-y divide-rule-hair">
                 {owned.map((w) => (
                   <li key={w.id} className="px-5 py-4">
+                    {/* 18px 짜리 글줄 하나가 과녁이었다. 보이는 크기는 그대로
+                        두고 눌리는 높이만 벌린다(2.5.5 의 44px). */}
                     <Link
                       href={`/works/${w.id}`}
-                      className="text-body-sm font-bold break-keep text-gray-90 hover:text-primary"
+                      className="inline-flex items-center text-body-sm font-bold break-keep text-gray-90 pointer-coarse:min-h-11 hover:text-primary"
                     >
                       {w.title}
                     </Link>
@@ -834,14 +899,16 @@ async function HandoverStandby({
                   </li>
                 ))}
               </ul>
-            </Card>
+            </div>
           </div>
 
-          {/* ── 옆칸 ────────────────────────────────────────────────────────── */}
-          <div className="flex flex-col gap-5">
-            <Card>
-              <CardHeader title="인계를 시작하면" as="h2" />
-              <CardBody>
+          {/* ── 옆칸 ──────────────────────────────────────────────────────────
+              설명과 안내다. 왼쪽 문서와 같은 테두리를 두르고 있으면 둘이
+              동급으로 읽힌다 — 여백 등급으로 물린다(card.tsx 의 quiet). */}
+          <div className="flex flex-col gap-6">
+            <Card variant="quiet">
+              <CardHeader variant="quiet" title="인계를 시작하면" as="h2" />
+              <CardBody variant="quiet">
                 <ol className="flex flex-col gap-4">
                   {[
                     [
@@ -877,23 +944,18 @@ async function HandoverStandby({
                   ))}
                 </ol>
               </CardBody>
-              {canMutate ? (
-                <div className="border-t border-rule-hair px-5 py-4">
-                  <ButtonLink href="/handover/new" block>
-                    인계 시작하기
-                    <ArrowRight aria-hidden className="size-4" />
-                  </ButtonLink>
-                </div>
-              ) : null}
+              {/* 「인계 시작하기」가 여기 있었다 — 곁칸 설명 카드의 맨 아래.
+                  이 화면이 하러 온 일이 각주 자리에 있었던 셈이라 머리 줄의
+                  동작 자리로 올렸다. 같은 단추를 두 번 두지 않는다. */}
             </Card>
 
             {/* 데모에서 실제로 굴러가는 인계 건이 어디 있는지 알려 준다.
                 이 계정은 인계 당사자가 아니므로, 여기서 「시작하기」를 눌러 새로
                 만드는 것 말고 **이미 진행 중인 것을 보는 길**도 있어야 한다.
                 (정책이 당사자에게만 보여 주므로 계정을 바꿔야 열린다) */}
-            <Card>
-              <CardHeader title="진행 중인 인계를 보려면" as="h2" />
-              <CardBody>
+            <Card variant="quiet">
+              <CardHeader variant="quiet" title="진행 중인 인계를 보려면" as="h2" />
+              <CardBody variant="quiet">
                 <p className="text-body-sm leading-relaxed break-keep text-gray-60">
                   인계·인수 문서는 <strong className="font-bold text-gray-80">
                     넘기는 사람과 받는 사람에게만

@@ -41,12 +41,31 @@ export function PageHeader({
   action,
   meta,
   size = "lg",
+  as: Title = "h1",
 }: {
   title: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
   meta?: ReactNode;
   size?: keyof typeof TITLE;
+  /**
+   * 이 줄이 화면의 h1 인가.
+   *
+   * 거의 언제나 그렇고, 그래서 기본값이 h1 이다. 예외는 **화면 안에 진짜
+   * 문서가 서 있는 경우**다 — 인계·인수 화면은 별지 제12호서식을 화면에 그대로
+   * 세우고, 그 서식은 자기 제목(「업무인계·인수서」)을 h1 으로 갖고 있다.
+   * 그러면 한 화면에 h1 이 둘이 되고, 제목으로 훑는 사람은 어느 것이 화면
+   * 이름인지 알 수 없다.
+   *
+   * 그때는 **문서 쪽이 h1 이다.** 그 화면의 이름은 「업무인계·인수」라는 글자가
+   * 아니라 아래 서 있는 서식 그 자체이기 때문이다(handover/page.tsx 가 같은
+   * 말을 이미 적어 두었다). 이 줄은 그 위에 붙는 이름표라 `p` 로 내려간다.
+   *
+   * ※ 인쇄 전용으로 숨어 있는 서식(approval-print-sheet 의 `hidden print:block`)
+   *   은 화면에서 display:none 이라 접근성 트리에 없다. 그런 화면은 h1 이
+   *   하나이므로 여기를 건드릴 필요가 없다.
+   */
+  as?: "h1" | "p";
 }) {
   return (
     <header
@@ -56,7 +75,7 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0">
-        <h1 className={TITLE[size]}>{title}</h1>
+        <Title className={TITLE[size]}>{title}</Title>
         {description ? (
           <p
             className={cn(

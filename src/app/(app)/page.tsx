@@ -195,7 +195,10 @@ export default async function HomePage() {
                   : `/works?mine=1#col-${key}`
               }
               className={cn(
-                "inline-flex items-center gap-2 rounded-xs px-2 py-1 text-body-xs font-bold tabular-nums",
+                // 세로 20px 한 줄인 것이 이 줄의 요점이라(위 주석) 높이를 늘리지
+                // 않는다. 32px 는 2.5.8(AA, 24×24)을 넘는다. 손가락 쪽만
+                // 44px 로 벌린다 — 저장소가 쓰는 pointer-coarse 규약.
+                "inline-flex items-center gap-2 rounded-xs px-2 py-1 text-body-xs font-bold tabular-nums pointer-coarse:min-h-11",
                 "hover:bg-gray-10 active:bg-primary-5",
                 key === "overdue" && counts.overdue > 0
                   ? "text-status-overdue-text"

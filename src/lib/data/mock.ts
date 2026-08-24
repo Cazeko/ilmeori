@@ -31,7 +31,7 @@ import {
 import { departments, profiles } from "@/lib/mock/org";
 import { getDemoState, type DemoState } from "@/lib/demo-state";
 import { searchTerm } from "@/lib/search-term";
-import { WORKS_LIMIT } from "./types";
+import { ACCESS_LOG_LIMIT, WORKS_LIMIT } from "./types";
 import type {
   ApprovalSummary,
   HandoverView,
@@ -821,7 +821,7 @@ async function buildHandover(base: Handover): Promise<HandoverView> {
  */
 export async function listAccessLogs(
   viewer: Profile,
-  limit = 50,
+  limit = ACCESS_LOG_LIMIT,
 ): Promise<AccessLogWithActor[]> {
   const state = await getDemoState();
   const readable = new Map(

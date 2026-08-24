@@ -67,7 +67,7 @@ export function ApprovalDecision({
         </div>
       </form>
 
-      <details className="mt-4 border-t border-primary/20 pt-3">
+      <details className="mt-4 border-t border-primary/30 pt-3">
         <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 py-2 text-body-sm font-bold text-gray-60 hover:text-gray-80">
           <Undo2 aria-hidden className="size-4 shrink-0 text-gray-40" />
           이 문서를 반려해야 한다면

@@ -422,7 +422,7 @@ function BlockPreview({
       style={indent ? { paddingInlineStart: `${12 + indent * 16}px` } : undefined}
     >
       {marker ? <span className="mr-2 text-gray-60">{marker}</span> : null}
-      {text || <span className="text-gray-50">(빈 문단)</span>}
+      {text || <span className="text-gray-60">(빈 문단)</span>}
     </p>
   );
 }
