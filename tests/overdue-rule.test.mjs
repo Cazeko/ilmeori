@@ -21,7 +21,8 @@
  *   npm run test:overdue
  */
 
-import { derivedStatus, todayISO } from "../src/lib/types.ts";
+import { derivedStatus } from "../src/lib/types.ts";
+import { daysUntil, todayKST } from "../src/lib/format.ts";
 import { ilikePattern } from "../src/lib/search-term.ts";
 
 let pass = 0;
@@ -45,7 +46,7 @@ console.log("\n지연 — 화면의 판정과 DB 의 조건이 같은 답을 하
  *
  *   .neq("status", "done")        끝나지 않았고
  *   .not("due_date", "is", null)  기한이 있고
- *   .lt("due_date", todayISO())   그 기한이 오늘보다 앞이다
+ *   .lt("due_date", todayKST())   그 기한이 오늘보다 앞이다
  *
  * 저 세 줄이 바뀌면 여기도 바뀌어야 하고, 안 바꾸면 아래 대조가 깨진다.
  */
@@ -53,7 +54,7 @@ function matchesSqlPredicate(work, today) {
   return work.status !== "done" && work.due_date !== null && work.due_date < today;
 }
 
-const today = todayISO();
+const today = todayKST();
 const yesterday = new Date(Date.parse(`${today}T00:00:00Z`) - 86400000)
   .toISOString()
   .slice(0, 10);
@@ -88,6 +89,62 @@ ok("기한 없음 = 지연 아님", derivedStatus({ status: "todo", due_date: nu
 ok(
   "끝난 일은 기한이 한참 지나도 지연이 아니다",
   derivedStatus({ status: "done", due_date: "2020-01-01" }) === "done",
+);
+
+// ---------------------------------------------------------------------------
+console.log("\n「오늘」은 하나뿐인가 — 아침 여덟 시 반");
+// ---------------------------------------------------------------------------
+
+/*
+ * 이 앱에는 한동안 「오늘」이 둘이었다.
+ *
+ *   카드의 날짜 글자   format.ts 의 daysUntil → todayKST()  Asia/Seoul
+ *   지연 배지·개수     types.ts 의 todayISO()               UTC
+ *
+ * 한국은 UTC+9 라 **매일 00:00~09:00 KST 동안 두 값이 다른 날짜**였다.
+ * 그 아홉 시간에 어제 마감인 업무는 이렇게 보였다.
+ *
+ *     날짜 글자 「1일 지남」(붉게)  ·  배지 「진행중」  ·  지연 개수 제외
+ *
+ * 공무원 출근 시각이 정확히 그 창 안이라 9시가 지나면 조용히 맞아졌고,
+ * 그래서 버그로 신고되지 않고 「가끔 이상하다」로 남는 종류였다.
+ *
+ * 아래는 그 창의 한복판을 못박는다. 누가 UTC 기준 「오늘」을 다시 만들면
+ * 여기가 먼저 터진다.
+ */
+const 아침 = new Date("2026-08-24T23:30:00Z"); // = 2026-08-25 08:30 KST
+const kstDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(아침);
+const utcDay = 아침.toISOString().slice(0, 10);
+
+ok(
+  "그 시각에 UTC 와 KST 는 실제로 다른 날짜다",
+  kstDay !== utcDay,
+  `KST ${kstDay} · UTC ${utcDay}`,
+);
+
+// 기한이 「어제(KST)」인 업무 하나를 그 시각에 본다.
+const 어제KST = utcDay; // 2026-08-24 — KST 로는 어제, UTC 로는 아직 오늘
+const 날짜글자 = daysUntil(어제KST, kstDay); // 음수면 「N일 지남」
+const 배지가지연 = 어제KST < kstDay; // derivedStatus 가 하는 바로 그 비교
+
+ok(
+  "날짜 글자와 배지가 같은 날을 본다",
+  날짜글자 < 0 && 배지가지연,
+  `${-날짜글자}일 지남 · 지연=${배지가지연}`,
+);
+
+ok(
+  "UTC 를 기준으로 삼았다면 어긋났다 — 그래서 쓰지 않는다",
+  (어제KST < utcDay) === false,
+  "UTC 기준으로는 「아직 오늘」이라 지연이 아니다",
+);
+
+// 실제 함수가 KST 를 본다는 것. 위 세 줄은 산술이고 이 줄이 구현을 잡는다.
+ok(
+  "todayKST() 가 Asia/Seoul 을 본다",
+  todayKST() ===
+    new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date()),
+  todayKST(),
 );
 
 // ---------------------------------------------------------------------------

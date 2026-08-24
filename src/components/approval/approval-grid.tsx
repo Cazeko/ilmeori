@@ -297,7 +297,7 @@ export function ApprovalOpinions({
               className={cn(
                 "rounded-sm border px-4 py-3",
                 s.rejected_at
-                  ? "border-danger/25 bg-danger-bg"
+                  ? "border-danger/30 bg-danger-bg"
                   : "border-rule-frame bg-surface",
               )}
             >

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { FileSignature, Inbox, RotateCcw, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, FileSignature, Inbox, RotateCcw, ShieldCheck } from "lucide-react";
 import { startHandover } from "@/lib/actions/handover";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
@@ -67,6 +68,25 @@ export default async function StartHandoverPage({
 
   return (
     <PageContainer width="form">
+      {/* 새 업무·결재 올리기가 전부 이 줄을 두는데 여기만 없었다. 폼 화면은
+          중간에 그만두는 일이 잦아서 돌아갈 길이 특히 필요하다. */}
+      <nav aria-label="현재 위치" className="mb-4">
+        <ol className="flex items-center gap-1 text-body-xs text-gray-60">
+          <li>
+            <Link
+              href="/handover"
+              className="inline-flex items-center font-bold hover:text-primary pointer-coarse:min-h-11"
+            >
+              인계·인수
+            </Link>
+          </li>
+          <li aria-hidden>
+            <ChevronRight className="size-3.5" />
+          </li>
+          <li className="text-gray-70">인계 시작</li>
+        </ol>
+      </nav>
+
       <PageHeader
         title="인계 시작"
         description="넘길 사람과 업무만 고르면 나머지는 쌓인 기록에서 뽑아 채웁니다."
@@ -150,12 +170,18 @@ export default async function StartHandoverPage({
                     {/* 줄 전체가 누르는 자리다. 작은 네모만 표적이면
                         태블릿에서 몇 번씩 헛손질하게 된다. */}
                     <label className="flex min-h-11 cursor-pointer items-start gap-3 px-4 py-3 hover:bg-gray-5">
+                      {/* size-4.5(18px)였다 — 여백 사다리의 **반단계**다.
+                          globals.css 가 「반단계는 쓰지 않는다」고 못박았고,
+                          예외에는 이름을 준다(--spacing-chip-x/y). 여기는
+                          이름을 줄 만한 예외가 아니라 그냥 어긋난 값이었다.
+                          줄 전체가 이미 과녁이라(label) 네모 크기가 손끝을
+                          정하지 않는다. */}
                       <input
                         type="checkbox"
                         name="workIds"
                         value={w.id}
                         defaultChecked
-                        className="mt-1 size-4.5 shrink-0 cursor-pointer accent-primary"
+                        className="mt-1 size-4 shrink-0 cursor-pointer accent-primary"
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block text-body-sm font-bold break-keep text-gray-90">

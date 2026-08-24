@@ -48,6 +48,39 @@ const DOT: Record<WorkStatus, string> = {
   done: "bg-gray-50",
 };
 
+/**
+ * 보드에서 「문서」가 되는 카드 한 장을 고른다 — 가장 오래 지난 지연 업무.
+ *
+ * ── 왜 한 장인가 ───────────────────────────────────────────────────────────
+ *
+ * 한동안 `work-card.tsx` 가 **지연된 카드마다** `data-rank="doc"` 를 붙였다.
+ * 그 파일에는 「문서 등급은 한 **종류**이지 반드시 한 **개**가 아니다」라는
+ * 변론까지 적혀 있었는데, 실제로 보드를 열면 문서가 둘이었고 지연이 열둘인
+ * 부서에서는 열둘이 된다. **문서가 열둘이면 문서가 없는 것과 같다** — 실눈
+ * 시험이 「흐리게 봤을 때 덩어리 하나가 서는가」를 묻는 이유가 그것이다.
+ *
+ * 그래서 `card.tsx` 가 굵게 적어 둔 원래 규칙으로 되돌린다 —
+ * **한 화면에 문서는 하나.** 고르는 기준은 홈의 히어로와 같다: 가장 급한 것.
+ *
+ * ── 붉은 경보선은 그대로 둔다 ──────────────────────────────────────────────
+ *
+ * 선택받지 못한 지연 카드도 여전히 왼쪽 3px 경보선과 붉은 배지를 단다.
+ * 그건 **「늦었다」는 사실**이고 사실은 카드마다 참이다. 등급이 정하는 것은
+ * 「어느 것부터 보라」이지 「무엇이 늦었나」가 아니다.
+ *
+ * 지연이 0건이면 null 이다 — 그날 보드에 1등이 없는 것이 맞다.
+ */
+function leadCardId(works: WorkListItem[]): string | null {
+  let lead: WorkListItem | null = null;
+  for (const w of works) {
+    if (w.derived !== "overdue" || !w.due_date) continue;
+    // 기한이 이른 것이 더 오래 지난 것이다. 같으면 먼저 나온 것을 둔다 —
+    // listWorks 가 이미 급한 순으로 세워 보낸다.
+    if (!lead || w.due_date < lead.due_date!) lead = w;
+  }
+  return lead?.id ?? null;
+}
+
 export function KanbanBoard({
   works,
   approvals,
@@ -86,6 +119,9 @@ export function KanbanBoard({
       </div>
     );
   }
+
+  // 열마다 따로 고르면 열 수만큼 문서가 생긴다. **보드 전체에서 한 장**이다.
+  const leadId = leadCardId(works);
 
   return (
     // items-start: 열마다 내용 높이만큼만 차지한다.
@@ -171,6 +207,7 @@ export function KanbanBoard({
                     approval={approvals?.get(w.id)}
                     pick={pickOf?.(w)}
                     meId={meId}
+                    lead={w.id === leadId}
                   />
                 </li>
               ))}

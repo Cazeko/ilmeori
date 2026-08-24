@@ -169,7 +169,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
                 </div>
               ))}
             </dl>
-            <p className="mt-4 text-body-xs leading-relaxed break-keep text-gray-50">
+            <p className="mt-4 text-body-xs leading-relaxed break-keep text-gray-60">
               행정안전부 연구용역 「행정업무 효율성 진단 및 관리방안 구축 — 업무
               인계인수를 중심으로」(한국행정연구원, 2011). 같은 조사에서 대면
               인계인수는 통상 30분 안에 끝나는 것으로 나타났습니다.

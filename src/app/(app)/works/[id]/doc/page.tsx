@@ -101,6 +101,19 @@ export default async function WorkDocPage({
         </ol>
       </nav>
 
+      {/* ── 이 화면에는 h1 이 없었다 ────────────────────────────────────────
+          이름이 <title> 에만 있어서, 제목으로 화면을 훑는 사람이 여기 도착하면
+          **잡을 닻이 하나도 없었다.** 편집기 안에도 heading 이 없다(문단은
+          전부 p 다). page-header.tsx 가 적어 둔 말 그대로다 — 「스크린리더
+          사용자는 h1으로 「여기가 어디인지」를 잡는다」.
+
+          눈에는 그리지 않는다. 바로 아래 A4 종이가 자기 제목을 이미 크게 달고
+          있어서, 그 위에 같은 글자를 한 번 더 쓰면 종이 밖에 종이 제목이
+          하나 더 서는 꼴이 된다. 소리에만 둔다. */}
+      <h1 className="sr-only">
+        {doc ? docTitle(doc) || work.title : work.title} — 문서 편집
+      </h1>
+
       <ActionFeedback msg={sp.msg} className="mb-3 print:hidden" />
 
       {!document || !doc ? (

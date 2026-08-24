@@ -190,7 +190,10 @@ export default async function ApprovalDetailPage({
               {approval.work ? (
                 <Link
                   href={`/works/${approval.work.id}?tab=approval`}
-                  className="font-bold text-primary"
+                  /* 과녁이 19px 였다 — <dd> 안에 홀로 선 링크라 2.5.8 의
+                     인라인 예외에 걸리지 않는다(AA 는 24×24). 보이는 글자
+                     크기는 그대로 두고 눌리는 높이만 벌린다. */
+                  className="inline-flex min-h-11 items-center font-bold text-primary"
                 >
                   {approval.work.title}
                 </Link>

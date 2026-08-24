@@ -46,7 +46,9 @@ export default function OfflinePage() {
       </a>
 
       <details className="mt-6 text-body-sm text-gray-60">
-        <summary className="cursor-pointer">왜 저장해 두지 않나요</summary>
+        <summary className="inline-flex min-h-11 cursor-pointer items-center">
+          왜 저장해 두지 않나요
+        </summary>
         <p className="mt-2 leading-relaxed break-keep">
           공문서를 브라우저 저장소에 남기면 로그아웃한 뒤에도 그 파일이 남고,
           같은 컴퓨터를 쓰는 다음 사람이 그것을 꺼내 볼 수 있습니다. 볼 수 있게

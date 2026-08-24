@@ -64,7 +64,7 @@ export function PreviousYearCard({
        데는 그것으로 족하고, 면을 칠하면 무게가 생긴다. */
     <section
       aria-labelledby="prev-year-heading"
-      className="rounded-sm border border-rule-frame border-l-3 border-l-accent/60 bg-surface p-4"
+      className="rounded-sm border border-rule-frame border-l-3 border-l-accent bg-surface p-4"
     >
       <p
         id="prev-year-heading"

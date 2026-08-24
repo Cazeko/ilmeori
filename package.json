@@ -18,7 +18,7 @@
     "test:contrast": "node tests/contrast.test.mjs",
     "test:design": "node tests/design-lint.test.mjs",
     "test:squint": "node tests/squint.test.mjs",
-    "check:visual": "npm run test:squint",
+    "check:visual": "node scripts/visual-check.mjs",
     "test:rich-save": "node tests/rich-save.test.mjs",
     "test:data-contract": "node --import ./tests/alias-hook-register.mjs tests/data-contract.test.mjs",
     "icons": "node scripts/gen-icons.mjs",
