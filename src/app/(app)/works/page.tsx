@@ -24,8 +24,10 @@ import {
   getApprovalSummaries,
   getDepartmentTree,
   listWorks,
+  countOverdueWorks,
   roleIn,
 } from "@/lib/data";
+import { WORKS_LIMIT } from "@/lib/data/types";
 import { canMutate } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
 
@@ -86,15 +88,20 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
       ? await listWorks(viewer, { q, mine, overdueOnly, archived })
       : worksForGuess;
 
-  // 「지연 n건」 알림에 쓸 수. 예전에는 같은 표를 조건만 바꿔 한 번 더 불렀는데,
-  // 그 질의가 임베드 6종을 달고 나가는 제일 무거운 것이었다.
-  // 지금 걸린 조건이 그 집합과 같을 때는 방금 받은 결과에서 세면 된다.
-  const countedHere = !mine && !overdueOnly && !archived;
-  const overdueCount = countedHere
-    ? works.filter((w) => w.derived === "overdue").length
-    : (await listWorks(viewer, { q, departmentId })).filter(
-        (w) => w.derived === "overdue",
-      ).length;
+  // 「지연 n건」 알림에 쓸 수.
+  //
+  // 예전에는 두 갈래였다 — 조건이 같으면 방금 받은 목록에서 세고, 다르면 같은
+  // 표를 조건만 바꿔 **한 번 더 불러** 셌다. 뒤쪽은 임베드 6종을 달고 나가는
+  // 제일 무거운 질의였고 세는 데만 쓰고 버렸다.
+  //
+  // 목록에 상한이 생기면서 앞쪽도 못 쓰게 됐다. 100건까지만 받아 놓고 세면
+  // 101번째 지연 업무가 수에서 빠지고, 그러면 화면이 「지연 2건」이라 적어 놓고
+  // 실제로는 셋인 상태가 된다. 개수는 행을 받지 않고 DB 가 센 것을 받는다.
+  const overdueCount = await countOverdueWorks(viewer, { q, departmentId });
+
+  // 상한에 닿았는가. 결재함이 쓰는 판정과 같다 — 받은 수가 상한이면 더 있을 수
+  // 있다고 본다. 「말하지 않는 상한은 「전부 다 봤다」로 읽힌다」.
+  const truncated = works.length >= WORKS_LIMIT;
 
   // 결재 진행률은 업무마다 묻지 않는다. 화면에 뜬 업무 전부를 한 번에 가져온다.
   const approvals = await getApprovalSummaries(
@@ -415,6 +422,18 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
       ) : (
         <KanbanBoard works={works} approvals={approvals} meId={viewer.id} />
       )}
+
+      {/* 잘랐으면 말한다. 결재함이 세워 둔 규약이고(§ listApprovals), 보드가
+          그 규약 밖에 있던 것이 이번에 고친 것 중 하나다.
+          「지연 N건」은 이 상한과 무관하게 DB 가 전부 센 수라, 여기 적힌 수와
+          위 알림의 수가 어긋나 보일 수 있다 — 그래서 그 사실도 함께 적는다. */}
+      {truncated ? (
+        <p className="mt-3 text-body-xs break-keep text-gray-60">
+          기한이 가까운 {WORKS_LIMIT}건까지만 봅니다. 더 있으면 검색어나 부서로
+          좁혀 주세요. 위의 「기한이 지난 업무」 수는 이 상한과 상관없이 전부
+          센 값입니다.
+        </p>
+      ) : null}
     </PageContainer>
   );
 }

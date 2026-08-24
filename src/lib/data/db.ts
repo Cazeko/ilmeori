@@ -4,8 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { approvalProgress, byRecent } from "@/lib/approval";
 import { NOTE_LIMIT, groupThreads } from "@/lib/note";
 import { daysUntil } from "@/lib/format";
+import { ilikePattern } from "@/lib/search-term";
 import {
   derivedStatus,
+  todayISO,
   type AccessLogWithActor,
   type ActivityWithActor,
   type ApprovalKind,
@@ -29,6 +31,7 @@ import {
   type Work,
   type WorkListItem,
 } from "@/lib/types";
+import { WORKS_LIMIT } from "./types";
 import type {
   ApprovalSummary,
   HandoverView,
@@ -52,13 +55,22 @@ import type {
  * 안 보여야 할 것이 보이면 그건 이 파일이 아니라 정책의 문제이고,
  * 그 정책은 supabase/rls.test.mjs 59개가 지키고 있다.
  *
- * ── 필터를 자바스크립트로 거는 이유 ────────────────────────────────────────
+ * ── 필터를 DB 로 내린 이유 ─────────────────────────────────────────────────
  *
- * 검색어·내 업무·지연 필터는 가져온 뒤에 건다. 두 가지 이유다.
- *   1. RLS가 걸러 준 뒤의 행 수가 작다(부서 하나가 다루는 업무는 수십 건이다)
- *   2. PostgREST의 or(...) 는 문자열을 조립해 보내므로 검색어에 쉼표나 괄호가
- *      들어가면 질의가 깨진다. 이스케이프를 직접 하느니 안 만드는 편이 낫다
- * 부서 필터만 서버에서 건다. 값이 uuid로 고정돼 있고 범위를 크게 줄이기 때문이다.
+ * 여기에는 「검색어·내 업무·지연은 가져온 뒤에 건다」고 적혀 있었다. 근거가
+ * 둘이었는데 하나는 틀렸고 하나는 풀 수 있는 것이었다.
+ *
+ *   「RLS 가 걸러 준 뒤의 행 수가 작다」  부서 하나면 그렇다. 그런데 이 화면은
+ *     공개 범위가 「전체」인 업무를 시 전체에서 모아 보여 준다. 작다는 전제가
+ *     제품이 자라면 깨지고, 깨지는 자리가 **가장 자주 열리는 화면**이다.
+ *
+ *   「or(...) 는 문자열 조립이라 쉼표·괄호가 들어가면 깨진다」  맞다. 그래서
+ *     안 만드는 대신 **값을 만드는 자리를 하나로 못박았다**(lib/search-term.ts).
+ *     겁내서 피하면 상한을 걸 수 없고, 상한이 없으면 이 화면은 언젠가 선다.
+ *
+ * 지금은 결과 집합을 정하는 조건이 전부 질의에 있다. 자바스크립트에 남은 것은
+ * **정렬뿐**이고(byUrgency 는 파생 상태를 본다), 그건 상한 안에서만 돈다.
+ * 자세한 내용은 listWorks 머리말에 있다.
  */
 
 // 화면이 쓰는 모양 그대로 한 번에 가져온다. 관계 이름은 외래키 이름을 따른다.
@@ -192,30 +204,162 @@ function byUrgency(a: WorkListItem, b: WorkListItem) {
 // 업무
 // ---------------------------------------------------------------------------
 
-export async function listWorks(viewer: Profile, filter: WorkFilter = {}) {
+/**
+ * 업무 목록.
+ *
+ * ── 상한이 없던 자리 ───────────────────────────────────────────────────────
+ *
+ * 한동안 이 함수는 RLS 가 허용하는 **전 행**을 임베드 6종째로 받아 온 뒤,
+ * 검색어·내 업무·지연을 자바스크립트에서 걸렀다. 결재함은 이미 100건에서
+ * 자르고 「잘랐다」고 화면에 적는데(listApprovals), 정작 이 제품에서 가장 자주
+ * 열리는 화면만 그 규약 밖에 있었다. 시 단위로 업무가 쌓이면 보드를 열 때마다
+ * 그 전부가 나온다.
+ *
+ * 상한을 걸려면 **거르는 일이 먼저 DB 로 내려가야 한다.** 100건을 받아 놓고
+ * 그 안을 검색하면 101번째 업무는 제목이 정확히 일치해도 안 나오고, 사용자는
+ * 그것을 「없다」로 읽는다. 조용히 틀린 답이 느린 답보다 나쁘다.
+ *
+ * 그래서 결과 집합을 정하는 조건은 전부 질의로 옮겼다.
+ *
+ *   archived · departmentId   원래 질의에 있었다
+ *   q                         ilike 두 칸(제목·설명). 값은 search-term.ts 가 만든다
+ *   overdueOnly               아래 세 줄. types.ts 의 derivedStatus 와 같은 정의다
+ *   mine                      내 참여 목록을 먼저 받아 id 로 좁힌다
+ *
+ * ── 정렬은 두 번 한다. 이유가 있다 ─────────────────────────────────────────
+ *
+ * SQL 은 기한 오름차순으로 정렬한다(없는 것은 뒤로). 지연된 업무는 기한이
+ * 오늘보다 앞이므로 **자동으로 맨 앞에 모인다** — 상한이 잘라 내는 쪽이
+ * 「기한 없는 업무」가 되도록 만드는 것이 목적이다. 급한 것을 자르면 안 된다.
+ *
+ * 그 다음 자바스크립트가 byUrgency 로 다시 정렬한다. 이쪽이 화면의 진짜 순서다
+ * (지연을 완료보다 앞에 세우는 규칙은 파생 상태라 SQL 이 모른다). 100건 안에서
+ * 도는 정렬이라 값이 싸다.
+ */
+export async function listWorks(
+  viewer: Profile,
+  filter: WorkFilter = {},
+  limit = WORKS_LIMIT,
+) {
   const supabase = await createClient();
-  let query = withoutDeletedComments(supabase.from("work").select(WORK_SELECT));
-  query = filter.archived
-    ? query.not("archived_at", "is", null)
-    : query.is("archived_at", null);
-  if (filter.departmentId) query = query.eq("department_id", filter.departmentId);
 
-  const { data, error } = await query;
+  // 내가 참여한 업무만 — 참여 목록을 먼저 받아 id 로 좁힌다.
+  // 임베드에 !inner 를 걸어 한 번에 하는 길도 있지만, 그러면 화면에 그리는
+  // members 가 **나 하나로 잘려** 카드의 참여자 줄이 거짓말을 한다.
+  let mineIds: string[] | null = null;
+  if (filter.mine) {
+    const { data: rows, error: mineError } = await supabase
+      .from("work_member")
+      .select("work_id")
+      .eq("profile_id", viewer.id);
+    if (mineError) throw mineError;
+    mineIds = (rows ?? []).map((r) => r.work_id as string);
+    if (mineIds.length === 0) return [];
+  }
+
+  const query = worksFiltered(
+    withoutDeletedComments(supabase.from("work").select(WORK_SELECT)),
+    filter,
+    mineIds,
+  );
+
+  const { data, error } = await query
+    /* 기한 없는 것을 뒤로 보낸다 — 잘려 나가는 쪽이 급하지 않은 쪽이어야 한다.
+       기한이 있는 것끼리는 이른 것이 앞이므로 지연된 업무가 맨 앞에 모인다.
+
+       ⚠ 알려진 한계: **끝난 업무도 기한만으로 줄을 선다.** 기한이 오래된
+         완료 업무가 많으면 그것들이 앞자리를 차지해 진행 중인 업무를 상한
+         밖으로 밀어낼 수 있다. 저장소가 몇 해치 쌓인 뒤에 나타나는 문제다.
+
+         지금 고치지 않은 이유는 PostgREST 가 식(`status = 'done'`)으로 정렬을
+         못 하기 때문이다. status 로 먼저 정렬하면(열거형이 done 을 마지막에
+         둔다) 완료는 뒤로 가지만 **컷 안에서 긴급도가 사라진다** — 먼 미래의
+         「대기」가 오늘 지난 「검토」를 이긴다. 둘 중 덜 나쁜 쪽을 골랐다.
+
+         제대로 된 답은 열마다 따로 상한을 두거나 쪽 넘김을 넣는 것이고,
+         그건 이 수정의 범위 밖이다. 완료 업무가 화면을 먹기 시작하면
+         그때가 그 작업을 할 때다. */
+    .order("due_date", { ascending: true, nullsFirst: false })
+    .order("updated_at", { ascending: false })
+    .limit(limit);
   if (error) throw error;
 
-  const q = filter.q?.trim().toLowerCase();
-  return (data as unknown as RawWork[])
-    .map(toListItem)
-    .filter((w) => !filter.mine || w.members.some((m) => m.profile_id === viewer.id))
-    .filter(
-      (w) =>
-        !q ||
-        w.title.toLowerCase().includes(q) ||
-        (w.description ?? "").toLowerCase().includes(q),
-    )
-    .filter((w) => !filter.overdueOnly || w.derived === "overdue")
-    .sort(byUrgency);
+  return (data as unknown as RawWork[]).map(toListItem).sort(byUrgency);
 }
+
+/**
+ * 「기한이 지난 업무 N건」의 N.
+ *
+ * 예전에는 이 수를 **같은 표를 조건만 바꿔 한 번 더 부른 뒤 세어서** 얻었다.
+ * 임베드 6종을 달고 나가는 제일 무거운 질의였고, 세는 데만 쓰고 버렸다.
+ * 게다가 목록에 상한이 생긴 지금은 그 방법이 틀린 답을 준다 — 100건까지만
+ * 받아서 세면 101번째 지연 업무가 수에서 빠진다.
+ *
+ * 행을 받지 않고 DB 가 센 수만 받는다(head: true). 상한과 무관하게 정확하다.
+ */
+export async function countOverdueWorks(
+  _viewer: Profile,
+  filter: WorkFilter = {},
+): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await worksFiltered(
+    supabase.from("work").select("id", { count: "exact", head: true }),
+    { ...filter, overdueOnly: true },
+    null,
+  );
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/**
+ * 두 조회가 **같은 조건**을 보게 묶어 둔다.
+ *
+ * 목록과 개수가 서로 다른 조건을 보면 화면이 「지연 3건」이라 적어 놓고 세 장이
+ * 아닌 목록을 보여 준다. 조건을 한 함수에 모아 그 어긋남을 구조적으로 막는다.
+ */
+function worksFiltered<T>(
+  query: T,
+  filter: WorkFilter,
+  mineIds: string[] | null,
+): T {
+  /* 조건을 거는 메서드만 추린 구조 타입으로 받는다. Supabase 빌더는
+     `select()` 에 무엇을 넘겼는지에 따라 타입이 갈리는데(행을 받는 쪽과
+     개수만 받는 쪽), 거는 조건은 양쪽이 똑같다. 그 공통분모만 본다. */
+  let q = query as Filterable;
+
+  q = filter.archived
+    ? q.not("archived_at", "is", null)
+    : q.is("archived_at", null);
+  if (filter.departmentId) q = q.eq("department_id", filter.departmentId);
+  if (mineIds) q = q.in("id", mineIds);
+
+  const pattern = ilikePattern(filter.q);
+  if (pattern) {
+    q = q.or(`title.ilike.${pattern},description.ilike.${pattern}`);
+  }
+
+  // 지연 = 끝나지 않았고 · 기한이 있고 · 그 기한이 오늘보다 앞이다.
+  // types.ts 의 derivedStatus 와 **같은 세 조건**이고, 둘이 갈라지지 않는지는
+  // tests/overdue-rule.test.mjs 가 잰다.
+  if (filter.overdueOnly) {
+    q = q
+      .neq("status", "done")
+      .not("due_date", "is", null)
+      .lt("due_date", todayISO());
+  }
+  return q as T;
+}
+
+/** worksFiltered 가 쓰는 메서드만. 위 주석 참조. */
+type Filterable = {
+  not(column: string, operator: string, value: unknown): Filterable;
+  is(column: string, value: unknown): Filterable;
+  eq(column: string, value: unknown): Filterable;
+  in(column: string, values: readonly unknown[]): Filterable;
+  or(filters: string): Filterable;
+  neq(column: string, value: unknown): Filterable;
+  lt(column: string, value: unknown): Filterable;
+};
 
 export async function getWork(
   _viewer: Profile,

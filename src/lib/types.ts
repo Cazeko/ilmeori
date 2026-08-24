@@ -640,12 +640,36 @@ export const ACTIVITY_TONE: Record<ActivityKind, ActivityTone> = {
 };
 
 /**
+ * 「오늘」을 만드는 자리는 하나다.
+ *
+ * 지연 판정의 기준선이고, 화면(derivedStatus)과 DB 조회(data/db.ts 의
+ * listWorks·countOverdueWorks)가 **같은 값**을 봐야 한다. 두 곳에서 각자
+ * 만들면 자정 언저리에 목록과 개수가 갈린다.
+ *
+ * ⚠ 이 값은 **UTC 기준이다.** 한국은 UTC+9 이므로 00:00~09:00 KST 사이에는
+ *   아직 어제 날짜가 나오고, 그동안 「오늘 마감」인 업무가 지연으로 넘어가지
+ *   않는다. 이 저장소의 다른 자리(format.ts·activity-timeline)는 이미
+ *   Asia/Seoul 을 쓰므로 여기만 규약 밖이다.
+ *
+ *   고치지 않고 그대로 옮겼다. 「무엇을 지연으로 볼 것인가」는 화면에 보이는
+ *   제품 판단이라, 성능 작업에 끼워 조용히 바꿀 것이 아니다. 고칠 때는 이
+ *   함수 한 줄만 바꾸면 화면과 DB 가 함께 따라온다 — 그러라고 여기 모았다. */
+export function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
  * 실제 표시할 상태를 계산한다.
  * '지연'은 DB에 저장하지 않는다. 저장하면 매일 밤 배치로 갱신해야 하고,
  * 그 배치가 실패하면 화면이 거짓말을 한다.
+ *
+ * ── 지연의 정의는 여기 세 줄이 원본이다 ────────────────────────────────────
+ *
+ * 끝나지 않았고 · 기한이 있고 · 그 기한이 오늘보다 앞이다. 셋이 전부 참일
+ * 때만 지연이다. `data/db.ts` 의 조회가 **같은 세 조건을 SQL 로** 옮겨 적고
+ * 있고, 둘이 갈라지지 않는지는 `tests/overdue-rule.test.mjs` 가 잰다.
  */
 export function derivedStatus(work: Pick<Work, "status" | "due_date">): DerivedStatus {
   if (work.status === "done" || !work.due_date) return work.status;
-  const today = new Date().toISOString().slice(0, 10);
-  return work.due_date < today ? "overdue" : work.status;
+  return work.due_date < todayISO() ? "overdue" : work.status;
 }

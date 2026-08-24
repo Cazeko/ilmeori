@@ -35,8 +35,20 @@ export type {
   WorkRecords,
 } from "./types";
 
-export const listWorks = (viewer: Profile, filter?: WorkFilter) =>
-  impl.listWorks(viewer, filter);
+export const listWorks = (
+  viewer: Profile,
+  filter?: WorkFilter,
+  limit?: number,
+) => impl.listWorks(viewer, filter, limit);
+
+/**
+ * 「기한이 지난 업무 N건」의 N.
+ *
+ * 목록에서 세지 않는다 — 목록은 상한에서 잘리므로 101번째 지연 업무가 수에서
+ * 빠진다. 두 구현 모두 상한과 무관하게 전부 센다.
+ */
+export const countOverdueWorks = (viewer: Profile, filter?: WorkFilter) =>
+  impl.countOverdueWorks(viewer, filter);
 
 export const getWork = (viewer: Profile, id: string) => impl.getWork(viewer, id);
 
