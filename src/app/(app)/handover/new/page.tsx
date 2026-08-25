@@ -227,10 +227,7 @@ export default async function StartHandoverPage({
             {/* 이 단추는 긴 폼의 맨 아래에 있다. 눌린 뒤 화면 밖으로 밀려나
                 있는 경우가 많아, 단추 하나로는 「무슨 일이 일어나는 중」이라는
                 신호가 화면 어디에도 안 남는다(ui/form-waiting.tsx). */}
-            <FormWaiting
-              title="인계서 초안을 만들고 있습니다"
-              hint="쌓인 기록을 별지 제12호서식 순서대로 훑어 옮기는 중입니다. 인계서를 위해 따로 적어 둔 것은 없습니다."
-            />
+            <FormWaiting title="인계서 초안을 만들고 있습니다" />
           </div>
         </form>
       )}

@@ -20,7 +20,7 @@ import {
   type HandoverBlockKey,
 } from "@/lib/types";
 import { classifyError } from "./feedback";
-import { changed, finish, openSession } from "./guard";
+import { changed, finish, openSession, holdFloor } from "./guard";
 
 /**
  * 인계·인수.
@@ -130,6 +130,8 @@ export async function resetDemo() {
  * 그리고 확인용 초안뿐이다. 실제 이전은 확인을 거친 뒤 executeHandover가 한다.
  */
 export async function startHandover(formData: FormData) {
+  // 화면의 기다림 표시가 번쩍이지 않도록 시작 시각을 잡아 둔다.
+  const startedAt = Date.now();
   const { viewer, supabase } = await openSession();
 
   // 한 번에 하나만 진행한다. 같은 업무를 담은 인계가 둘 생기면 그 업무가
@@ -238,6 +240,9 @@ export async function startHandover(formData: FormData) {
   }
 
   revalidatePath("/handover");
+  // 도는 표시가 번쩍이지 않게 바닥을 깐다(guard.ts 의 holdFloor).
+  // 성공 갈래에만 건다 — 위 오류 갈래들은 그대로 즉시 돌아간다.
+  await holdFloor(startedAt);
   finish("/handover", "handover.started");
 }
 

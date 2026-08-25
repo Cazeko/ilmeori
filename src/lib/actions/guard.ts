@@ -98,3 +98,33 @@ export function finish(path: string, code: FeedbackCode): never {
 export function changed(data: unknown[] | null): boolean {
   return Array.isArray(data) && data.length > 0;
 }
+
+/**
+ * 기다림의 **바닥** — 3초.
+ *
+ * ── 왜 일부러 붙잡는가 ─────────────────────────────────────────────────────
+ *
+ * 인계서 초안과 결재 문서를 만드는 동안 화면 가운데에 도는 표시가 뜬다
+ * (ui/form-waiting.tsx). 그런데 서버가 빠르게 끝내는 날에는 그 표시가 **번쩍
+ * 하고 지나간다.** 사람은 그 깜빡임을 「뭔가 잘못 눌렸나」로 읽지, 「빨랐구나」로
+ * 읽지 않는다 — 화면이 무엇을 했는지 알아볼 시간 자체가 없기 때문이다.
+ *
+ * 그래서 **최소 노출 시간**을 준다. 더하는 것이 아니라 바닥을 까는 것이다 —
+ * 서버가 이미 3초를 넘겼으면 여기서는 한 밀리초도 더 기다리지 않는다.
+ *
+ * ── 이것이 무엇을 대가로 하는지 적어 둔다 ─────────────────────────────────
+ *
+ * **일을 일부러 늦추는 코드다.** 하루에 여러 번 쓰는 자리였다면 넣지 않았을
+ * 것이다. 그렇지 않은 두 자리에만 건다 — 인계는 사람이 바뀔 때 한 번, 결재
+ * 문서 만들기는 그보다 잦아도 하루 몇 번이다. 목록을 열거나 저장하는 것처럼
+ * 반복되는 동작에는 **절대 붙이지 않는다.**
+ *
+ * 그리고 **성공 갈래에만** 건다. 오류를 3초 붙잡아 두는 것은 기다림이 아니라
+ * 벌이다.
+ */
+const WAIT_FLOOR_MS = 3_000;
+
+export async function holdFloor(startedAt: number): Promise<void> {
+  const left = WAIT_FLOOR_MS - (Date.now() - startedAt);
+  if (left > 0) await new Promise((resolve) => setTimeout(resolve, left));
+}
