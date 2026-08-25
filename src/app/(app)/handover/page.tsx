@@ -440,7 +440,7 @@ export default async function HandoverPage({
                   <li key={work.id} className="px-4 py-3">
                     <Link
                       href={`/works/${work.id}`}
-                      className="block hover:text-primary"
+                      className="block transition-colors duration-150 hover:text-primary"
                     >
                       <span className="line-clamp-2 text-body-sm font-bold break-keep text-gray-90">
                         {work.title}
@@ -533,7 +533,7 @@ export default async function HandoverPage({
                       </p>
                     )}
                     <form action={confirmHandover}>
-                      <SubmitButton block>
+                      <SubmitButton block pendingLabel="확인하는 중…">
                         내용을 확인했습니다
                         <ArrowRight aria-hidden className="size-4" />
                       </SubmitButton>
@@ -586,7 +586,11 @@ export default async function HandoverPage({
                           ))}
                         </ul>
                         <form action={executeHandover}>
-                          <SubmitButton variant="danger">
+                          {/* 이 앱에서 가장 무거운 단추다 — 주담당이 실제로
+                              바뀌고 열람 권한이 옮겨 간다. 되돌릴 수 없는
+                              동작에는 무슨 일이 벌어지는 중인지 글로 준다
+                              (ui/submit-button.tsx). */}
+                          <SubmitButton variant="danger" pendingLabel="실행하는 중…">
                             실행합니다
                           </SubmitButton>
                         </form>
@@ -617,7 +621,7 @@ export default async function HandoverPage({
               "use client"라 스크립트가 없으면 버튼이 아무 일도 하지 않는다. */}
             {isSender && !done && canMutate ? (
               <details className="rounded-sm border border-rule-frame bg-surface">
-                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
                   <RotateCcw aria-hidden className="size-4 shrink-0 text-gray-40" />
                   인계를 잘못 시작했다면
                 </summary>
@@ -641,7 +645,7 @@ export default async function HandoverPage({
                     ) : null}
                   </p>
                   <form action={cancelHandover}>
-                    <SubmitButton variant="secondary" size="sm">
+                    <SubmitButton variant="secondary" size="sm" pendingLabel="취소하는 중…">
                       <RotateCcw aria-hidden className="size-4" />이 인계 취소
                     </SubmitButton>
                   </form>
@@ -878,7 +882,7 @@ async function HandoverStandby({
                         두고 눌리는 높이만 벌린다(2.5.5 의 44px). */}
                     <Link
                       href={`/works/${w.id}`}
-                      className="inline-flex items-center text-body-sm font-bold break-keep text-gray-90 pointer-coarse:min-h-11 hover:text-primary"
+                      className="inline-flex items-center text-body-sm font-bold break-keep text-gray-90 pointer-coarse:min-h-11 transition-colors duration-150 hover:text-primary"
                     >
                       {w.title}
                     </Link>

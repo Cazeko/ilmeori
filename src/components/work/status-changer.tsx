@@ -66,6 +66,11 @@ function Columns({ current }: { current: WorkStatus }) {
               "min-h-11 cursor-pointer px-4 text-body-sm font-bold transition-colors duration-150",
               "disabled:cursor-not-allowed",
               i > 0 && "border-l border-rule-hair",
+              // 누르는 즉시 칠해진다 — :active 는 브라우저가 칠하므로 자바스크립트
+              // 를 기다리지 않는다(0ms). 이 화면에서 가장 자주 눌리는 조작기이고,
+              // 서버가 새 화면을 그리는 383~448ms 동안 유일한 대답이다
+              // (ui/link-pending.tsx 의 실측). 옆줄·결재함 칩과 같은 규약이다.
+              "active:bg-primary-10 active:text-primary",
               active ? ON : "bg-surface text-gray-60 hover:bg-gray-5",
             )}
           >

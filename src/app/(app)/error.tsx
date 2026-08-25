@@ -72,7 +72,7 @@ export default function AppError({
           <button
             type="button"
             onClick={reset}
-            className="inline-flex min-h-11 cursor-pointer items-center rounded-sm bg-primary px-6 text-body-sm font-bold text-white hover:bg-primary-hover"
+            className="inline-flex min-h-11 cursor-pointer items-center rounded-sm bg-primary px-6 text-body-sm font-bold text-white transition-colors duration-150 hover:bg-primary-hover"
           >
             다시 시도
           </button>

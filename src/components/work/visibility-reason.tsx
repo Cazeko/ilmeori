@@ -19,6 +19,22 @@ import type { MemberRole, Profile, WorkListItem } from "@/lib/types";
  * details로 접어 두는 이유: 매일 쓰는 사람에게는 필요 없는 설명이고,
  * 처음 열어 본 사람에게는 가장 궁금한 것이다. 접힌 한 줄이 둘을 모두 만족시킨다.
  * (스크립트 없이 열린다. 이 화면 전체가 그렇다)
+ *
+ * ── 이 상자는 **문서 안에** 있다 ───────────────────────────────────────────
+ *
+ * 부르는 자리가 업무 상세의 `<header data-rank="doc">` 안이다(works/[id]/page.tsx).
+ * 한동안 여기가 `rounded-sm border border-rule-frame bg-surface` — 즉 **판 등급
+ * 겉모양 그대로**였다. 문서 한 장 안에 판이 한 장 더 들어 있는 모양이고,
+ * card.tsx 가 「판 안에 판이 들어가는 모양이 34개 상자를 만든 원인 중
+ * 하나였다」고 적어 둔 바로 그 형태다.
+ *
+ * 나쁜 점이 둘이다. 문서의 테두리와 이 상자의 테두리가 같은 굵기(frame)라
+ * **어느 쪽이 문서인지 흐려지고**, 판 색(#fafafa)이 문서 종이(#ffffff) 위에
+ * 얹혀 대비 1.02 로 아무 일도 하지 않으면서 상자만 하나 는다.
+ *
+ * 여백 등급으로 내린다 — 채움과 네 변을 걷고 **왼쪽 칸선 하나**만 남긴다.
+ * 열람기록·인계가 이미 같은 수를 썼고(그쪽은 채운 파란 판이었다), 이 시스템의
+ * 위계는 원래 면이 아니라 선 굵기가 나른다(globals.css 의 --color-rule-*).
  */
 export function VisibilityReason({
   work,
@@ -32,8 +48,8 @@ export function VisibilityReason({
   const reason = whyVisible(work, viewer, role);
 
   return (
-    <details className="mt-5 rounded-sm border border-rule-frame bg-surface">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm text-gray-70 hover:text-gray-90">
+    <details className="mt-5 border-l border-l-rule-hair pl-3">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 py-2 text-body-sm text-gray-70 transition-colors duration-150 hover:text-gray-90">
         <Eye aria-hidden className="size-4 shrink-0 text-gray-40" />
         <span className="break-keep">
           <span className="font-bold">이 업무가 보이는 이유</span>:{" "}
@@ -41,7 +57,7 @@ export function VisibilityReason({
         </span>
       </summary>
 
-      <div className="border-t border-rule-hair px-4 py-4">
+      <div className="pt-1 pb-3">
         <p className="text-body-sm leading-relaxed break-keep text-gray-70">
           {reason.long}
         </p>

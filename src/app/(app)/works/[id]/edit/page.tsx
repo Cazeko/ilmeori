@@ -69,7 +69,7 @@ export default async function EditWorkPage({
       <nav aria-label="현재 위치" className="mb-4">
         <ol className="flex items-center gap-1 text-body-xs text-gray-60">
           <li>
-            <Link href="/works" className="inline-flex items-center font-bold hover:text-primary pointer-coarse:min-h-11">
+            <Link href="/works" className="inline-flex items-center font-bold transition-colors duration-150 hover:text-primary pointer-coarse:min-h-11">
               업무 보드
             </Link>
           </li>
@@ -79,7 +79,7 @@ export default async function EditWorkPage({
           <li className="min-w-0">
             <Link
               href={`/works/${work.id}`}
-              className="line-clamp-1 font-bold hover:text-primary"
+              className="line-clamp-1 font-bold transition-colors duration-150 hover:text-primary"
             >
               {work.title}
             </Link>

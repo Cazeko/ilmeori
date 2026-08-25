@@ -287,7 +287,7 @@ export function PlainEditor({
                         <p className="mb-2 text-body-sm break-keep text-gray-70">
                           이 문단이 문서에서 사라집니다. 되돌릴 수 없습니다.
                         </p>
-                        <SubmitButton variant="danger" size="sm">
+                        <SubmitButton pendingLabel="지우는 중…" variant="danger" size="sm">
                           <Trash2 aria-hidden className="size-4" />
                           문단을 지웁니다
                         </SubmitButton>

@@ -105,7 +105,7 @@ export default async function ApprovalExportPage({
         <nav aria-label="현재 위치" className="mb-4">
           <ol className="flex items-center gap-1 text-body-xs text-gray-60">
             <li>
-              <Link href="/approvals" className="inline-flex items-center font-bold hover:text-primary pointer-coarse:min-h-11">
+              <Link href="/approvals" className="inline-flex items-center font-bold transition-colors duration-150 hover:text-primary pointer-coarse:min-h-11">
                 결재함
               </Link>
             </li>
@@ -118,7 +118,7 @@ export default async function ApprovalExportPage({
                 /* 다른 화면의 같은 마디에는 이 높이가 붙어 있는데
                    여기만 빠져 있었다 — 과녁이 20px 라 WCAG 2.5.8
                    (AA, 24×24) 아래였다. */
-                className="inline-flex min-h-11 items-center line-clamp-1 hover:text-primary"
+                className="inline-flex min-h-11 items-center line-clamp-1 transition-colors duration-150 hover:text-primary"
               >
                 {approval.title}
               </Link>

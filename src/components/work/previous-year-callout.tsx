@@ -78,7 +78,7 @@ export function PreviousYearCard({
         <p className="mt-2 text-body-xs break-keep text-gray-70">
           <Link
             href={`/works/${currentWork.id}`}
-            className="inline-flex items-center font-bold text-gray-90 hover:text-primary pointer-coarse:min-h-6"
+            className="inline-flex items-center font-bold text-gray-90 transition-colors duration-150 hover:text-primary pointer-coarse:min-h-6"
           >
             「{currentWork.title}」
           </Link>
@@ -116,7 +116,7 @@ export function PreviousYearCard({
 
       <Link
         href={`/works/${brief.work.id}`}
-        className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-sm bg-surface px-3 text-body-sm font-bold text-gray-70 ring-1 ring-gray-20 hover:bg-gray-5 hover:text-gray-90 hover:ring-gray-30 pointer-coarse:min-h-11"
+        className="mt-3 inline-flex min-h-9 items-center gap-2 rounded-sm bg-surface px-3 text-body-sm font-bold text-gray-70 ring-1 ring-gray-20 transition-colors duration-150 hover:bg-gray-5 hover:text-gray-90 hover:ring-gray-30 pointer-coarse:min-h-11"
       >
         작년 판 열어 보기
         <ArrowRight aria-hidden className="size-4" />

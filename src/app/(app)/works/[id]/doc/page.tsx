@@ -78,7 +78,7 @@ export default async function WorkDocPage({
           <li>
             <Link
               href="/works"
-              className="inline-flex items-center font-bold hover:text-primary pointer-coarse:min-h-11"
+              className="inline-flex items-center font-bold transition-colors duration-150 hover:text-primary pointer-coarse:min-h-11"
             >
               업무 보드
             </Link>
@@ -89,7 +89,7 @@ export default async function WorkDocPage({
           <li className="min-w-0">
             <Link
               href={`/works/${work.id}?tab=doc`}
-              className="line-clamp-1 hover:text-primary pointer-coarse:min-h-11"
+              className="line-clamp-1 transition-colors duration-150 hover:text-primary pointer-coarse:min-h-11"
             >
               {work.title}
             </Link>

@@ -37,7 +37,7 @@ export function NotificationBell({
   return (
     <details className="relative shrink-0">
       <summary
-        className="flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-sm px-2 text-gray-70 hover:bg-gray-5 hover:text-gray-90 [&::-webkit-details-marker]:hidden"
+        className="flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-sm px-2 text-gray-70 transition-colors duration-150 hover:bg-gray-5 hover:text-gray-90 [&::-webkit-details-marker]:hidden"
         aria-label={
           unread > 0 ? `알림 ${unread}건이 안 읽혔습니다` : "알림"
         }
@@ -76,7 +76,7 @@ export function NotificationBell({
                 <a
                   href={`/notifications/${n.id}`}
                   className={cn(
-                    "flex min-h-11 flex-col gap-1 px-4 py-3 hover:bg-gray-5 active:bg-primary-5",
+                    "flex min-h-11 flex-col gap-1 px-4 py-3 transition-colors duration-150 hover:bg-gray-5 active:bg-primary-5",
                     n.read_at ? "text-gray-60" : "text-gray-90",
                   )}
                 >

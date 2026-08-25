@@ -60,7 +60,10 @@ export function ApprovalDecision({
           )}
         </Field>
         <div>
-          <SubmitButton>
+          {/* 서명·반려·회수는 셋 다 되돌릴 수 없다. 흐려지기만 하는 단추는
+              「눌리긴 했나」를 남기고, 그 물음의 답이 「한 번 더 눌러 보자」다.
+              무슨 일이 벌어지는 중인지 글로 적는다(ui/submit-button.tsx). */}
+          <SubmitButton pendingLabel="서명하는 중…">
             <PenLine aria-hidden className="size-4" />
             서명합니다
           </SubmitButton>
@@ -68,7 +71,7 @@ export function ApprovalDecision({
       </form>
 
       <details className="mt-4 border-t border-primary/30 pt-3">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 py-2 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 py-2 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
           <Undo2 aria-hidden className="size-4 shrink-0 text-gray-40" />
           이 문서를 반려해야 한다면
         </summary>
@@ -92,7 +95,7 @@ export function ApprovalDecision({
             )}
           </Field>
           <div>
-            <SubmitButton variant="danger">
+            <SubmitButton variant="danger" pendingLabel="반려하는 중…">
               <Undo2 aria-hidden className="size-4" />
               반려합니다
             </SubmitButton>
@@ -112,7 +115,7 @@ export function ApprovalDecision({
 export function ApprovalWithdraw({ approvalId }: { approvalId: string }) {
   return (
     <details className="rounded-sm border border-rule-frame bg-surface">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
         <RotateCcw aria-hidden className="size-4 shrink-0 text-gray-40" />
         잘못 올렸다면
       </summary>
@@ -124,7 +127,7 @@ export function ApprovalWithdraw({ approvalId }: { approvalId: string }) {
         </p>
         <form action={withdrawApproval}>
           <input type="hidden" name="approvalId" value={approvalId} />
-          <SubmitButton variant="secondary" size="sm">
+          <SubmitButton variant="secondary" size="sm" pendingLabel="회수하는 중…">
             <RotateCcw aria-hidden className="size-4" />이 결재 회수
           </SubmitButton>
         </form>

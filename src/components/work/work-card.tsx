@@ -146,7 +146,18 @@ export function WorkCard({
           "cursor-pointer has-[input:checked]:border-primary has-[input:checked]:bg-primary-5",
         // 고를 수 없는 카드는 물러난다. 감추지는 않는다 — 보드에서 사라지면
         // 「내 업무만 있는 보드」로 읽히고, 그건 사실이 아니다.
-        pick === "locked" && "opacity-60",
+        //
+        // 물러나게 하는 데 `opacity-60` 을 쓰던 때가 있었다. 투명도는 **읽는
+        // 순서만** 낮추는 것이 아니라 **읽을 수 있는지까지** 낮춘다 — 제목
+        // (gray-90)이 판 위에서 60% 로 섞이면 실측 **4.29:1** 로 본문 기준
+        // 4.5 에 미달한다. 고를 수 없다는 것과 읽을 수 없다는 것은 다른 말이고,
+        // 이 카드는 **여전히 읽으라고** 남겨 둔 것이다(위 문단).
+        //
+        // 그래서 글자는 그대로 두고 **판을 바탕색으로 내린다.** 판(#fafafa)이
+        // 본문 바탕(#f0f1f2)과 같아지면 카드가 격자에서 한 겹 물러나고, 테두리도
+        // 바깥선(frame)에서 칸선(hair)으로 한 칸 내린다 — 이 시스템의 위계는
+        // 원래 선 굵기 축이 나른다(globals.css 의 --color-rule-*).
+        pick === "locked" && "border-rule-hair bg-gray-5",
         // 눌린 카드는 흐려진다. 안쪽 LinkPendingMark 가 표식을 심으면
         // 여기서 받는다 — 카드를 client 컴포넌트로 만들지 않기 위한 배치다.
         "has-[[data-link-pending]]:opacity-55 has-[[data-link-pending]]:transition-opacity",

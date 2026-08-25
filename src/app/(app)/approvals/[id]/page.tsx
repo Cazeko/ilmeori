@@ -113,7 +113,7 @@ export default async function ApprovalDetailPage({
       <nav aria-label="현재 위치" className="mb-4">
         <ol className="flex items-center gap-1 text-body-xs text-gray-60">
           <li>
-            <Link href="/approvals" className="inline-flex items-center font-bold hover:text-primary pointer-coarse:min-h-11">
+            <Link href="/approvals" className="inline-flex items-center font-bold transition-colors duration-150 hover:text-primary pointer-coarse:min-h-11">
               결재함
             </Link>
           </li>
@@ -328,7 +328,11 @@ export default async function ApprovalDetailPage({
               </p>
               <form action={submitApproval}>
                 <input type="hidden" name="approvalId" value={approval.id} />
-                <SubmitButton>
+                {/* 되돌릴 수 없는 동작에는 **무슨 일이 벌어지는 중인지**를
+                    글로 준다. 흐려지기만 하면 「눌리긴 했나」로 읽히고, 바로 위
+                    문단이 「그때부터 본문은 고칠 수 없습니다」라고 적어 둔
+                    자리에서 그 물음은 비싸다. (ui/submit-button.tsx) */}
+                <SubmitButton pendingLabel="상신하는 중…">
                   <Send aria-hidden className="size-4" />
                   상신합니다
                 </SubmitButton>
@@ -336,7 +340,7 @@ export default async function ApprovalDetailPage({
             </div>
 
             <details className="rounded-sm border border-rule-frame bg-surface">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
                 <Trash2 aria-hidden className="size-4 shrink-0 text-gray-40" />
                 이 초안을 지우려면
               </summary>
@@ -348,7 +352,7 @@ export default async function ApprovalDetailPage({
                 </p>
                 <form action={deleteApproval}>
                   <input type="hidden" name="approvalId" value={approval.id} />
-                  <SubmitButton variant="secondary" size="sm">
+                  <SubmitButton pendingLabel="지우는 중…" variant="secondary" size="sm">
                     <Trash2 aria-hidden className="size-4" />
                     초안 지우기
                   </SubmitButton>

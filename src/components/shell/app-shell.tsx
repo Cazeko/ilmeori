@@ -262,7 +262,7 @@ export function AppShell({
         <details ref={drawerRef} data-drawer className="lg:hidden">
           <summary
             aria-label="메뉴"
-            className="flex size-11 shrink-0 cursor-pointer list-none items-center justify-center rounded-sm text-gray-60 hover:bg-gray-5 [&::-webkit-details-marker]:hidden"
+            className="flex size-11 shrink-0 cursor-pointer list-none items-center justify-center rounded-sm text-gray-60 transition-colors duration-150 hover:bg-gray-5 active:bg-gray-10 [&::-webkit-details-marker]:hidden"
           >
             <Menu aria-hidden className="size-5" />
           </summary>
@@ -295,7 +295,7 @@ export function AppShell({
                 onClick={() => {
                   if (drawerRef.current) drawerRef.current.open = false;
                 }}
-                className="flex size-11 cursor-pointer items-center justify-center rounded-sm text-gray-60 hover:bg-gray-5"
+                className="flex size-11 cursor-pointer items-center justify-center rounded-sm text-gray-60 transition-colors duration-150 hover:bg-gray-5 active:bg-gray-10"
               >
                 <X aria-hidden className="size-5" />
               </button>

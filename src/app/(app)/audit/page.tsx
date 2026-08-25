@@ -132,7 +132,7 @@ export default async function AuditPage() {
                               보이는 크기는 그대로 두고 눌리는 높이만 벌린다. */}
                           <Link
                             href={`/works/${l.work.id}`}
-                            className="inline-flex items-center text-body-sm text-gray-60 pointer-coarse:min-h-11 hover:text-primary"
+                            className="inline-flex items-center text-body-sm text-gray-60 pointer-coarse:min-h-11 transition-colors duration-150 hover:text-primary"
                           >
                             <span className="line-clamp-1">{l.work.title}</span>
                           </Link>

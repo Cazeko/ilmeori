@@ -129,7 +129,7 @@ export function AttachmentPanel({
                   data-download=""
                   // 보이는 글자(파일 이름)를 접근성 이름에 그대로 품는다.
                   aria-label={`${fileName} 내려받기`}
-                  className="flex min-h-11 items-center gap-2 text-body-sm font-bold break-all text-gray-80 hover:text-primary"
+                  className="flex min-h-11 items-center gap-2 text-body-sm font-bold break-all text-gray-80 transition-colors duration-150 hover:text-primary"
                 >
                   <Paperclip
                     aria-hidden
@@ -324,8 +324,13 @@ export function AttachmentPanel({
 
       {/* 파일이 한 건도 없을 때는 보관 방식을 말할 것이 없다. 예전에는 0건인
           패널에도 이 3줄이 늘 붙어, 빈 화면에서 가장 긴 글이 정책 설명이었다. */}
+      {/* 채움(bg-gray-5)을 걷었다. 이 줄은 판 **안에** 있는 곁정보이고, 판이
+          이미 자기 테두리로 「여기까지가 첨부다」를 말했다. 안쪽에 면을 한 겹
+          더 깔면 판 안에 판이 생긴다 — card.tsx 가 34개 상자의 원인으로 지목한
+          그 모양이다. 끊는 일은 위쪽 칸선(rule-hair) 하나로 충분하다.
+          (DESIGN.md §16.1 — 면은 화면에서 가장 비싼 표현 수단이다) */}
       {attachments.length > 0 ? (
-        <div className="border-t border-rule-hair bg-gray-5 px-5 py-3">
+        <div className="border-t border-rule-hair px-5 py-3">
           <p className="text-body-xs leading-relaxed text-gray-60">
             공개 URL 이 없는 비공개 저장소에 있습니다. 내려받을 때마다 권한을
             확인합니다.

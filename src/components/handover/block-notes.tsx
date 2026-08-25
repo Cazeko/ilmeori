@@ -135,7 +135,7 @@ export function BlockNotes({
           {/* 「이 항목에」는 그 항목 안에 있으니 자명한 말이다. 일곱 번
               반복되면 문서가 아니라 설문지가 된다. 아래 Field 라벨이 어느
               항목인지를 이미 말하므로 여기서는 동작만 적는다. */}
-          <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-2 text-body-sm font-bold text-gray-60 hover:text-gray-80">
+          <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-2 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
             <PenLine aria-hidden className="size-4" />
             보충 적기
           </summary>

@@ -221,7 +221,7 @@ export function ActivityFeed({
                     **조작 도구**(단추·펼침·이동 메뉴)에만 44px 를 준다. */}
                 <Link
                   href={`/works/${a.work.id}`}
-                  className="inline-flex min-w-0 items-center truncate font-bold text-gray-60 hover:text-primary pointer-coarse:min-h-6"
+                  className="inline-flex min-w-0 items-center truncate font-bold text-gray-60 transition-colors duration-150 hover:text-primary pointer-coarse:min-h-6"
                 >
                   {a.work.title}
                 </Link>

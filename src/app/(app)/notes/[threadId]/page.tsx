@@ -66,7 +66,7 @@ export default async function NoteThreadPage({
           <li>
             <Link
               href="/notes"
-              className="inline-flex items-center font-bold hover:text-primary pointer-coarse:min-h-11"
+              className="inline-flex items-center font-bold transition-colors duration-150 hover:text-primary pointer-coarse:min-h-11"
             >
               쪽지
             </Link>
