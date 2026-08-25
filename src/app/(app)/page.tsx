@@ -17,7 +17,7 @@ import { ActivityFeed } from "@/components/work/activity-timeline";
 import { PreviousYearCard } from "@/components/work/previous-year-callout";
 import { UrgentHero, UrgentRow } from "@/components/work/urgent-hero";
 import { StatusBadge } from "@/components/status-badge";
-import { daysUntil, formatDueLabel } from "@/lib/format";
+import { daysUntil, formatDueDday, formatDueLabel } from "@/lib/format";
 import {
   getApprovalSummaries,
   getDashboard,
@@ -333,7 +333,14 @@ export default async function HomePage() {
                               : "text-gray-60",
                           )}
                         >
-                          {formatDueLabel(w.due_date!)}
+                          {/* 「그 다음」과 같은 화면에 있다. 한 화면에서 같은
+                              사실을 「D+28」과 「28일 지남」 두 가지로 적으면
+                              둘이 다른 것처럼 읽힌다 — 좁은 자리는 좁은 자리의
+                              표기로 통일한다(format.ts 의 formatDueDday). */}
+                          <span aria-hidden>{formatDueDday(w.due_date!)}</span>
+                          <span className="sr-only">
+                            {formatDueLabel(w.due_date!)}
+                          </span>
                         </span>
                       </Link>
                     </li>

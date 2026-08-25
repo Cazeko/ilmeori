@@ -22,7 +22,13 @@
  */
 
 import { derivedStatus } from "../src/lib/types.ts";
-import { daysUntil, todayKST } from "../src/lib/format.ts";
+import {
+  daysUntil,
+  formatDueDday,
+  formatDueLabel,
+  todayKST,
+} from "../src/lib/format.ts";
+import { readFileSync } from "node:fs";
 import { ilikePattern } from "../src/lib/search-term.ts";
 
 let pass = 0;
@@ -186,6 +192,40 @@ ok(
 ok(
   "탈출 시도가 조건을 하나 더 만들지 못한다",
   !userPart(ilikePattern('a","b')).includes('"'),
+);
+
+
+// ---------------------------------------------------------------------------
+console.log("\n기한 표기 — 화면은 D-day, 종이는 우리말");
+// ---------------------------------------------------------------------------
+/*
+ * 같은 사실에 표기가 둘이다. 나누는 기준은 「자리」다.
+ *
+ *   좁은 자리(칩·카드·목록 줄·히어로 숫자)   D+28        formatDueDday
+ *   문장·종이(상세 설명·인계 초안·별지 서식)  28일 지남   formatDueLabel
+ *
+ * **종이 쪽이 지켜야 할 것이다.** lib/handover-draft.ts 가 만드는 것은 별지
+ * 제12호서식과 인계 초안이고, 그것은 결재에 올라간다. 거기 「D+28」이 찍히면
+ * 공문서가 화면 약어를 쓰는 셈이 된다.
+ *
+ * 「하나로 통일하자」는 다음 사람의 손이 정확히 그 방향으로 간다 — 그래서
+ * 함수를 나눠 두는 것으로는 부족하고, 어느 파일이 어느 쪽을 부르는지를 여기서
+ * 지킨다.
+ */
+const 어제 = daysUntil("2026-08-24", "2026-08-25");
+ok("지난 기한은 D+", formatDueDday("2026-08-24", "2026-08-25") === "D+1", `${어제}일`);
+ok("남은 기한은 D-", formatDueDday("2026-09-15", "2026-08-25") === "D-21");
+ok("마감 당일은 D-DAY", formatDueDday("2026-08-25", "2026-08-25") === "D-DAY");
+
+// 종이의 말은 바뀌지 않았다.
+ok("종이는 그대로 우리말", formatDueLabel("2026-08-24", "2026-08-25") === "1일 지남");
+ok("종이는 그대로 우리말 (남음)", formatDueLabel("2026-09-15", "2026-08-25") === "21일 남음");
+
+const 종이 = readFileSync(new URL("../src/lib/handover-draft.ts", import.meta.url), "utf8");
+ok(
+  "별지 제12호서식은 D-day 를 쓰지 않는다",
+  !종이.includes("formatDueDday"),
+  "lib/handover-draft.ts",
 );
 
 // ---------------------------------------------------------------------------
