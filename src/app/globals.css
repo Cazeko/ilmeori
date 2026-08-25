@@ -321,6 +321,7 @@
        rise-in    "방금 뭔가 도착했나?"   — 실시간으로 온 알림이 밀려 올라온다
        drawer-in  "메뉴가 어디서 나왔나?" — 서랍이 왼쪽 밖에서 들어온다
        scrim-in   위 서랍에 딸린 덮개
+       globe      "아직 만드는 중인가?"   — 인계서 초안·결재 문서를 짜는 몇 초
 
      길이는 거리에 비례시킨다. 6px 움직이는 것과 260px 움직이는 것에 같은
      시간을 주면, 짧은 쪽은 느리고 긴 쪽은 급해 보인다.
@@ -336,6 +337,22 @@
   --animate-drawer-in: ilm-drawer-in 220ms cubic-bezier(0.2, 0, 0, 1);
   --animate-scrim-in: ilm-scrim-in 220ms ease-out;
 
+  /* ── 도는 지구본 ───────────────────────────────────────────────────────
+     위 셋과 성질이 다르다. 셋은 **한 번 돌고 마는 것**이고 이것은 **무한
+     반복**이다. 그래서 여기에는 규칙이 둘 더 붙는다.
+
+     ① 무한 반복은 `prefers-reduced-motion` 전역 규칙(길이 0.01ms)으로 멎지
+        않고 **뭉개진다.** 부르는 쪽이 `motion-safe:` 를 붙여야 한다
+        (link-pending·work-live·nav-placeholder 가 같은 이유로 그렇게 한다).
+     ② 무한 반복은 「아직 안 끝났다」는 뜻이므로, 끝날 일이 있는 자리에만
+        쓴다. 여기서는 서버가 인계서 초안·결재 문서를 짜는 동안이다 —
+        규칙이 기록을 훑어 서식을 조립하는 몇 초이고, 그동안 화면이 아무 말도
+        안 하면 사람은 **눌리지 않았다고 읽고 한 번 더 누른다.**
+
+     느리게 돈다(10초에 한 바퀴). 기다림을 재촉하는 표시가 아니라 「돌고
+     있다」는 사실만 말하는 표시라, 빠르면 오히려 조급해진다. */
+  --animate-globe: ilm-globe 10s linear infinite;
+
   @keyframes ilm-rise-in {
     from {
       opacity: 0;
@@ -350,6 +367,11 @@
   @keyframes ilm-scrim-in {
     from {
       opacity: 0;
+    }
+  }
+  @keyframes ilm-globe {
+    to {
+      rotate: 360deg;
     }
   }
 }

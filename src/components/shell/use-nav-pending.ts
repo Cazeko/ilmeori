@@ -66,9 +66,55 @@ export function useNavPending() {
     return () => document.removeEventListener("click", onClick, true);
   }, [here]);
 
-  // 도착했으면 푼다. 그리고 어떤 이유로든 이동이 일어나지 않았을 때를 위해
-  // 8초 뒤에는 반드시 푼다 — 자리표시가 남은 채 굳는 것이 제일 나쁘다.
   const arrived = goingTo === null || goingTo === here;
+
+  /**
+   * 도착했으면 **지운다.** 견주기만 하고 두면 안 된다.
+   *
+   * ── 뒤로가기가 8초 동안 자리표시에 덮이던 이유 ──────────────────────────
+   *
+   * 예전에는 `arrived` 를 계산만 하고 `goingTo` 는 그대로 뒀다. 「지금 여기가
+   * 목적지와 같으니 pending 은 거짓」이라 화면상으로는 멀쩡했다. 문제는
+   * **그 값이 다음 이동까지 살아 있다**는 것이었다.
+   *
+   *   1. 보드에서 카드를 누른다        goingTo = "/works/<id>"
+   *   2. 상세에 닿는다                 here = goingTo → arrived, 자리표시 사라짐
+   *      (그런데 goingTo 는 여전히 "/works/<id>")
+   *   3. **뒤로가기**를 누른다          here = "/works" ≠ goingTo → arrived 가
+   *      **다시 거짓**이 된다 → 자리표시가 켜진다
+   *   4. 누른 적이 없으니 풀릴 일도 없다 → **8초 실패대기**가 끝나야 걷힌다
+   *
+   * 그리고 그 실패대기가 goingTo 를 null 로 만들기 때문에, 그다음부터는
+   * 앞으로·뒤로가 멀쩡하다. 「처음 한 번만 느리다」는 증상이 여기서 나왔다.
+   * 본문은 내내 DOM 에 있었다 — 실측하면 뒤로가기 자체는 41ms 다.
+   *
+   * 도착한 순간 지우면 3번이 성립하지 않는다.
+   */
+  useEffect(() => {
+    if (goingTo !== null && goingTo === here) setGoingTo(null);
+  }, [goingTo, here]);
+
+  /**
+   * 브라우저 앞으로·뒤로는 **누른 것이 아니다.**
+   *
+   * 이 훅이 세는 것은 「링크를 눌렀다」 하나뿐이다(위 캡처 리스너). 히스토리
+   * 이동은 거기 해당하지 않고, 게다가 그 화면은 이미 클라이언트 캐시에 있어
+   * 기다릴 것이 없다(Next 의 client cache 는 뒤로·앞으로에서 재사용된다).
+   * 그러니 popstate 가 오면 「가는 중」은 무조건 없던 일이 된다.
+   *
+   * 위 도착 판정만으로도 지금은 충분하지만, 이동이 **취소되는** 경우까지
+   * 덮으려면 이쪽이 필요하다 — 링크를 누른 직후 곧바로 뒤로가기를 누르면
+   * 목적지에 닿지 않은 채 goingTo 만 남는다.
+   */
+  useEffect(() => {
+    const onPop = () => setGoingTo(null);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // 어떤 이유로든 이동이 일어나지 않았을 때를 위해 8초 뒤에는 반드시 푼다 —
+  // 자리표시가 남은 채 굳는 것이 제일 나쁘다. 위 둘이 생긴 뒤로 이 시계가
+  // 실제로 끝까지 도는 경우는 「눌렀는데 서버가 8초 넘게 답하지 않는다」뿐이다.
   useEffect(() => {
     if (arrived) return;
     const failsafe = setTimeout(() => setGoingTo(null), 8_000);

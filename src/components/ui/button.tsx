@@ -90,6 +90,46 @@ export function Button({
   );
 }
 
+/**
+ * 겉모습은 버튼, 동작은 **내려받기.**
+ *
+ * ── 왜 ButtonLink 로는 안 되는가 ──────────────────────────────────────────
+ *
+ * 한/글·워드 내보내기 주소는 페이지가 아니라 라우트 핸들러다 — 파일을 돌려주고
+ * 화면은 그대로 있어야 한다. 그런데 `next/link` 로 걸어 두면 라우터가 그것을
+ * **화면 이동**으로 보고 전환을 시작한다. 서버는 그 사이 hwpx 를 조립하고
+ * 있으므로 몇 초가 걸리고, 그동안 본문이 자리표시로 덮인다. 다 만들어져
+ * 내려오면 브라우저가 Content-Disposition 을 보고 저장으로 넘기므로 **이동은
+ * 결국 일어나지 않는다** — 사용자가 본 것은 「한참 로딩하다가 제자리로 돌아옴」
+ * 이고, 실제로 그 화면은 한 번도 갈릴 예정이 없었다.
+ *
+ * 평범한 `<a download>` 는 라우터를 거치지 않는다. 브라우저가 자기 내려받기
+ * 갈래로 처리하므로 화면은 1픽셀도 움직이지 않는다.
+ *
+ * `download` 와 `data-download` 를 **둘 다** 단다. 앞엣것은 브라우저에게,
+ * 뒤엣것은 shell/use-nav-pending.ts 에게 하는 말이다 — 그 훅은 클릭을 캡처
+ * 단계에서 세기 때문에 `next/link` 인지 아닌지를 모른다.
+ *
+ * ※ 파일 이름은 서버가 정한다(Content-Disposition). `download` 에 값을 주면
+ *   그 이름이 서버의 것을 덮어써서, 업무 제목으로 짓던 이름이 사라진다.
+ */
+export function DownloadLink({
+  className,
+  variant,
+  size,
+  block,
+  ...props
+}: ComponentProps<"a"> & ButtonVariants) {
+  return (
+    <a
+      download=""
+      data-download=""
+      className={cn(button({ variant, size, block }), className)}
+      {...props}
+    />
+  );
+}
+
 /** 겉모습은 버튼, 동작은 이동. 이동은 반드시 <a>여야 새 탭 열기가 동작한다. */
 export function ButtonLink({
   className,

@@ -5,7 +5,7 @@ import { ApprovalBadge } from "@/components/approval/approval-badge";
 import { ApprovalPrintSheet } from "@/components/approval/approval-print-sheet";
 import { ExportBlocks } from "@/components/approval/export-blocks";
 import { PrintButton } from "@/components/handover/print-button";
-import { ButtonLink } from "@/components/ui/button";
+import { ButtonLink, DownloadLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import { PageContainer } from "@/components/ui/page-container";
@@ -167,15 +167,10 @@ export default async function ApprovalExportPage({
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {/* 링크다. 자바스크립트 없이 눌러도 내려받아진다. */}
-            <ButtonLink
-              href={`/approvals/${approval.id}/export/hwpx`}
-              prefetch={false}
-              /* 화면이 갈리지 않는 주소다 — 자리표시가 켜지면 안 된다. */
-              data-download=""
-            >
+            <DownloadLink href={`/approvals/${approval.id}/export/hwpx`}>
               <Download aria-hidden className="size-4" />
               한/글 파일(.hwpx)
-            </ButtonLink>
+            </DownloadLink>
             <PrintButton />
             <span className="inline-flex items-center gap-2 text-body-xs text-gray-60">
               <Printer aria-hidden className="size-3.5" />
