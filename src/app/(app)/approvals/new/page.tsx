@@ -5,6 +5,7 @@ import { ApprovalFields } from "@/components/approval/approval-fields";
 import { PeoplePicker } from "@/components/approval/people-picker";
 import { ButtonLink } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { FormWaiting } from "@/components/ui/form-waiting";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ActionFeedback } from "@/components/ui/feedback";
@@ -212,10 +213,17 @@ export default async function NewApprovalPage({
           </Card>
 
           <div className="flex flex-wrap gap-2">
-            <SubmitButton>
+            <SubmitButton pendingLabel="만드는 중…">
               <Send aria-hidden className="size-4" />
               문서 만들기
             </SubmitButton>
+            {/* 서버가 업무의 기록에서 기안문 본문을 짜는 동안 몇 초가 걸린다.
+                그동안 화면이 아무 말도 안 하면 한 번 더 누르게 된다
+                (ui/form-waiting.tsx). */}
+            <FormWaiting
+              title="결재 문서를 만들고 있습니다"
+              hint="업무에 쌓인 기록에서 기안문 본문을 뽑는 중입니다. 상신은 아직 하지 않습니다."
+            />
             <ButtonLink href="/approvals" variant="secondary">
               취소
             </ButtonLink>

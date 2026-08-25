@@ -21,7 +21,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { ApprovalRow } from "@/components/approval/approval-row";
 import { CARD_SURFACE, Card, CardHeader } from "@/components/ui/card";
 import { PersonChip } from "@/components/ui/avatar";
-import { ButtonLink } from "@/components/ui/button";
+import { ButtonLink, DownloadLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Notice } from "@/components/ui/notice";
@@ -429,23 +429,27 @@ export default async function WorkDetailPage({
                             (works/[id]/doc/page.tsx 의 canWrite 주석). */}
                         {canEdit ? "문서 편집기 열기" : "문서 크게 보기"}
                       </ButtonLink>
-                      {/* 내보내기는 평범한 링크다. 스크립트가 없어도 눌린다. */}
-                      <ButtonLink
+                      {/* 내보내기는 **화면을 갈지 않는다** — 파일만 내려온다.
+                          next/link 로 걸면 라우터가 이동으로 보고 전환을
+                          시작해서, 서버가 hwpx 를 조립하는 동안 본문이
+                          자리표시로 덮였다가 제자리로 돌아온다
+                          (ui/button.tsx 의 DownloadLink 주석). */}
+                      <DownloadLink
                         href={`/works/${work.id}/doc/export/hwpx`}
                         variant="secondary"
                         size="sm"
                       >
                         <FileDown aria-hidden className="size-4" />
                         한/글
-                      </ButtonLink>
-                      <ButtonLink
+                      </DownloadLink>
+                      <DownloadLink
                         href={`/works/${work.id}/doc/export/docx`}
                         variant="secondary"
                         size="sm"
                       >
                         <FileDown aria-hidden className="size-4" />
                         워드
-                      </ButtonLink>
+                      </DownloadLink>
                     </div>
                   </div>
 

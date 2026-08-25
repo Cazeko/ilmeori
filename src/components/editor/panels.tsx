@@ -143,11 +143,13 @@ export function TopBar({
       ) : null}
 
       <div className="flex shrink-0 flex-wrap items-center gap-2">
-        <a href={`${exportBase}/hwpx`} className="ilm-xbtn">
+        {/* 화면을 갈지 않는다 — 브라우저 내려받기로 넘긴다.
+            data-download 은 shell/use-nav-pending.ts 에게 하는 말이다. */}
+        <a href={`${exportBase}/hwpx`} download="" data-download="" className="ilm-xbtn">
           <FileDown aria-hidden className="size-4" />
           한/글 (.hwpx)
         </a>
-        <a href={`${exportBase}/docx`} className="ilm-xbtn">
+        <a href={`${exportBase}/docx`} download="" data-download="" className="ilm-xbtn">
           <FileDown aria-hidden className="size-4" />
           워드 (.docx)
         </a>
@@ -544,9 +546,18 @@ export function StatusBar({
 
       {/* Tab 은 들여쓰기에 쓰이므로 편집칸에서 빠져나가는 길을 따로 알려야 한다.
           WCAG 2.1.2 는 「함정이 없을 것」과 함께 「나가는 방법을 알릴 것」을
-          요구한다. 적어 두지 않으면 지킨 것이 아니다. */}
+          요구한다. 적어 두지 않으면 지킨 것이 아니다.
+
+          ── 「편집칸 밖으로」가 거짓말이었다 ─────────────────────────────
+          이 안내를 읽고 Esc 를 누르면 **화면이 바뀔 것**으로 읽힌다. 실제로는
+          rich-doc-editor.tsx 가 초점을 **도구모음 첫 단추**로 옮길 뿐이고,
+          문서도 화면도 그대로다. 「밖으로」라는 말이 어디까지의 밖인지를 안
+          말해서 생긴 오해다 — 실제로 「업무 화면으로 가는 줄 알았는데 안
+          간다」는 물음을 받았다.
+          가는 자리를 그대로 적는다. 알려야 하는 것은 「나갈 수 있다」가 아니라
+          **「어디로 나가는가」**다. 거기서부터 Tab 이 평범하게 동작한다. */}
       <span className="text-gray-60">
-        <kbd className="ilm-kbd">Esc</kbd> 편집칸 밖으로
+        <kbd className="ilm-kbd">Esc</kbd> 도구모음으로
       </span>
 
       <span className="ilm-tooldiv" aria-hidden />
