@@ -11,7 +11,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { approvalStateLine } from "@/lib/approval";
-import { daysUntil, formatDueLabel, formatShortDate } from "@/lib/format";
+import {
+  daysUntil,
+  formatDueDday,
+  formatDueLabel,
+  formatShortDate,
+} from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
 import { AvatarStack } from "@/components/ui/avatar";
 import type { ApprovalSummary } from "@/lib/data/types";
@@ -35,9 +40,31 @@ import type { WorkListItem } from "@/lib/types";
  * ── 칸의 리듬 ──────────────────────────────────────────────────────────────
  *
  * 안쪽 간격을 4·8·12 로만 쓴다. 8·10·6·12 처럼 어긋나 있으면 사람은 숫자를
- * 세지 못해도 「정돈이 안 됐다」로 느낀다. 그리고 아래 줄(참여자·대화 수)은
- * mt-auto 로 **바닥에 붙인다** — 제목이 한 줄인 카드와 두 줄인 카드가 나란히
- * 놓였을 때 밑줄이 어긋나 보이는 것이 칸반에서 가장 눈에 띄는 흐트러짐이다.
+ * 세지 못해도 「정돈이 안 됐다」로 느낀다.
+ *
+ * ── `min-h-36` + `mt-auto` 가 바로 그 「어긋남」을 만들고 있었다 ─────────────
+ *
+ * 아래 줄(참여자·대화 수)에 `mt-auto` 가 걸려 있었고, 그 자리에 이런 근거가
+ * 적혀 있었다 — 「제목이 한 줄인 카드와 두 줄인 카드가 **나란히** 놓였을 때
+ * 밑줄이 어긋나 보인다」. 그런데 이 카드를 담는 그릇은 앱 전체에 하나뿐이고
+ * (kanban-board.tsx 의 `<ul className="flex flex-col">`) **세로 열**이다.
+ * 세로 flex 에서 stretch 는 높이가 아니라 폭에 걸리므로, 카드가 나란히 놓이는
+ * 일 자체가 없다. `mt-auto` 는 나눠 줄 남는 공간이 없어 아무 일도 안 한다 —
+ * **`min-h-36`(144px)이 억지로 만들어 준 잔여분을 빼면.**
+ *
+ * 그래서 자연 높이가 144px 에 못 미치는 카드에서만 그 잔여분이 **부서 줄과
+ * 아래 가로줄 사이**로 들어갔다. 실측하면 같은 열 안에서 간격이 세 가지였다.
+ *
+ *   0px    자연 높이가 144 이상인 카드 (아홉 장)
+ *   10px   자연 높이가 144 미만이라 늘어난 카드 (네 장)
+ *   28px   결재 진행률 줄이 하나 더 있는 카드
+ *
+ * 위계를 만들지 않는 간격이 카드마다 다르면, 사람은 이유를 못 찾은 채
+ * 「정돈이 안 됐다」만 느낀다. 늘어나는 장치를 걷고 **12px 로 못박는다** —
+ * 사다리 위의 값이고, 카드가 몇 줄이든 같다.
+ *
+ * (억지 높이 `min-h-36` 도 함께 지운다. 그것이 없으면 `mt-auto` 는 언제나 0
+ *  이므로, 둘 중 하나만 남기면 규칙이 다시 조용히 어긋난다.)
  *
  * ── 이 화면의 「문서」는 한 장이다 ──────────────────────────────────────────
  *
@@ -132,7 +159,7 @@ export function WorkCard({
       // (tests/squint.test.mjs, 위 머리글).
       data-rank={lead ? "doc" : "panel"}
       className={cn(
-        "relative flex min-h-36 flex-col rounded-sm border border-rule-frame bg-surface",
+        "relative flex flex-col rounded-sm border border-rule-frame bg-surface",
         // 안쪽 여백 한 칸이 등급이다 — 문서 16px / 판 12px.
         lead ? "p-4" : "p-3",
         // 손이 닿았다는 표시는 **바탕**으로 한다. hover:border-* 는 의사클래스라
@@ -204,10 +231,22 @@ export function WorkCard({
             )}
           >
             {/* 끝난 일에 "47일 지남"이라고 적으면 늦은 것처럼 읽힌다.
-                완료된 업무에는 남은 날짜가 아니라 기한 날짜만 적는다. */}
-            {work.derived === "done"
-              ? formatShortDate(work.due_date)
-              : formatDueLabel(work.due_date)}
+                완료된 업무에는 남은 날짜가 아니라 기한 날짜만 적는다.
+
+                끝나지 않은 일은 D-day 로 적는다 — 카드 머리 줄은 배지와 날짜가
+                한 줄에 서는 자리라, 「28일 지남」 여섯 글자가 들어가면 좁은
+                화면에서 줄이 갈라진다. 소리에는 원래 말을 그대로 준다
+                (format.ts 의 formatDueDday). */}
+            {work.derived === "done" ? (
+              formatShortDate(work.due_date)
+            ) : (
+              <>
+                <span aria-hidden>{formatDueDday(work.due_date)}</span>
+                <span className="sr-only">
+                  {formatDueLabel(work.due_date)}
+                </span>
+              </>
+            )}
           </span>
         ) : null}
       </div>
@@ -290,9 +329,11 @@ export function WorkCard({
         </p>
       ) : null}
 
-      {/* mt-auto 가 이 줄을 바닥에 붙인다. h-7 로 높이를 못박아, 아바타가 있는
-          카드와 없는 카드의 밑줄이 같은 자리에 온다. */}
-      <div className="mt-auto flex h-7 items-center justify-between gap-2 border-t border-rule-hair pt-2">
+      {/* 위 줄과의 간격을 12px 로 못박는다 — 예전에는 `mt-auto` 였고, 그것이
+          카드마다 0·10·28px 로 갈리던 원인이었다(위 머리글).
+          h-7 은 남긴다. 아바타가 있는 카드와 없는 카드의 밑줄이 같은 자리에
+          오게 하는 것은 이 높이 고정이 하는 일이고, 그건 실제로 동작한다. */}
+      <div className="mt-3 flex h-7 items-center justify-between gap-2 border-t border-rule-hair pt-2">
         <AvatarStack people={work.members.map((m) => m.profile)} meId={meId} />
         <span className="flex items-center gap-3 text-body-xs text-gray-60">
           {/* 아이콘 옆 숫자만 두면 스크린리더에는 "5"라고만 읽힌다.

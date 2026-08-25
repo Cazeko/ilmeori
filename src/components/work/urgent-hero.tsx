@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Building2, MessageSquare, Paperclip, Stamp, Users } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { approvalStateLine } from "@/lib/approval";
-import { daysUntil, formatDueLabel } from "@/lib/format";
+import { daysUntil, formatDueDday, formatDueLabel } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
 import { AvatarStack } from "@/components/ui/avatar";
 import { CARD_SURFACE } from "@/components/ui/card";
@@ -108,7 +108,11 @@ export function UrgentHero({
               tone.text,
             )}
           >
-            {formatDueLabel(work.due_date)}
+            {/* 이 화면에서 가장 큰 글자다. 「28일 지남」 여섯 글자가 46px 로
+                서면 폭이 300px 을 넘어 좁은 화면에서 배지를 아래로 밀었다.
+                D+28 은 같은 사실을 네 글자로 말한다. 소리는 그대로 둔다. */}
+            <span aria-hidden>{formatDueDday(work.due_date)}</span>
+            <span className="sr-only">{formatDueLabel(work.due_date)}</span>
           </span>
         ) : null}
       </div>
@@ -185,20 +189,36 @@ export function UrgentRow({ work }: { work: WorkListItem }) {
   return (
     <Link
       href={`/works/${work.id}`}
-      className="flex items-center gap-3 rounded-sm px-2 py-3 hover:bg-gray-10 active:bg-primary-5"
+      className="flex items-center gap-3 rounded-sm px-2 py-3 transition-colors duration-150 hover:bg-gray-10 active:bg-primary-5"
     >
-      <span className="line-clamp-1 min-w-0 flex-1 text-body-sm font-bold text-gray-90">
+      {/* ── 세 조각을 붙여 놓는다 ─────────────────────────────────────────
+          한동안 제목에 `flex-1` 이, 날짜에 `w-20 text-right` 가 걸려 있었다.
+          그러면 제목이 남는 폭을 **전부** 먹고 상태·날짜를 화면 오른쪽 끝까지
+          민다 — 1440px 홈에서 제목이 끝나는 자리와 배지 사이가 **800px 가까이**
+          비었다. 열이 둘로 갈라지는 셈이라, 한 줄인데 두 번 봐야 한다.
+
+          오른쪽 맞춤은 「숫자 열을 세로로 훑는다」는 전제 위에서만 값을 한다.
+          여기는 줄이 둘에서 셋뿐이라 세로로 훑을 것이 없다. 대신 **가로로 한
+          번에 읽히는 것**이 중요하다 — 제목·상태·기한이 한 덩어리로 붙는다.
+
+          제목의 `min-w-0` 은 남긴다. flex 자식의 최소 폭은 기본이 min-content
+          라, 이것을 0 으로 눌러야 안쪽 line-clamp 가 제 일을 하고 긴 제목이
+          좁은 화면에서 배지를 밀어내지 않는다. */}
+      <span className="line-clamp-1 min-w-0 text-body-sm font-bold text-gray-90">
         {work.title}
       </span>
       <StatusBadge status={work.derived} size="sm" />
       {work.due_date ? (
         <span
           className={cn(
-            "w-20 shrink-0 text-right text-body-xs font-bold tabular-nums",
+            "shrink-0 text-body-xs font-bold tabular-nums",
             tone.text,
           )}
         >
-          {formatDueLabel(work.due_date)}
+          {/* 눈에는 D+28, 소리에는 「28일 지남」. D-day 는 낭독기에서 뜻을
+              잃는다(format.ts 의 formatDueDday). */}
+          <span aria-hidden>{formatDueDday(work.due_date)}</span>
+          <span className="sr-only">{formatDueLabel(work.due_date)}</span>
         </span>
       ) : null}
     </Link>
