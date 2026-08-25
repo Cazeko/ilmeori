@@ -35,12 +35,17 @@ import { WaitingGlobe } from "@/components/ui/waiting-globe";
  */
 export function FormWaiting({
   title,
-  hint,
 }: {
-  /** 지금 무엇을 만들고 있는가. 아는 사실만 적는다. */
+  /**
+   * 지금 무엇을 만들고 있는가. **이 한 줄이 전부다.**
+   *
+   * 한동안 아래에 설명 한 줄이 더 있었다(「쌓인 기록을 별지 제12호서식
+   * 순서대로 훑는 중입니다」). 맞는 말이었지만 이 화면이 할 말은 아니다 —
+   * DESIGN.md §16.5 가 걷어낸 것과 같은 종류의 글이고, 기다리는 사람이
+   * 읽으려고 멈추는 글이면 기다림이 더 길어진다. 설명은 소스 주석과 문서가
+   * 맡는다. 여기서는 **무슨 일이 벌어지는 중인지** 하나만 말한다.
+   */
   title: string;
-  /** 그것이 어디서 나오는지 한 줄. */
-  hint?: string;
 }) {
   const { pending } = useFormStatus();
   if (!pending) return null;
@@ -48,7 +53,12 @@ export function FormWaiting({
   return (
     <div
       // 대화상자 층(globals.css 의 z 규약 다섯 칸 중 맨 위).
-      className="fixed inset-0 z-50 flex items-center justify-center bg-gray-90/40 p-6"
+      //
+      // 어둡게만 덮으면 뒤의 긴 폼이 그대로 읽혀서 눈이 그쪽으로 간다.
+      // 흐리게 함께 처리하면 뒤가 「지금 만질 것이 아니다」로 물러나고,
+      // 도는 표시가 화면에서 유일하게 초점 맞은 것이 된다. 잠깐 뜨는 판이라
+      // 흐림 비용도 그 몇 초뿐이다.
+      className="fixed inset-0 z-50 flex items-center justify-center bg-gray-90/40 p-6 backdrop-blur-sm"
     >
       <div
         role="status"
@@ -59,11 +69,6 @@ export function FormWaiting({
       >
         <WaitingGlobe />
         <p className="mt-4 text-h3 font-bold break-keep text-gray-90">{title}</p>
-        {hint ? (
-          <p className="mt-2 text-body-sm leading-relaxed break-keep text-gray-60">
-            {hint}
-          </p>
-        ) : null}
       </div>
     </div>
   );

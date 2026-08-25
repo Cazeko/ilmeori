@@ -23,7 +23,7 @@ import {
   type Profile,
 } from "@/lib/types";
 import { classifyError } from "./feedback";
-import { changed, finish, openWork } from "./guard";
+import { changed, finish, openWork, holdFloor } from "./guard";
 
 /**
  * 결재.
@@ -153,6 +153,8 @@ function isAddableKind(v: unknown): v is (typeof ADDABLE_KINDS)[number] {
  * 「빠바바밥」은 결재선을 자동으로 **채우는** 것이지 자동으로 **올리는** 것이 아니다.
  */
 export async function createApproval(formData: FormData) {
+  // 화면의 기다림 표시가 번쩍이지 않도록 시작 시각을 잡아 둔다.
+  const startedAt = Date.now();
   const rawWorkId = formData.get("workId");
   if (typeof rawWorkId !== "string" || !rawWorkId) {
     finish("/approvals/new", "approval.no_work");
@@ -231,6 +233,8 @@ export async function createApproval(formData: FormData) {
 
   revalidatePath("/approvals");
   revalidatePath(`/works/${work.id}`);
+  // 도는 표시가 번쩍이지 않게 바닥을 깐다(guard.ts 의 holdFloor).
+  await holdFloor(startedAt);
   finish(`/approvals/${approvalId}`, "approval.created");
 }
 
