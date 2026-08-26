@@ -14,7 +14,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ActivityFeed } from "@/components/work/activity-timeline";
-import { PreviousYearCard } from "@/components/work/previous-year-callout";
 import { UrgentHero, UrgentRow } from "@/components/work/urgent-hero";
 import { StatusBadge } from "@/components/status-badge";
 import { daysUntil, formatDueDday, formatDueLabel } from "@/lib/format";
@@ -22,7 +21,6 @@ import {
   getApprovalSummaries,
   getDashboard,
   getHandoverFor,
-  getPreviousYearBrief,
   listApprovalsAwaitingMe,
 } from "@/lib/data";
 import { myTurn } from "@/lib/approval";
@@ -92,30 +90,38 @@ export default async function HomePage() {
   );
   const [hero, ...alsoUrgent] = bySoonest;
 
-  // 「작년 이맘때」 — 해마다 반복되는 업무 중 아직 끝나지 않은 것 하나.
-  // 여럿이면 마감이 가장 가까운 것을 고른다. 작년 판을 꺼내 보는 일은
-  // 그 업무를 실제로 시작할 때 필요하지, 목록으로 늘어놓을 것이 아니다.
-  const repeating =
-    mine
-      .filter((w) => w.previous_year && w.derived !== "done")
-      .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"))
-      .at(0) ?? null;
-
-  // 두 번째 왕복도 한꺼번에 던진다. 앞의 Promise.all 결과가 있어야 무엇을
-  // 물을지 정해지므로 두 겹이 되는 것은 어쩔 수 없지만, 두 겹이 세 겹이 되지는
-  // 않게 한다.
+  // 「작년 이맘때」 카드를 홈에서 내렸다.
   //
-  // 「지금 손대야 하는 일」 카드에도 결재 진행률을 붙인다. 급한 업무일수록
+  // 작년 판을 꺼내 보는 일은 **그 업무를 실제로 시작할 때** 필요하지, 아침에
+  // 홈을 열었을 때 필요한 것이 아니다. 홈에서 유일하게 「오늘」과 무관한
+  // 칸이었고, 오른쪽 열만 길어지게 만드는 원인이기도 했다.
+  // 컴포넌트(previous-year-callout.tsx)와 조회(getPreviousYearBrief)는 그대로
+  // 둔다 — 업무 상세에서 쓴다.
+  //
+  // 「지금 손대야 하는 일」 카드에 붙는 결재 진행률. 급한 업무일수록
   // 「결재가 어디까지 갔는가」가 다음 행동을 정한다.
-  const [approvals, prevYear] = await Promise.all([
-    getApprovalSummaries(
-      viewer,
-      urgent.map((w) => w.id),
-    ),
-    repeating?.previous_year
-      ? getPreviousYearBrief(viewer, repeating.previous_year.id)
-      : null,
-  ]);
+  const approvals = await getApprovalSummaries(
+    viewer,
+    urgent.map((w) => w.id),
+  );
+
+  // ── 아래 두 판의 세로 길이를 맞춘다 ──────────────────────────────────────
+  //
+  // 소식은 늘 8줄(574px)인데 마감은 계정마다 4줄(311px)~6줄(451px)이라,
+  // 왼쪽만 123~263px 길게 늘어져 있었다. 나란히 놓인 두 판의 밑선이 안 맞으면
+  // 그 자체가 어수선하게 읽힌다.
+  //
+  // 줄 높이가 소식 68px, 마감 70px 로 거의 같다. **그래서 줄 수를 맞추면
+  // 높이가 맞는다** — 실측 오차 8~13px 이다. 숫자를 하나 박아 두는 대신
+  // 마감 줄 수를 따라가게 하는 이유는, 계정마다 마감 수가 다르기 때문이다
+  // (김서연 6 · 박준호 4). 6 으로 고정하면 김서연만 맞고 박준호는 127px 남는다.
+  //
+  // 마감이 3건 미만이면 따라가지 않는다. 그때는 소식이 한두 줄만 남는데,
+  // 이 판에는 「전체 보기」가 없어서 잘린 소식은 갈 곳이 없다.
+  const dueSoon = mine
+    .filter((w) => w.due_date && w.derived !== "done")
+    .slice(0, 6);
+  const feed = recent.slice(0, Math.max(dueSoon.length, 3));
 
   return (
     <PageContainer>
@@ -279,9 +285,9 @@ export default async function HomePage() {
           {/* ── 최근 소식 ──────────────────────────────────────────────── */}
           <Card variant="quiet">
             <CardHeader variant="quiet" title="내 업무에서 일어난 일" />
-            {recent.length > 0 ? (
+            {feed.length > 0 ? (
               <CardBody variant="quiet">
-                <ActivityFeed items={recent} />
+                <ActivityFeed items={feed} />
               </CardBody>
             ) : (
               <EmptyState
@@ -297,11 +303,9 @@ export default async function HomePage() {
         <div className="flex min-w-0 flex-col gap-8">
           <Card variant="quiet">
             <CardHeader variant="quiet" title="다가오는 마감" />
-            {mine.filter((w) => w.due_date && w.derived !== "done").length > 0 ? (
+            {dueSoon.length > 0 ? (
               <ul>
-                {mine
-                  .filter((w) => w.due_date && w.derived !== "done")
-                  .slice(0, 6)
+                {dueSoon
                   .map((w) => (
                     <li key={w.id}>
                       <Link
@@ -353,17 +357,6 @@ export default async function HomePage() {
               />
             )}
           </Card>
-
-          {/* ── 작년 이맘때 ────────────────────────────────────────────────
-              마감 다음에 둔다. 「올해 무엇을 해야 하는가」를 먼저 보고,
-              그 다음에 「작년에는 어떻게 했는가」를 본다. 순서가 뒤집히면
-              회고가 할 일보다 위에 오는 화면이 된다. */}
-          {prevYear && repeating ? (
-            <PreviousYearCard
-              brief={prevYear}
-              currentWork={{ id: repeating.id, title: repeating.title }}
-            />
-          ) : null}
         </div>
       </div>
     </PageContainer>
