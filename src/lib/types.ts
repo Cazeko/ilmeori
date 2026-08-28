@@ -15,7 +15,15 @@ export type MemberRole = "owner" | "editor" | "viewer";
 export type WorkVisibility = "private" | "department" | "city";
 export type HandoverStatus = "draft" | "generated" | "confirmed" | "completed";
 
-/** 법정 결재유형 8종. 「승인」 같은 사기업 낱말로 바꾸지 않는다. */
+/**
+ * 결재유형 8가지. 「승인」 같은 사기업 낱말로 바꾸지 않는다.
+ *
+ * 낱말의 출처는 「행정업무의 운영 및 혁신에 관한 규정」 **제10조**(결재·전결·대결)와
+ * 시행규칙 **제4조**(검토·협조)다. 「법정 8종」이라고 부르지 않는다 — 온나라 고시
+ * (행안부 제2024-28호)가 세는 8종은 `기안·검토·협조·병렬협조·결재·전결·대결·전대결`
+ * 이라 **목록이 같지 않다.** 여기에는 「검토」·「전대결」이 없고 「최종결재」·「사후보고」가
+ * 있다. 「법정」이라는 낱말을 붙이면 목록이 다른 순간 제품의 정확성 자체가 흔들린다.
+ */
 export type ApprovalKind =
   | "draft" // 기안
   | "review" // 결재
@@ -531,7 +539,7 @@ export const HANDOVER_STATUS_LABEL: Record<HandoverStatus, string> = {
 };
 
 /**
- * 결재유형 8종의 이름. 법정 용어를 그대로 쓴다.
+ * 결재유형 8가지의 이름. 규정·시행규칙의 낱말을 그대로 쓴다(ApprovalKind 머리말).
  *
  * 「승인」·「검토자」 같은 사기업 낱말로 바꾸면 공무원이 화면을 보고 무엇을 하는
  * 칸인지 다시 배워야 한다. DB의 approval_kind 열거형과 **같은 목록**이다.

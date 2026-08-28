@@ -66,8 +66,9 @@ import { useCollab, type Peer } from "./use-collab";
  *
  * ⚠ 이 규칙은 리눅스 컨테이너에서 검증할 수 없다. 여기에는 한글 IME 가 없고,
  * Playwright 의 타이핑은 조합 과정을 거치지 않는다. **실제 Windows 한/글 IME 로
- * 확인한 적이 없다** — pack.ts 가 「실제 한/글에서 열어 본 적이 없다」고 적은
- * 것과 같은 종류의 미검증이다. 반드시 사람이 한 번 쳐 봐야 한다.
+ * 확인한 적이 없다** — 한/글로 열어 보기 전까지 pack.ts 머리말에 붙어 있던 것과
+ * 같은 종류의 미검증이다. **그 쪽은 사람이 한 번 열어서 걷어냈고, 이 쪽은 아직
+ * 남아 있다.** 반드시 사람이 한 번 쳐 봐야 한다.
  */
 
 export type EditorPerson = { id: string; name: string; position: string | null };
