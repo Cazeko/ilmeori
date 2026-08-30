@@ -461,6 +461,16 @@ export interface WorkListItem extends Work {
   derived: DerivedStatus;
   comment_count: number;
   attachment_count: number;
+  /**
+   * 이 업무에 딸린 문서 판 수.
+   *
+   * 대화 수는 오래전부터 있었는데 문서 수는 없었다 — 그래서 인계를 시작하기
+   * **전** 화면이 「지금 넘긴다면 무엇이 실리는가」를 셀 때 문서만 빠져 있었고,
+   * 그 자리에 「업무마다 질의를 더 돌려야 한다」고 적혀 있었다. 세는 방법은
+   * `comment_count` 와 똑같다(목업은 필터, Supabase 는 임베드 count) —
+   * 새 질의가 아니라 이미 도는 질의에 칸 하나를 더하는 일이다.
+   */
+  document_count: number;
   /** 같은 업무의 작년 판. 있으면 '작년 이맘때' 카드를 띄운다. */
   previous_year: Pick<Work, "id" | "title" | "fiscal_year"> | null;
   /** 참여 부서 수 — 부서 간 협업 여부를 카드에서 바로 읽게 한다. */

@@ -1004,6 +1004,7 @@ export async function buildHandoverDraft(
     }
     for (const { comment: c, labels } of picks.picked) {
       quotedComments += 1;
+      const q = quote(c.body);
       lines.push(
         // 누를 수 있는 것은 꼬리표 줄이다. 인용문 자체를 링크로 만들면 굵은
         // 글자가 문장을 덮어, 「원문 그대로」가 원문처럼 안 보인다.
@@ -1012,7 +1013,20 @@ export async function buildHandoverDraft(
           w.id,
           c.id,
         ),
-        plain(`  “${quote(c.body).text}”`),
+        // ⚠ 잘렸으면 잘렸다고 적는다.
+        //
+        // `quote()` 는 `truncated` 를 함께 돌려주는데 **이 자리만 그 값을
+        // 버리고 있었다.** 미포착 판은 같은 함수의 같은 값을 받아 「(뒤가
+        // 잘렸습니다 — 원문 보기)」를 붙인다(screening-panel.tsx).
+        //
+        // 한국어는 어미에서 뜻이 뒤집힌다. 220자에서 잘린 인용은 「…해도
+        // 되는지 확인이 필요합」 처럼 끝나 **질문을 단정으로** 바꿀 수 있고,
+        // 그러면 잘린 인용이 원문보다 강하게 말한다. 「사람의 말은 그대로
+        // 인용한다」를 이 서식이 직접 어기는 자리였다.
+        //
+        // 종이에는 원문으로 가는 길이 없으므로 사실만 적는다. 화면에서는
+        // 바로 위 꼬리표가 그 대화로 가는 링크다.
+        plain(`  “${q.text}”${q.truncated ? " (뒤가 잘렸습니다)" : ""}`),
       );
     }
 

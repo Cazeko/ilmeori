@@ -195,6 +195,7 @@ function toListItem(raw: Work, state: DemoState): WorkListItem {
       comments.filter((c) => c.work_id === work.id && !c.deleted_at).length +
       state.comments.filter((c) => c.work_id === work.id).length,
     attachment_count: attachments.filter((a) => a.work_id === work.id).length,
+    document_count: documents.filter((d) => d.work_id === work.id).length,
     previous_year: prev
       ? { id: prev.id, title: prev.title, fiscal_year: prev.fiscal_year }
       : null,

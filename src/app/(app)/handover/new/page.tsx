@@ -201,6 +201,16 @@ export default async function StartHandoverPage({
                               연간 반복
                             </span>
                           ) : null}
+                          {/* ── 이 업무에 쌓여 있는 **원문의 수** ─────────────
+                              여기는 규칙이 아직 안 돈 자리다. 그래서 「현안 3건」
+                              같은 **해석된 수**는 적으면 안 된다 — 무엇이 실릴지
+                              고르기 전에 화면이 먼저 판정한 것이 되고, 다음 화면의
+                              수와 어긋나면 어느 쪽이 맞는지 알 수 없게 된다.
+                              세는 것은 **있는 그대로의 개수**뿐이다. */}
+                          <span className="text-body-xs tabular-nums text-gray-60">
+                            대화 {w.comment_count} · 문서 {w.document_count} ·
+                            첨부 {w.attachment_count}
+                          </span>
                         </span>
                       </span>
                     </label>

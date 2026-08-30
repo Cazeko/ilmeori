@@ -86,7 +86,8 @@ const WORK_SELECT = `
   ),
   previous_year:previous_year_work_id ( id, title, fiscal_year ),
   comment_count:comment ( count ),
-  attachment_count:attachment ( count )
+  attachment_count:attachment ( count ),
+  document_count:document ( count )
 `;
 
 /**
@@ -143,6 +144,7 @@ type RawWork = Work & {
   previous_year: Pick<Work, "id" | "title" | "fiscal_year"> | null;
   comment_count: unknown;
   attachment_count: unknown;
+  document_count: unknown;
 };
 
 const ROLE_ORDER = { owner: 0, editor: 1, viewer: 2 } as const;
@@ -181,6 +183,7 @@ function toListItem(raw: RawWork): WorkListItem {
     derived: derivedStatus(raw),
     comment_count: countOf(raw.comment_count),
     attachment_count: countOf(raw.attachment_count),
+    document_count: countOf(raw.document_count),
     previous_year: raw.previous_year,
     department_count: deptIds.size,
   };
