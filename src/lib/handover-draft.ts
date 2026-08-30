@@ -1,11 +1,17 @@
 import "server-only";
 
-import { gatherForWorks, type HandoverView, type WorkRecords } from "@/lib/data";
+import {
+  gatherForWorks,
+  getDepartments,
+  type HandoverView,
+  type WorkRecords,
+} from "@/lib/data";
 import { formatDate, formatDueLabel, josa } from "@/lib/format";
 import { ISSUE_CUE_NAMES, issueLabels } from "@/lib/handover-cues";
 import {
   STATUS_LABEL,
   VISIBILITY_LABEL,
+  type ActivityKind,
   type ActivityWithActor,
   type AttachmentWithUploader,
   type CommentWithAuthor,
@@ -161,6 +167,55 @@ const atComment = (
 const workTitle = (w: { id: string; title: string }): DraftLine =>
   atWork(`· ${w.title}`, w.id);
 
+/**
+ * 「업무 처리 절차」를 이루는 이력 갈래.
+ *
+ * 심사위원이 말한 절차는 **그 업무를 실제로 처리하는 순서**다. 그런데 인터뷰
+ * (2026-08-29, 순천시청 세무 6급 팀장 Q4)에서 실무자가 인계서에 실제로 적는
+ * 것은 결재 경로였다 — *"인계자 기안(주무관 또는 팀장) → 팀장 → 과장"*.
+ * 그리고 *"업무를 실제로 처리하는 순서인 민원 접수, 현장확인, 관계기관 협의,
+ * 위원회 심의, 고시 등은 **필요시 파일 별첨**"* 이라고 했다.
+ *
+ * 그래서 두 층으로 나눈다. **결재로 지나간 자리는 기록에 있으니 자동으로 적고,
+ * 바깥에서 도는 절차는 없다고 화면이 먼저 말한다.** 지어내는 것보다 비워 두고
+ * 비었다고 적는 것이 이 제품의 규칙이다.
+ *
+ * 갈래와 그 자국의 이름을 **한 표에** 둔다. 둘로 나눠 두면 갈래를 하나 더할 때
+ * 이름을 빠뜨려도 타입이 통과하고 인계서에 엉뚱한 낱말이 조용히 찍힌다 —
+ * types.ts 의 ActivityKind 주석이 적어 둔 바로 그 실패다.
+ */
+const APPROVAL_TRACE = {
+  "approval.submitted": "상신",
+  "approval.signed": "서명",
+  "approval.rejected": "반려",
+  "approval.completed": "완결",
+  "approval.withdrawn": "회수",
+} as const satisfies Partial<Record<ActivityKind, string>>;
+
+type ApprovalTraceKind = keyof typeof APPROVAL_TRACE;
+
+const isApprovalTrace = (k: ActivityKind): k is ApprovalTraceKind =>
+  k in APPROVAL_TRACE;
+
+/**
+ * 이력 한 줄이 결재 자국인가 — **줄 자체를 좁힌다.**
+ * 갈래만 좁히는 술어로 걸러 내면 걸러진 뒤에도 `a.kind` 는 여전히 전체
+ * ActivityKind 라, 표에서 이름을 꺼낼 때 타입이 막는다.
+ */
+const hasApprovalTrace = (
+  a: ActivityWithActor,
+): a is ActivityWithActor & { kind: ApprovalTraceKind } =>
+  isApprovalTrace(a.kind);
+
+/**
+ * 「업무 처리 절차」에 실을 결재 자국 수 상한.
+ *
+ * 인터뷰 Q43·Q44 — *"인계인수서 서식이 복잡하거나 작성하는 양이 많아지게 되면
+ * 활용도가 낮아짐"*, 적정 분량 *"3장 내외"*. 칸을 늘리는 것보다 각 칸이 부는
+ * 쪽이 더 빨리 3장을 넘긴다.
+ */
+const PROCESS_MAX = 6;
+
 /** 인용문 길이 상한. 잘라내는 것도 왜곡이라 넉넉히 둔다. */
 const QUOTE_MAX = 220;
 
@@ -183,6 +238,165 @@ function who(p: Pick<Profile, "name" | "position">): string {
 function quote(body: string): string {
   const flat = body.replace(/\s*\n+\s*/g, " ").trim();
   return flat.length > QUOTE_MAX ? `${flat.slice(0, QUOTE_MAX)}…` : flat;
+}
+
+/**
+ * 「가. 담당 업무」에 붙는 업무 처리 절차.
+ *
+ * 결재 이력을 오간 순서대로 옮긴다. 요약문을 그대로 싣지 않는 이유는 그 안에
+ * 결재 제목이 통째로 들어 있어(「…원가산정 용역 결과 협조 요청」) 업무마다 같은
+ * 제목이 서너 줄씩 되풀이되기 때문이다. 대신 **정해진 자리에서만** 읽는다.
+ */
+function processLines(
+  w: WorkListItem,
+  activities: ActivityWithActor[],
+  deptName: (id: string | null | undefined) => string | null,
+): DraftLine[] {
+  const steps = activities
+    .filter(hasApprovalTrace)
+    // 절차는 오간 순서가 곧 뜻이다. 그런데 **시각만 보면 갈린다** —
+    // sign_approval() 은 서명과 완결을 같은 트랜잭션에서 찍고(0017),
+    // created_at 은 트랜잭션 시각이라 두 줄이 같은 값을 갖는다. 그러면
+    // 완결이 서명 앞에 서고, Postgres 쪽은 순서가 아예 정해지지도 않는다.
+    // id 는 단조 증가하므로 그것으로 가른다.
+    .sort((x, y) => x.created_at.localeCompare(y.created_at) || x.id - y.id);
+  if (steps.length === 0) return [];
+
+  // 넘치면 **최근 것을 남긴다.** 오래된 쪽을 남기면 완결·반려처럼 결과를 말하는
+  // 자국이 잘려 나가고, 인계서가 「올리기는 했는데 어떻게 됐는지는 모름」이 된다.
+  // 대화를 고를 때와 같은 방향이다(pickIssueComments).
+  const shown = steps.slice(-PROCESS_MAX);
+  const lines: DraftLine[] = [plain("  [업무 처리 절차]")];
+  if (steps.length > shown.length) {
+    lines.push(
+      atWork(
+        `    앞의 ${steps.length - shown.length}건은 업무 화면의 결재 탭에 있습니다`,
+        w.id,
+      ),
+    );
+  }
+
+  for (const a of shown) {
+    const actor = a.actor ? who(a.actor) : "알 수 없음";
+    // 소관 부서가 아닌 사람이 찍힌 자리가 곧 협조다. 부서 이름을 붙여야
+    // 인계받는 사람이 「이 건은 밖과 물려 있다」를 한 줄에서 안다.
+    // 소속을 모르면 모른다고 적는다 — 아무 표시도 안 하면 같은 과로 읽힌다.
+    const dept = a.actor ? deptName(a.actor.department_id) : null;
+    const mark = !a.actor
+      ? ""
+      : dept === null
+        ? "(소속 미상)"
+        : dept === w.department.name
+          ? ""
+          : `(${dept})`;
+
+    // ⚠ 요약문에서 낱말만 찾으면 안 된다. 반려 요약문에는 **반려 사유가 그대로
+    // 박혀 있고**(0017 의 format), 사유는 대개 결재 이야기다 —
+    // "협조란 서명을 먼저 받아 오세요" 한 줄이 「협조 반려」로 찍힌다.
+    // 그래서 서명한 자국에서만, 그것도 **제목 뒤 고정 자리**에서 읽는다.
+    //   「제목」 협조란에 서명했습니다 (의견 있음)
+    const box =
+      a.kind === "approval.signed"
+        ? a.summary.match(/」\s*(\S+?)란에 서명했습니다/)?.[1]
+        : undefined;
+    const opinion =
+      a.kind === "approval.signed" && /서명했습니다 \(의견 있음\)/.test(a.summary)
+        ? " · 의견 있음"
+        : "";
+    const trace = APPROVAL_TRACE[a.kind];
+    const what = box ? `${box}란 ${trace}` : trace;
+
+    lines.push(
+      plain(`    ${formatDate(a.created_at)} ${actor}${mark} ${what}${opinion}`),
+    );
+  }
+
+  return lines;
+}
+
+/**
+ * 협조·연락이 오간 부서를 모은다.
+ *
+ * 세 소스의 합집합이고, **소관 부서와 다른 부서만** 남긴다. 같은 과 사람은
+ * 인계받는 사람이 이미 옆자리에서 만난다.
+ *   ① 결재 이력의 행위자 — 협조 결재가 여기 찍힌다
+ *   ② 대화를 쓴 사람
+ *   ③ 업무에 참여한 사람
+ *
+ * 건수 많은 순으로 세우고, 같으면 이름순으로 둔다. 같은 자료에서 두 번 뽑으면
+ * 같은 차례로 나와야 한다 — 인계서를 두 번 뽑아 sha256 이 같아야 하기 때문이다.
+ */
+function collectContacts(
+  gathered: Gathered[],
+  deptName: (id: string | null | undefined) => string | null,
+): Array<{ dept: string; detail: string }> {
+  type Row = {
+    approvals: number;
+    comments: number;
+    /** 사람을 센다. 건수를 세면 한 사람이 세 업무에 있을 때 「3명」이 된다. */
+    members: Set<string>;
+    /** 마지막으로 **무슨 일이 오간** 날. 참여자 등록은 여기 안 들어간다. */
+    last: string;
+  };
+  const tally = new Map<string, Row>();
+
+  const rowFor = (
+    departmentId: string | null | undefined,
+    home: string,
+  ): Row | null => {
+    const name = deptName(departmentId);
+    if (!name || name === home) return null;
+    const row = tally.get(name) ?? {
+      approvals: 0,
+      comments: 0,
+      members: new Set<string>(),
+      last: "",
+    };
+    tally.set(name, row);
+    return row;
+  };
+
+  for (const { work: w, activities, comments } of gathered) {
+    const home = w.department.name;
+    for (const a of activities) {
+      if (!isApprovalTrace(a.kind)) continue;
+      const row = rowFor(a.actor?.department_id, home);
+      if (!row) continue;
+      row.approvals += 1;
+      if (a.created_at > row.last) row.last = a.created_at;
+    }
+    for (const c of comments) {
+      const row = rowFor(c.author.department_id, home);
+      if (!row) continue;
+      row.comments += 1;
+      if (c.created_at > row.last) row.last = c.created_at;
+    }
+    for (const m of w.members) {
+      // ⚠ 참여자에는 **날짜를 붙이지 않는다.** 예전에는 `w.updated_at` 을 썼는데
+      // 그건 「업무 행이 마지막으로 고쳐진 때」라 그 부서와 아무 상관이 없다.
+      // 누가 오탈자 하나를 고친 날이 「최근 연락한 날」로 찍히면, 지어내지 않는다는
+      // 이 문서의 규칙을 이 줄 하나가 깬다.
+      rowFor(m.profile.department_id, home)?.members.add(m.profile_id);
+    }
+  }
+
+  return [...tally]
+    .map(([dept, r]) => {
+      const bits = [
+        r.approvals > 0 ? `결재 ${r.approvals}건` : "",
+        r.comments > 0 ? `대화 ${r.comments}건` : "",
+        r.members.size > 0 ? `참여자 ${r.members.size}명` : "",
+      ].filter(Boolean);
+      // 오간 일이 없고 참여자로만 묶인 부서에는 날짜가 없다. 그게 사실이다.
+      const when = r.last ? ` (최근 ${formatDate(r.last)})` : "";
+      return {
+        dept,
+        detail: `${bits.join(" · ")}${when}`,
+        weight: r.approvals + r.comments + r.members.size,
+      };
+    })
+    .sort((a, b) => b.weight - a.weight || a.dept.localeCompare(b.dept, "ko"))
+    .map(({ dept, detail }) => ({ dept, detail }));
 }
 
 type IssueQuote = { comment: CommentWithAuthor; labels: string[] };
@@ -242,7 +456,15 @@ export async function buildHandoverDraft(
   //
   // 업무마다 네 번씩 묻지 않고 표마다 한 번씩 묻는다 — 인계 대상이 몇 건이든
   // 왕복 수가 늘지 않는다(예전에는 건수 × 5였다).
-  const records = await gatherForWorks(works.map((w) => w.id));
+  // 부서는 표 하나가 통째로 오고 건수와 무관하다. 「협조·연락 부서」와
+  // 「업무 처리 절차」가 사람의 소속을 이름으로 불러야 해서 한 번 받아 둔다.
+  const [records, departments] = await Promise.all([
+    gatherForWorks(works.map((w) => w.id)),
+    getDepartments(),
+  ]);
+  const deptById = new Map(departments.map((d) => [d.id, d.name]));
+  const deptName = (id: string | null | undefined) =>
+    id ? (deptById.get(id) ?? null) : null;
   // 계약상 요청한 id 는 전부 키로 돌아온다. 그래도 없으면 그 업무만 빈 칸으로
   // 두고 나머지를 살린다 — 인계서 한 장이 통째로 안 나오는 것보다 낫다.
   const empty: WorkRecords = {
@@ -270,7 +492,15 @@ export async function buildHandoverDraft(
   const commentCount = gathered.reduce((n, g) => n + g.comments.length, 0);
 
   // --- 가. 담당 업무 -------------------------------------------------------
-  const duties: DraftParagraph[] = works.map((w) => {
+  //
+  // 「업무 처리 절차」가 여기 붙는다. 서식에 칸을 더 만들지 않는다 —
+  // 행안부 『2025 행정업무운영 편람』 249쪽의 별지 제12호서식 「가. 담당 업무」
+  // 작성 지침이 이미 그렇게 적고 있다.
+  //   "직무기술서를 작성하는 형식으로 직무의 성격, 내용, 수행방법 등을 정리하고
+  //    **도식화된 업무프로세스를 포함한다.**"
+  // 2차 심사에서 「인수인계서에는 업무 프로세스가 있어야 한다」는 지적이 나왔는데,
+  // 그건 우리가 칸을 발명할 일이 아니라 이미 있는 칸을 안 채우고 있던 것이다.
+  const duties: DraftParagraph[] = gathered.map(({ work: w, activities }) => {
     const parts = [
       workTitle(w),
       plain(
@@ -289,8 +519,26 @@ export async function buildHandoverDraft(
         .join(", ");
       if (others) parts.push(plain(`  함께 보는 사람: ${others}`));
     }
+    parts.push(...processLines(w, activities, deptName));
     return parts;
   });
+  // 자동으로 채운 것이 어디까지인지 문서가 스스로 말한다. 이 문장이 없으면
+  // 「절차를 다 적었다」로 읽히고, 그게 이 칸에서 가장 비싼 오해다.
+  // **칸에 한 번만 적는다** — 업무마다 되풀이하면 세 건짜리 인계서에서만도
+  // 같은 문장이 세 번 나오고, 그게 3장을 넘기는 가장 흔한 경로다(인터뷰 Q44).
+  // 판정을 **렌더된 글자에서 하지 않는다.** 업무 제목은 사람이 지은 것이라
+  // 「[업무 처리 절차] 표준화 TF」 같은 제목 하나면 절차가 하나도 없는 칸에
+  // 안내문이 붙는다. processLines 가 이미 아는 사실을 그대로 쓴다.
+  const hasProcess = gathered.some((g) =>
+    g.activities.some((a) => isApprovalTrace(a.kind)),
+  );
+  if (hasProcess) {
+    duties.push([
+      plain(
+        "[업무 처리 절차]는 결재로 지나간 자리입니다. 민원 접수·현장확인·관계기관 협의·위원회 심의처럼 시스템 밖에서 도는 절차와, 아직 오지 않은 결재는 여기 없습니다. 인계자가 적거나 파일로 붙여 주십시오.",
+      ),
+    ]);
+  }
 
   // --- 나. 주요 업무계획 및 진행사항 ---------------------------------------
   const progress: DraftParagraph[] = gathered.map(
@@ -436,6 +684,29 @@ export async function buildHandoverDraft(
       ),
     ]);
   }
+
+  // ── 협조·연락이 오간 부서 ───────────────────────────────────────────────
+  //
+  // 2차 심사 지적 — *"그 프로세스를 진행할 때 어떤 부서와 연락을 해야 되고
+  // 이런 것까지 구체적으로 인수인계서에 담아서"*.
+  //
+  // 새 칸을 만들지 않고 여기 넣는다. 행안부 『2025 행정업무운영 편람』 249쪽이
+  // 별지 제12호서식 「사. 그 밖의 참고사항」에 *"업무지원을 받을 수 있는 인계자의
+  // 연락처 등"* 을 적으라고 이미 지목한다. 칸을 늘리면 3장을 넘긴다(인터뷰 Q44).
+  //
+  // ⚠ 인터뷰 Q5 에서 실무자는 연락처가 아쉽지 않았다고 답했다(명함·메모로 다
+  // 받았다). 그래서 **자동으로 채운 것이 어디까지인지**를 크게 적는다 —
+  // 계정이 있는 사람만 여기 나온다.
+  const contacts = collectContacts(gathered, deptName);
+  if (contacts.length > 0) {
+    notes.push([
+      plain("협조·연락이 오간 부서입니다. 결재 협조와 대화에서 모은 것입니다."),
+      ...contacts.map((c) => plain(`· ${c.dept} — ${c.detail}`)),
+      plain(
+        "여기에는 이 시스템에 계정이 있는 사람만 나옵니다. 경기도·국토부·시행사·설계사·마을 대표처럼 시청 밖 관계자는 인계자가 적어 주십시오.",
+      ),
+    ]);
+  }
   notes.push([
     plain(
       `인계자 ${who(view.from)}${josa(
@@ -455,7 +726,18 @@ export async function buildHandoverDraft(
       // 없는 결재 문서가 나오면 만들다 만 것처럼 보인다. 다른 칸에는 전부 있는
       // 폴백을 여기에도 둔다. "없다"가 아니라 "못 본다"일 수 있음을 함께 적는다.
       paragraphs: duties.length > 0 ? duties : [[plain(EMPTY_WORKS)]],
-      sources: [`업무 ${works.length}건의 기본 정보와 참여자 목록`],
+      sources: [
+        `업무 ${works.length}건의 기본 정보와 참여자 목록`,
+        // 「업무 처리 절차」의 출처. 결재선 표가 아니라 **이력**에서 나온다 —
+        // 실제로 지나간 자리만 적는다는 뜻이고, 아직 안 온 결재는 여기 없다.
+        //
+        // 절차가 한 줄도 없으면 이 꼬리표도 적지 않는다. 쓰지 않은 기록을
+        // 근거로 대는 것은 이 꼬리표를 붙인 이유와 정반대다.
+        // 갈래 이름은 표에서 가져온다 — 손으로 적어 두었더니 「회수」가 빠져 있었다.
+        ...(hasProcess
+          ? [`업무 이력 중 결재 ${Object.values(APPROVAL_TRACE).join("·")} 기록`]
+          : []),
+      ],
     },
     {
       key: "1-progress",
@@ -519,7 +801,11 @@ export async function buildHandoverDraft(
       key: "4-notes",
       heading: "4. 그 밖의 참고사항",
       paragraphs: notes,
-      sources: ["연간 반복 업무 연결 정보", "참여 부서 수"],
+      sources: [
+        "연간 반복 업무 연결 정보",
+        "참여 부서 수",
+        "결재 협조·대화·참여자의 소속 부서(소관 부서와 다른 곳만)",
+      ],
     },
   ];
 

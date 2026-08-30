@@ -35,6 +35,12 @@ const { workHref, workTalkHref } = await import("@/lib/types.ts");
 const mock = await import("@/lib/data/mock.ts");
 const { profiles } = await import("@/lib/mock/org.ts");
 
+/** 「2026년 8월 6일」 → 20260806. 문자열 비교로는 8월과 12월이 뒤집힌다. */
+function dateNum(s) {
+  const [y, m, d] = s.match(/\d+/g).map(Number);
+  return y * 10000 + m * 100 + d;
+}
+
 let pass = 0;
 const fails = [];
 function ok(name, cond, extra = "") {
@@ -85,18 +91,48 @@ const golden = readFileSync(
   new URL("./fixtures/handover-draft.txt", import.meta.url),
   "utf8",
 );
+/**
+ * 시간이 지나면 달라지는 자리만 지운다.
+ *
+ * 초안에는 **오늘을 기준으로 계산되는** 조각이 셋 있다 — 기한까지 남은 날
+ * (`formatDueLabel`), 그 날수로 정해지는 파생 상태(`derivedStatus` 의 지연),
+ * 그리고 지연 문구. 붙박이를 그대로 두면 **내일이면 시험이 빨간불이 된다.**
+ * 제출 사흘 전에 그런 시험은 있으나 마나가 아니라 해롭다.
+ *
+ * 그렇다고 붙박이를 버리지는 않는다. 이 셋만 지우고 나머지 여든 줄
+ * (제목·절차·인용·근거·협조 부서)은 글자 그대로 못박는다.
+ */
+const stable = (t) =>
+  t
+    .replace(/\(\d+일 (지남|남음)\)/g, "(D±N)")
+    .replace(/\(오늘 마감\)/g, "(D±N)")
+    .replace(/마감, [^.]*\./g, "마감, D±N.")
+    .replace(/· 현재 \S+/g, "· 현재 §")
+    .replace(/ — \S+, \d{4}년[^\n]*까지 \(D±N\)/g, " — §, D±N까지 (D±N)");
 const flat =
   draft.blocks
     .map((b) => `${b.heading}\n${b.paragraphs.map(draftParagraphText).join("\n\n")}`)
     .join("\n\n") + "\n";
 const firstDiff = [...golden].findIndex((ch, i) => flat[i] !== ch);
 ok(
-  "평탄화한 문서가 줄 링크를 넣기 전과 한 글자도 다르지 않다",
-  flat === golden,
+  "평탄화한 문서가 붙박이와 같다(오늘에 따라 달라지는 자리 제외)",
+  stable(flat) === stable(golden),
   firstDiff >= 0
-    ? `${firstDiff}번째 글자부터 — 붙박이 「${golden.slice(firstDiff, firstDiff + 40)}」 / 지금 「${flat.slice(firstDiff, firstDiff + 40)}」`
+    ? `${firstDiff}번째 글자쯤부터 — 붙박이 「${golden.slice(firstDiff, firstDiff + 40)}」 / 지금 「${flat.slice(firstDiff, firstDiff + 40)}」`
     : `길이 ${golden.length} → ${flat.length}`,
 );
+// 두 번 뽑아 같은 글자가 나오는가. 「규칙은 놓치고 AI는 지어낸다」는 주장의
+// 나머지 절반이다 — 같은 입력에 같은 출력이 아니면 「셀 수 있게 틀린다」가
+// 성립하지 않는다. 부서 모으기처럼 Map 을 도는 자리가 늘 때 제일 먼저 깨진다.
+const again = await buildHandoverDraft(await mock.getHandoverFor(from));
+ok(
+  "같은 기록에서 두 번 뽑으면 한 글자도 다르지 않다",
+  flat ===
+    again.blocks
+      .map((b) => `${b.heading}\n${b.paragraphs.map(draftParagraphText).join("\n\n")}`)
+      .join("\n\n") + "\n",
+);
+
 // 링크는 화면의 장치다. 글자에는 흔적이 남으면 안 된다.
 ok(
   "평탄화한 글에 주소나 앵커가 섞이지 않는다",
@@ -111,7 +147,10 @@ ok(
 console.log("\n[2] 가리킬 수 있는 줄 — 어느 줄이 눌리는가");
 // ---------------------------------------------------------------------------
 
-const workTitleLines = lines.filter((l) => /^· /.test(l.text));
+// 「· 」는 목록의 글머리이지 업무의 표시가 아니다 — 협조 부서 목록도 같은 것을
+// 쓴다. 그래서 **실제 업무 제목과 맞는 줄**만 골라 본다.
+const titles = new Set(view.items.map((i) => `· ${i.work.title}`));
+const workTitleLines = lines.filter((l) => titles.has(l.text));
 const quoteTagLines = lines.filter((l) => /^ {2}\[대화 — /.test(l.text));
 const quoteBodyLines = lines.filter((l) => /^ {2}“/.test(l.text));
 
@@ -141,7 +180,88 @@ ok(
 );
 
 // ---------------------------------------------------------------------------
-console.log("\n[3] 지어낸 앵커가 없다 — 누르면 실제로 그 기록으로 간다");
+console.log("\n[3] 업무 처리 절차 · 협조 부서 — 2차 지적에 답하는 두 칸");
+// ---------------------------------------------------------------------------
+
+const duties = draft.blocks.find((b) => b.key === "1-duties");
+const dutyText = duties.paragraphs.map(draftParagraphText).join("\n\n");
+const notesText = draft.blocks
+  .find((b) => b.key === "4-notes")
+  .paragraphs.map(draftParagraphText)
+  .join("\n\n");
+
+// 칸을 새로 만들지 않았다. 편람 249쪽이 「가. 담당 업무」에 업무프로세스를
+// 포함하라고 이미 적어 두었기 때문이다. 여덟 번째 칸이 생기면 그건 그 서식이 아니다.
+ok(
+  "서식은 일곱 칸 그대로다",
+  draft.blocks.length === 7,
+  draft.blocks.map((b) => b.key).join(", "),
+);
+ok("「가. 담당 업무」에 업무 처리 절차가 있다", dutyText.includes("[업무 처리 절차]"));
+
+// 절차는 오간 순서가 곧 뜻이다. 이력은 최신순으로 오므로 뒤집지 않으면 거꾸로 실린다.
+// 순서는 **업무 안에서만** 뜻이 있다. 문단 경계를 넘어 비교하면 다음 업무의
+// 첫 결재가 앞 업무의 마지막보다 이르다는 이유로 실패한다(실제로 그렇게 짰다).
+const perWork = duties.paragraphs.map((p) =>
+  p
+    .map((l) => l.text.match(/^ {4}(\d{4}년 \d+월 \d+일) /)?.[1])
+    .filter(Boolean),
+);
+const stepCount = perWork.reduce((n, ds) => n + ds.length, 0);
+ok("절차 줄이 하나 이상 있다", stepCount > 0, `${stepCount}줄`);
+ok(
+  "업무마다 절차가 오간 순서로 실린다",
+  perWork.every((ds) =>
+    ds.every((d, i) => i === 0 || dateNum(ds[i - 1]) <= dateNum(d)),
+  ),
+  perWork.filter((ds) => ds.length).map((ds) => ds.join(" → ")).join(" | "),
+);
+
+// 자동으로 채운 범위를 밝히는 문장은 **칸에 하나만** 있어야 한다.
+// 업무마다 되풀이하면 세 건짜리 인계서에서만 세 번 나오고, 그게 3장을 넘긴다.
+ok(
+  "「밖에서 도는 절차는 없다」는 안내가 칸에 한 번만 나온다",
+  (dutyText.match(/시스템 밖에서 도는 절차/g) ?? []).length === 1,
+);
+
+// ⚠ 「협조」와 「의견 있음」은 **서명한 자국에서만** 읽는다.
+// 반려 요약문에는 반려 사유가 그대로 박혀 있고(0017 의 format), 사유는 대개
+// 결재 이야기다 — "협조란 서명을 먼저 받아 오세요" 한 줄이 「협조 반려」로
+// 찍히면 인계서가 없는 사실을 말한다. 낱말만 찾던 시절의 결함이다.
+const traceLines = duties.paragraphs
+  .flat()
+  .filter((l) => /^ {4}\d{4}년 \d+월 \d+일 /.test(l.text));
+ok(
+  "서명이 아닌 자국에는 「…란」도 「의견 있음」도 붙지 않는다",
+  traceLines
+    .filter((l) => /(상신|반려|완결|회수)$/.test(l.text.trimEnd()))
+    .every((l) => !/란 |의견 있음/.test(l.text)),
+  traceLines.map((l) => l.text.trim()).join(" / "),
+);
+ok(
+  "서명은 어느 란인지까지 적는다",
+  traceLines.some((l) => /(결재|협조|전결|대결)란 서명/.test(l.text)),
+  traceLines.map((l) => l.text.trim()).join(" / "),
+);
+
+ok("「4. 그 밖의 참고사항」에 협조 부서가 있다", notesText.includes("협조·연락이 오간 부서"));
+// 소관 부서는 협조가 아니다. 인계받는 사람이 이미 옆자리에서 만난다.
+const homeDepts = new Set(view.items.map((i) => i.work.department.name));
+const listed = [...notesText.matchAll(/^· (.+?) — /gm)].map((m) => m[1]);
+ok(
+  "소관 부서는 협조 부서로 세지 않는다",
+  listed.every((d) => !homeDepts.has(d)),
+  `소관 [${[...homeDepts].join(", ")}] / 실린 것 [${listed.join(", ")}]`,
+);
+// Q5 에서 실무자는 연락처가 아쉽지 않았다고 답했다. 그래서 자동으로 채운 범위를
+// 밝히는 것이 이 칸에서 가장 중요하다 — 시청 밖 관계자는 계정이 없어 안 나온다.
+ok(
+  "시청 밖 관계자는 안 나온다고 문서가 먼저 말한다",
+  notesText.includes("시청 밖 관계자"),
+);
+
+// ---------------------------------------------------------------------------
+console.log("\n[4] 지어낸 앵커가 없다 — 누르면 실제로 그 기록으로 간다");
 // ---------------------------------------------------------------------------
 
 ok(
@@ -170,7 +290,7 @@ ok(
 );
 
 // ---------------------------------------------------------------------------
-console.log("\n[4] 주소 모양");
+console.log("\n[5] 주소 모양");
 // ---------------------------------------------------------------------------
 
 // 업무 줄까지 대화 탭으로 보내면 업무를 누른 사람이 대화 목록에 떨어진다.
