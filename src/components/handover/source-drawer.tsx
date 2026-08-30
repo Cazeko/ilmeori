@@ -201,19 +201,30 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
 type Source = { label: string; body: string; href: string };
 
 /**
- * 꼬리표 다음에 오는 **글자 노드만** 모은다.
+ * 인용문이 실제로 실려 있는 **따옴표 줄 한 줄**을 꺼낸다.
  *
- * 서식의 한 문단은 `<p class="whitespace-pre-line">` 하나이고, 그 안에서
- * 꼬리표는 `<a>`, 인용문은 그 뒤의 글자 노드다(draft-lines.tsx 가 줄 사이에
- * `\n` 을 끼운다). 다음 **요소**를 만나면 멈춘다 — 그다음은 다른 인용이거나
- * 다른 출처의 줄이다.
+ * 꼬리표(`<a>`) 다음 줄이 그 대화의 원문이다. `quote()` 가 줄바꿈을 눕혀
+ * 한 줄로 만들고(handover-draft.ts) 앞뒤에 “ ” 를 두르므로, 꺼낼 것은 정확히
+ * **첫 번째 비어 있지 않은 줄 하나**다.
  *
- * ⚠ 글자 노드만 보고 멈추면 안 된다. React 는 서버 렌더에서 붙어 있는 글자
- * 노드 사이에 `<!-- -->` 를 끼운다(하이드레이션 경계 표시). 처음에
+ * ⚠ 다음 요소가 나올 때까지 전부 담으면 안 된다. 처음에 그렇게 썼고, 그러면
+ * 인용 **다음 줄까지** 딸려 온다 — 「1-다」의 마지막 인용 뒤에는 규칙이 지어낸
+ * 「기한이 지났습니다. …」 가 붙어 있고, 그게 「인용한 대화 원문」이라며 서랍에
+ * 떴다. **사람이 하지 않은 말을 사람의 말로 보여 주는 것**이라, 이 제품에서
+ * 그보다 나쁜 결함은 없다.
+ *
+ * 그래서 자리로만 고르지 않고 **모양으로 확인한다.** 따옴표로 시작하고
+ * 끝나지 않으면 인용이 아니므로 서랍을 안 연다(꼬리표는 예전처럼 원문으로
+ * 이동한다). 잘린 인용의 꼬리(「(뒤가 잘렸습니다)」)는 인용의 일부로 함께
+ * 싣는다 — 잘렸다는 사실을 서랍에서 숨기면 안 된다.
+ *
+ * ⚠ 글자 노드만 보고 멈추는 것도 안 된다. React 는 서버 렌더에서 붙어 있는
+ * 글자 노드 사이에 `<!-- -->` 를 끼운다(하이드레이션 경계). 처음에
  * `nodeType === TEXT_NODE` 로 걸었다가 **첫 주석에서 멈춰 빈 문자열을 냈고,
- * 서랍은 조용히 안 열리고 링크가 그대로 동작했다.** 실패가 예전 동작이라
- * 아무도 안 죽었지만, 새로 지은 것이 한 번도 안 열리는 상태였다.
+ * 서랍은 조용히 안 열리고 링크가 그대로 동작했다.**
  */
+const QUOTED_LINE = /^[“"][\s\S]*[”"](\s*\(뒤가 잘렸습니다\))?$/;
+
 function quotedAfter(anchor: Element): string {
   let text = "";
   let node = anchor.nextSibling;
@@ -221,5 +232,9 @@ function quotedAfter(anchor: Element): string {
     if (node.nodeType === Node.TEXT_NODE) text += node.textContent ?? "";
     node = node.nextSibling;
   }
-  return text.trim();
+  const first = text
+    .split("\n")
+    .map((line) => line.trim())
+    .find(Boolean);
+  return first && QUOTED_LINE.test(first) ? first : "";
 }

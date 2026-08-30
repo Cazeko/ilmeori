@@ -499,15 +499,17 @@ export default async function HandoverPage({
                 갈린다), 카드 모양도 이 목록이 이미 쓰던 것 그대로다. */}
             <Card>
               <CardHeader
+                // 제목에 수를 붙이지 않는다. 「오늘 먼저 볼 것 4건」은 **넷을
+                // 골랐다**고 읽히는데, 이 목록은 고른 것이 아니라 넘겨받은 것
+                // **전부**를 급한 순으로 놓은 것이다. 고르지 않았으면 골랐다고
+                // 말하지 않는다 — 수는 아래 설명이 사실대로 말한다.
                 title={
-                  receiverDone
-                    ? `오늘 먼저 볼 것 ${sideItems.length}건`
-                    : `인계 대상 업무 ${items.length}건`
+                  receiverDone ? "오늘 먼저 볼 것" : `인계 대상 업무 ${items.length}건`
                 }
                 as="h2"
                 description={
                   receiverDone
-                    ? "기한이 지난 것부터, 그다음은 마감이 가까운 순입니다."
+                    ? `넘겨받은 ${sideItems.length}건을 기한이 지난 것부터, 그다음은 마감이 가까운 순으로 놓았습니다.`
                     : undefined
                 }
               />
