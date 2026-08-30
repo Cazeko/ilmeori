@@ -355,6 +355,39 @@ export function handoverBlockAnchor(key: HandoverBlockKey): string {
 }
 
 /**
+ * 대화 한 줄의 자리표 — **거는 쪽과 받는 쪽이 같은 함수를 쓴다.**
+ *
+ * 받는 쪽은 `comment-thread.tsx` 의 `<li id=…>` 이고, 거는 쪽은 인계서의 근거
+ * 꼬리표(`handover-draft.ts`)다. 두 문자열이 따로 적혀 있으면 한쪽만 고쳐도
+ * 아무 데서도 안 터진다 — 404 도 아니고 콘솔도 조용하고, 그냥 아무 일이
+ * 일어나지 않는다. `handoverBlockAnchor` 와 같은 이유로 같은 자리에 둔다.
+ */
+export function commentAnchor(commentId: string): string {
+  return `comment-${commentId}`;
+}
+
+/** 업무 화면. 탭을 고르지 않으면 기본 탭이 열린다. */
+export function workHref(workId: string): string {
+  return `/works/${workId}`;
+}
+
+/**
+ * 업무의 「대화」 자리.
+ *
+ * ⚠ **`?tab=talk` 를 빼면 안 된다.** 업무 상세의 대화는 탭 안에서만 그려지므로
+ * (`works/[id]/page.tsx` 의 `tab === "talk"`), 앵커만 붙여 보내면 그 글이 아예
+ * 없는 화면에 도착한다. 조각(`#…`)은 서버로 전송되지 않아 서버가 탭을 되짚어
+ * 줄 수도 없다. 실제로 인계서 근거 링크를 그렇게 한 번 냈다.
+ *
+ * 알림·대화 액션·쪽지·인계서가 전부 이 주소를 만들고 있었고, 전부 문자열로
+ * 따로 적혀 있었다. 탭 이름을 바꾸는 날 조용히 썩는 자리가 여섯 곳이었다.
+ */
+export function workTalkHref(workId: string, commentId?: string): string {
+  const talk = `${workHref(workId)}?tab=talk`;
+  return commentId ? `${talk}#${commentAnchor(commentId)}` : talk;
+}
+
+/**
  * 보충 한 줄의 길이 상한. DB의 handover_note_body_check 와 **같은 값**이어야 한다.
  * 더 적을 것이 있으면 한 줄을 더 적으면 된다 — 쌓이는 구조라 그래도 된다.
  */

@@ -1,4 +1,4 @@
-import type { AppNotification } from "@/lib/types";
+import { workTalkHref, type AppNotification } from "@/lib/types";
 
 /**
  * 알림의 규칙 — db 구현과 목업, 그리고 화면이 **같은 함수**를 쓴다.
@@ -13,7 +13,7 @@ export function notificationHref(n: AppNotification): string {
   switch (n.kind) {
     case "mention":
       // 부른 것은 대화다. 그 탭으로 곧장 보낸다.
-      return n.work_id ? `/works/${n.work_id}?tab=talk` : "/works";
+      return n.work_id ? workTalkHref(n.work_id) : "/works";
     case "note":
       return n.target_id ? `/notes/${n.target_id}` : "/notes";
     case "approval_decided":

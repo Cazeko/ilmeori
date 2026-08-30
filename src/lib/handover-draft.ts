@@ -36,6 +36,64 @@ import {
  * 근거를 못 붙이는 항목(물품·예산 등)은 지어내지 않고 비워 둔 채로 표시한다.
  */
 
+/**
+ * 이 줄이 어느 기록에서 나왔는가 — **가리킬 수 있는 형태로.**
+ *
+ * 근거 꼬리표는 원래 「대화 26건 중 8건」처럼 **세는 말**뿐이었다. 세는 말은
+ * 「어디서 나왔는지 적었다」는 주장이지 확인 수단이 아니다. 2차 심사에서
+ * *"AI가 쓴 답변같이 보였는데"* 라는 말이 나왔고, 거기에 대고 아니라고 말해
+ * 봐야 소용이 없다. **눌러서 원문으로 가는 것 하나가 그 자리에서 끝낸다.**
+ *
+ * 그래서 문단을 통짜 문자열이 아니라 줄의 목록으로 두고, 줄마다 출처를 단다.
+ * 업무를 가리키는 줄에는 업무가, 대화를 인용한 줄에는 그 대화가 붙는다.
+ *
+ * 가리키는 자리를 **주소가 아니라 신원으로** 담는다. 주소를 만드는 일은
+ * `workTalkHref()`(types.ts)가 하고, 그건 화면의 몫이다. 문서 모델이 주소를
+ * 들고 있으면 라우트가 바뀌는 날 결재로 올라간 문서에 옛 주소가 남는다.
+ */
+export type DraftRef = {
+  workId: string;
+  /** 대화를 가리킬 때만. 업무 화면의 그 글로 바로 간다. */
+  commentId?: string;
+};
+
+/** 문단을 이루는 한 줄. `ref` 가 있으면 **화면에서만** 누를 수 있다. */
+export type DraftLine = { text: string; ref?: DraftRef };
+
+/**
+ * 한 문단.
+ *
+ * 문단 하나가 업무 하나다. 근거마다 문단을 나누면 같은 업무 제목이 서너 번
+ * 되풀이되고, 종이에서는 그게 그대로 서식을 어지럽힌다. 그래서 링크는 문단이
+ * 아니라 **줄**에 붙는다.
+ */
+export type DraftParagraph = DraftLine[];
+
+/**
+ * 문단을 글자로 눕힌다.
+ *
+ * 화면은 줄마다 링크를 그리고, **종이와 저장본은 이 함수 하나만 쓴다.**
+ * 링크는 화면의 장치이지 문서의 내용이 아니다 — 종이에 인쇄된 「(누르세요)」나
+ * 결재로 올라간 문서에 남은 앵커는 둘 다 오류다.
+ *
+ * 이 함수가 예전의 통짜 문자열과 한 글자라도 다르면 종이와 화면이 다른 말을
+ * 하게 되므로, 시험이 그것부터 본다(tests/handover-draft.test.mjs).
+ */
+export function draftParagraphText(p: DraftParagraph): string {
+  return p.map((l) => l.text).join("\n");
+}
+
+/**
+ * 칸 하나를 한 줄로 — 사람이 적어야 하는 칸에서만 쓴다.
+ *
+ * 화면과 종이가 이 식을 각자 적고 있었다. 두 매체가 같은 문단에서 나온다는
+ * 것이 이 구조의 전부인데, 정작 문단을 잇는 방법이 두 곳에 있으면 그 자리에서
+ * 갈라진다.
+ */
+export function draftBlockText(paragraphs: DraftParagraph[]): string {
+  return paragraphs.map(draftParagraphText).join(" ");
+}
+
 export type DraftBlock = {
   /**
    * 서식 항목을 가리키는 고정 키.
@@ -48,7 +106,7 @@ export type DraftBlock = {
   /** 서식상의 항목 이름 */
   heading: string;
   /** 본문 문단들 */
-  paragraphs: string[];
+  paragraphs: DraftParagraph[];
   /** 이 문단들이 어느 기록에서 나왔는지 */
   sources: string[];
   /** 채울 근거가 없어 사람이 직접 적어야 하는 항목 */
@@ -79,6 +137,29 @@ export type HandoverDraft = {
  * 문장은 「이견」). 마지막 이름표가 바뀌면 받침도 함께 바뀐다.
  */
 const CUE_MENTION = `${ISSUE_CUE_NAMES}${josa(ISSUE_CUE_NAMES, "이", "가")}`;
+
+// 문단을 짓는 세 가지 줄. 어느 줄이 눌리는지가 여기서 한눈에 보이도록 이름을 준다.
+/** 가리킬 곳이 없는 줄 */
+const plain = (text: string): DraftLine => ({ text });
+/** 업무를 가리키는 줄 */
+const atWork = (text: string, workId: string): DraftLine => ({
+  text,
+  ref: { workId },
+});
+/** 인용한 대화를 가리키는 줄 */
+const atComment = (
+  text: string,
+  workId: string,
+  commentId: string,
+): DraftLine => ({ text, ref: { workId, commentId } });
+
+/**
+ * 업무 제목 줄. 다섯 칸이 같은 모양으로 시작한다.
+ * 이 줄의 생김새(`· `)를 시험이 근거 삼아 세므로(tests/handover-draft.test.mjs)
+ * 다섯 곳에 따로 적어 두면 한 곳만 고쳐도 시험이 조용히 반쪽만 본다.
+ */
+const workTitle = (w: { id: string; title: string }): DraftLine =>
+  atWork(`· ${w.title}`, w.id);
 
 /** 인용문 길이 상한. 잘라내는 것도 왜곡이라 넉넉히 둔다. */
 const QUOTE_MAX = 220;
@@ -189,48 +270,56 @@ export async function buildHandoverDraft(
   const commentCount = gathered.reduce((n, g) => n + g.comments.length, 0);
 
   // --- 가. 담당 업무 -------------------------------------------------------
-  const duties = works.map((w) => {
+  const duties: DraftParagraph[] = works.map((w) => {
     const parts = [
-      `· ${w.title}`,
-      `  소관 ${w.department.name} · 공개범위 ${VISIBILITY_LABEL[w.visibility]} · 현재 ${STATUS_LABEL[w.derived]}`,
+      workTitle(w),
+      plain(
+        `  소관 ${w.department.name} · 공개범위 ${VISIBILITY_LABEL[w.visibility]} · 현재 ${STATUS_LABEL[w.derived]}`,
+      ),
     ];
     if (w.due_date) {
-      parts.push(`  기한 ${formatDate(w.due_date)} (${formatDueLabel(w.due_date)})`);
+      parts.push(
+        plain(`  기한 ${formatDate(w.due_date)} (${formatDueLabel(w.due_date)})`),
+      );
     }
     if (w.members.length > 1) {
       const others = w.members
         .filter((m) => m.profile_id !== view.from.id)
         .map((m) => who(m.profile))
         .join(", ");
-      if (others) parts.push(`  함께 보는 사람: ${others}`);
+      if (others) parts.push(plain(`  함께 보는 사람: ${others}`));
     }
-    return parts.join("\n");
+    return parts;
   });
 
   // --- 나. 주요 업무계획 및 진행사항 ---------------------------------------
-  const progress = gathered.map(({ work: w, document, sections, activities }) => {
-    const lines = [`· ${w.title}`];
-    if (w.description) lines.push(`  ${w.description}`);
+  const progress: DraftParagraph[] = gathered.map(
+    ({ work: w, document, sections, activities }) => {
+      const lines = [workTitle(w)];
+      if (w.description) lines.push(plain(`  ${w.description}`));
 
-    // 진행 상황이 적힌 항목을 우선 가져온다. 없으면 마지막으로 고친 항목을 쓴다.
-    const progressSection =
-      sections.find((s) => s.heading?.includes("진행")) ??
-      [...sections].sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
-    if (progressSection?.body) {
-      lines.push(
-        `  [${document?.title} — ${progressSection.heading ?? "본문"}]`,
-        ...progressSection.body.split("\n").map((l) => `  ${l}`),
-      );
-    }
+      // 진행 상황이 적힌 항목을 우선 가져온다. 없으면 마지막으로 고친 항목을 쓴다.
+      const progressSection =
+        sections.find((s) => s.heading?.includes("진행")) ??
+        [...sections].sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
+      if (progressSection?.body) {
+        lines.push(
+          plain(`  [${document?.title} — ${progressSection.heading ?? "본문"}]`),
+          ...progressSection.body.split("\n").map((l) => plain(`  ${l}`)),
+        );
+      }
 
-    const lastStatus = activities.find((a) => a.kind === "work.status_changed");
-    if (lastStatus) {
-      lines.push(
-        `  최근 상태 변경: ${formatDate(lastStatus.created_at)} ${lastStatus.summary}`,
-      );
-    }
-    return lines.join("\n");
-  });
+      const lastStatus = activities.find((a) => a.kind === "work.status_changed");
+      if (lastStatus) {
+        lines.push(
+          plain(
+            `  최근 상태 변경: ${formatDate(lastStatus.created_at)} ${lastStatus.summary}`,
+          ),
+        );
+      }
+      return lines;
+    },
+  );
 
   // --- 다. 현안사항 및 문제점 ----------------------------------------------
   //
@@ -238,22 +327,21 @@ export async function buildHandoverDraft(
   //   ① 문서의 「현안 및 유의사항」 항목 — 이미 정리된 것
   //   ② 대화 — 아직 정리되지 않은 것. 그래서 인계에서 가장 잘 사라진다
   //   ③ 기한이 지난 업무 — 시스템이 계산으로 아는 것
-  const issues: string[] = [];
+  const issues: DraftParagraph[] = [];
   let matchedComments = 0;
   let quotedComments = 0;
 
   for (const { work: w, document, sections, comments } of gathered) {
-    // 업무 한 건이 한 문단이다. 근거마다 문단을 나누면 같은 업무 제목이
-    // 서너 번 되풀이되고, 종이에서는 그게 그대로 서식을 어지럽힌다.
-    const lines: string[] = [];
+    // 업무 한 건이 한 문단이다(DraftParagraph 주석 참조).
+    const lines: DraftLine[] = [];
 
     const issueSection = sections.find(
       (s) => s.heading?.includes("현안") || s.heading?.includes("유의"),
     );
     if (issueSection?.body) {
       lines.push(
-        `  [${document?.title} — ${issueSection.heading}]`,
-        ...issueSection.body.split("\n").map((l) => `  ${l}`),
+        plain(`  [${document?.title} — ${issueSection.heading}]`),
+        ...issueSection.body.split("\n").map((l) => plain(`  ${l}`)),
       );
     }
 
@@ -262,82 +350,101 @@ export async function buildHandoverDraft(
     for (const { comment: c, labels } of picks.picked) {
       quotedComments += 1;
       lines.push(
-        `  [대화 — ${who(c.author)}, ${formatDate(c.created_at)} · ${labels.join(" · ")}]`,
-        `  “${quote(c.body)}”`,
+        // 누를 수 있는 것은 꼬리표 줄이다. 인용문 자체를 링크로 만들면 굵은
+        // 글자가 문장을 덮어, 「원문 그대로」가 원문처럼 안 보인다.
+        atComment(
+          `  [대화 — ${who(c.author)}, ${formatDate(c.created_at)} · ${labels.join(" · ")}]`,
+          w.id,
+          c.id,
+        ),
+        plain(`  “${quote(c.body)}”`),
       );
     }
 
     if (w.derived === "overdue" && w.due_date) {
       lines.push(
-        `  기한이 지났습니다. ${formatDate(w.due_date)} 마감, ${formatDueLabel(w.due_date)}.`,
+        plain(
+          `  기한이 지났습니다. ${formatDate(w.due_date)} 마감, ${formatDueLabel(w.due_date)}.`,
+        ),
       );
     }
 
-    if (lines.length > 0) issues.push([`· ${w.title}`, ...lines].join("\n"));
+    if (lines.length > 0) issues.push([workTitle(w), ...lines]);
   }
   if (issues.length === 0) {
     // 볼 업무가 아예 없는 것과, 업무는 봤는데 현안이 없는 것은 다른 말이다.
-    issues.push(
-      gathered.length === 0 ? EMPTY_WORKS : "확인된 현안사항이 없습니다.",
-    );
+    issues.push([
+      plain(gathered.length === 0 ? EMPTY_WORKS : "확인된 현안사항이 없습니다."),
+    ]);
   }
 
   // --- 라. 주요 미결사항 ---------------------------------------------------
-  const pending = works
+  const pending: DraftParagraph[] = works
     .filter((w) => w.derived !== "done")
     .map((w) => {
       const due = w.due_date
         ? `${formatDate(w.due_date)}까지 (${formatDueLabel(w.due_date)})`
         : "기한 미정";
-      return `· ${w.title} — ${STATUS_LABEL[w.derived]}, ${due}`;
+      return [
+        atWork(`· ${w.title} — ${STATUS_LABEL[w.derived]}, ${due}`, w.id),
+      ];
     });
 
   // --- 2. 관련 문서 현황 ---------------------------------------------------
-  const docs: string[] = [];
+  const docs: DraftParagraph[] = [];
   for (const { work: w, document, sections, attachments } of gathered) {
     if (!document && attachments.length === 0) continue;
 
-    const lines = [`· ${w.title}`];
+    const lines = [workTitle(w)];
     if (document) {
       lines.push(
-        `  문서 「${document.title}」 (항목 ${sections.length}개)`,
-        ...sections.map((s) => `    - ${s.heading ?? "제목 없는 항목"}`),
+        plain(`  문서 「${document.title}」 (항목 ${sections.length}개)`),
+        ...sections.map((s) => plain(`    - ${s.heading ?? "제목 없는 항목"}`)),
       );
     }
     if (attachments.length > 0) {
       lines.push(
-        `  첨부 ${attachments.length}건`,
-        ...attachments.map((f) => `    - ${f.file_name} (${f.uploader.name} 등록)`),
+        plain(`  첨부 ${attachments.length}건`),
+        ...attachments.map((f) =>
+          plain(`    - ${f.file_name} (${f.uploader.name} 등록)`),
+        ),
       );
     }
-    docs.push(lines.join("\n"));
+    docs.push(lines);
   }
 
   // --- 4. 그 밖의 참고사항 -------------------------------------------------
-  const notes: string[] = [];
+  const notes: DraftParagraph[] = [];
   const repeating = works.filter((w) => w.previous_year);
   if (repeating.length > 0) {
-    notes.push(
-      "해마다 반복되는 업무입니다. 작년 판이 시스템에 남아 있으니 함께 보십시오.\n" +
-        repeating
-          .map((w) => `· ${w.title}\n    작년: ${w.previous_year?.title}`)
-          .join("\n"),
-    );
+    notes.push([
+      plain(
+        "해마다 반복되는 업무입니다. 작년 판이 시스템에 남아 있으니 함께 보십시오.",
+      ),
+      ...repeating.flatMap((w) => [
+        workTitle(w),
+        plain(`    작년: ${w.previous_year?.title}`),
+      ]),
+    ]);
   }
   const crossDept = works.filter((w) => w.department_count > 1);
   if (crossDept.length > 0) {
-    notes.push(
-      "다른 부서와 함께 보는 업무입니다. 담당자가 바뀐 사실을 알려야 합니다.\n" +
-        crossDept.map((w) => `· ${w.title} (${w.department_count}개 부서)`).join("\n"),
-    );
+    notes.push([
+      plain("다른 부서와 함께 보는 업무입니다. 담당자가 바뀐 사실을 알려야 합니다."),
+      ...crossDept.map((w) =>
+        atWork(`· ${w.title} (${w.department_count}개 부서)`, w.id),
+      ),
+    ]);
   }
-  notes.push(
-    `인계자 ${who(view.from)}${josa(
-      view.from.position ?? view.from.name,
-      "은",
-      "는",
-    )} 인계 후에도 열람 권한을 유지합니다. 확인이 필요한 사항은 문의할 수 있습니다.`,
-  );
+  notes.push([
+    plain(
+      `인계자 ${who(view.from)}${josa(
+        view.from.position ?? view.from.name,
+        "은",
+        "는",
+      )} 인계 후에도 열람 권한을 유지합니다. 확인이 필요한 사항은 문의할 수 있습니다.`,
+    ),
+  ]);
 
   const blocks: DraftBlock[] = [
     {
@@ -347,13 +454,13 @@ export async function buildHandoverDraft(
       // (부서 공개 업무는 RLS가 다른 과에 내주지 않는다). 그때 제목만 있고 본문이
       // 없는 결재 문서가 나오면 만들다 만 것처럼 보인다. 다른 칸에는 전부 있는
       // 폴백을 여기에도 둔다. "없다"가 아니라 "못 본다"일 수 있음을 함께 적는다.
-      paragraphs: duties.length > 0 ? duties : [EMPTY_WORKS],
+      paragraphs: duties.length > 0 ? duties : [[plain(EMPTY_WORKS)]],
       sources: [`업무 ${works.length}건의 기본 정보와 참여자 목록`],
     },
     {
       key: "1-progress",
       heading: "1-나. 주요 업무계획 및 진행사항",
-      paragraphs: progress.length > 0 ? progress : [EMPTY_WORKS],
+      paragraphs: progress.length > 0 ? progress : [[plain(EMPTY_WORKS)]],
       sources: [
         `업무 문서 ${documentCount}건의 진행 항목`,
         `업무 이력 ${activityCount}건 중 상태 변경 기록`,
@@ -382,13 +489,13 @@ export async function buildHandoverDraft(
     {
       key: "1-pending",
       heading: "1-라. 주요 미결사항",
-      paragraphs: pending.length > 0 ? pending : ["미결 업무가 없습니다."],
+      paragraphs: pending.length > 0 ? pending : [[plain("미결 업무가 없습니다.")]],
       sources: ["완료되지 않은 업무의 상태와 기한"],
     },
     {
       key: "2-docs",
       heading: "2. 관련 문서 현황",
-      paragraphs: docs.length > 0 ? docs : ["등록된 문서와 첨부가 없습니다."],
+      paragraphs: docs.length > 0 ? docs : [[plain("등록된 문서와 첨부가 없습니다.")]],
       sources: [`문서 ${documentCount}건 · 첨부 ${attachmentCount}건`],
     },
     {
@@ -399,7 +506,11 @@ export async function buildHandoverDraft(
       // 있으면 다 적은 칸에서 "적었습니다 … 적어야 합니다"가 한 상자 안에 나온다.
       // 지시는 아직 비어 있을 때만 화면과 종이가 각자 덧붙인다.
       paragraphs: [
-        "이 시스템에는 물품·예산 정보가 없습니다. 재무회계시스템과 물품관리대장에 있는 내용이라, 규칙은 이 칸을 채우지 않습니다.",
+        [
+          plain(
+            "이 시스템에는 물품·예산 정보가 없습니다. 재무회계시스템과 물품관리대장에 있는 내용이라, 규칙은 이 칸을 채우지 않습니다.",
+          ),
+        ],
       ],
       sources: [],
       needsHuman: true,

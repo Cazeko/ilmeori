@@ -3,7 +3,11 @@ import type {
   HandoverNoteWithAuthor,
   Profile,
 } from "@/lib/types";
-import type { HandoverDraft } from "@/lib/handover-draft";
+import {
+  draftBlockText,
+  draftParagraphText,
+  type HandoverDraft,
+} from "@/lib/handover-draft";
 import { formatDate, formatFullDateTime, todayKST } from "@/lib/format";
 
 /**
@@ -130,7 +134,9 @@ export function HandoverPrintSheet({
             <h2 className="font-bold">{block.heading}</h2>
             {block.needsHuman ? (
               <>
-                <p className="mt-1">{block.paragraphs.join(" ")}</p>
+                <p className="mt-1">
+                  {draftBlockText(block.paragraphs)}
+                </p>
                 {/* 지어내지 않는다는 원칙은 종이에서도 같다.
                     아직 비어 있으면 「직접 적어야 한다」는 말과 손으로 적을
                     자리를 함께 남긴다. 인계자가 화면에서 적어 넣었으면 그것이
@@ -145,9 +151,12 @@ export function HandoverPrintSheet({
                 ) : null}
               </>
             ) : (
+              /* 종이에는 링크가 없다. 인쇄된 앵커는 읽는 사람에게 아무것도
+                 아니고, 이 장은 결재로 올라간다. 그래서 종이는 문단을 글자로
+                 눕히는 함수 하나만 쓴다. */
               block.paragraphs.map((p, i) => (
                 <p key={i} className="mt-1 whitespace-pre-line">
-                  {p}
+                  {draftParagraphText(p)}
                 </p>
               ))
             )}

@@ -6,7 +6,11 @@ import { MentionBox } from "@/components/work/mention-box";
 import { EmptyState } from "@/components/ui/empty-state";
 import { canMutate } from "@/lib/env";
 import { formatDateTime, formatFullDateTime } from "@/lib/format";
-import type { CommentWithAuthor, Profile } from "@/lib/types";
+import {
+  commentAnchor,
+  type CommentWithAuthor,
+  type Profile,
+} from "@/lib/types";
 
 /**
  * 대화.
@@ -56,7 +60,16 @@ export function CommentThread({
           {comments.map((c) => {
             const mine = c.author_id === viewer.id;
             return (
-              <li key={c.id} className="flex gap-3">
+              // 인계서의 근거 꼬리표가 여기로 온다
+              // (handover-draft.ts 의 draftRefHref). 도착 지점이 화면 맨 위에
+              // 붙어 버리면 위쪽 맥락이 잘리므로 스크롤 여백을 함께 준다.
+              // `target:` 은 주소의 #에 걸린 요소에만 붙어서, 온 사람만 어느
+              // 줄인지 알고 그냥 읽는 사람에게는 아무 표시도 남지 않는다.
+              <li
+                key={c.id}
+                id={commentAnchor(c.id)}
+                className="flex scroll-mt-24 gap-3 target:bg-primary-5"
+              >
                 <Avatar profile={c.author} className="mt-1" />
                 <div className="min-w-0 flex-1">
                   {/* 삭제는 <form>이라 문단(<p>) 안에 넣을 수 없다.

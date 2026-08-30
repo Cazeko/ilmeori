@@ -9,7 +9,7 @@ import {
 } from "@/lib/data";
 import { getDemoState, resetDemoState, setDemoState } from "@/lib/demo-state";
 import { isSupabaseConfigured } from "@/lib/env";
-import { buildHandoverDraft } from "@/lib/handover-draft";
+import { buildHandoverDraft, draftParagraphText } from "@/lib/handover-draft";
 import { requireViewer } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -210,7 +210,10 @@ export async function startHandover(formData: FormData) {
   // 화면은 열 때마다 초안을 다시 조립하지만, 저장해 두는 판은 따로 필요하다.
   // "그때 무엇이 적혀 있었는가"는 나중에 기록을 다시 만들어서는 답할 수 없다.
   const documentDraft = draft.blocks
-    .map((b) => `${b.heading}\n${b.paragraphs.join("\n\n")}`)
+    .map(
+      (b) =>
+        `${b.heading}\n${b.paragraphs.map(draftParagraphText).join("\n\n")}`,
+    )
     .join("\n\n");
 
   const { error } = await supabase.from("handover").insert({

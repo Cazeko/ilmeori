@@ -21,17 +21,27 @@ const SRC = path.resolve(
   "src",
 );
 
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
+
+/**
+ * 있기만 한 것이 아니라 **파일**이어야 한다.
+ *
+ * `existsSync` 는 디렉터리에도 참을 준다. 그래서 `@/lib/data` 처럼 폴더
+ * 이름으로 적은 경로가 아래 index 찾기까지 가지 못하고 폴더 경로 그대로
+ * 돌아갔고, 노드가 ERR_UNSUPPORTED_DIR_IMPORT 로 멈췄다. 잎 모듈만 부르던
+ * 동안에는 드러나지 않던 자리다.
+ */
+const isFile = (p) => existsSync(p) && statSync(p).isFile();
 
 /** 타입스크립트처럼 확장자 없이 적은 경로를 실제 파일로 맞춰 준다. */
 function withExtension(filePath) {
-  if (existsSync(filePath)) return filePath;
+  if (isFile(filePath)) return filePath;
   for (const ext of [".ts", ".tsx", ".mjs", ".js"]) {
-    if (existsSync(filePath + ext)) return filePath + ext;
+    if (isFile(filePath + ext)) return filePath + ext;
   }
   for (const ext of [".ts", ".tsx", ".mjs", ".js"]) {
     const index = path.join(filePath, `index${ext}`);
-    if (existsSync(index)) return index;
+    if (isFile(index)) return index;
   }
   return filePath;
 }
@@ -57,7 +67,7 @@ export async function resolve(specifier, context, nextResolve) {
   if (specifier.startsWith(".") && context.parentURL?.startsWith("file:")) {
     const from = path.dirname(fileURLToPath(context.parentURL));
     const guess = withExtension(path.resolve(from, specifier));
-    if (existsSync(guess)) return nextResolve(pathToFileURL(guess).href, context);
+    if (isFile(guess)) return nextResolve(pathToFileURL(guess).href, context);
   }
 
   return nextResolve(specifier, context);

@@ -5,6 +5,7 @@ import { getWork } from "@/lib/data";
 import { canMutate } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
+import { workTalkHref } from "@/lib/types";
 import { classifyError } from "./feedback";
 import { changed, finish } from "./guard";
 
@@ -33,7 +34,7 @@ import { changed, finish } from "./guard";
 const MAX_BODY = 1000;
 
 /** 쪽지를 보낸 뒤 돌아갈 자리 — 업무의 「대화」 탭. 물어본 자리가 거기다. */
-const backTo = (workId: string) => `/works/${workId}?tab=talk`;
+const backTo = (workId: string) => workTalkHref(workId);
 
 export async function sendNote(formData: FormData) {
   const viewer = await requireViewer();

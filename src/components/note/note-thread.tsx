@@ -7,7 +7,11 @@ import { deleteNote, replyNote } from "@/lib/actions/notes";
 import { cn } from "@/lib/cn";
 import { canMutate } from "@/lib/env";
 import { formatDateTime, formatFullDateTime } from "@/lib/format";
-import type { NoteThread as Thread, Profile } from "@/lib/types";
+import {
+  workTalkHref,
+  type NoteThread as Thread,
+  type Profile,
+} from "@/lib/types";
 
 /**
  * 쪽지 실 하나.
@@ -72,7 +76,7 @@ export function NoteThreadView({
           <>
             <span>업무</span>
             <Link
-              href={`/works/${thread.work.id}?tab=talk`}
+              href={workTalkHref(thread.work.id)}
               className="font-bold break-keep text-gray-90"
             >
               {thread.work.title}

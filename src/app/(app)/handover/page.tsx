@@ -29,6 +29,7 @@ import { ProgressSteps } from "@/components/handover/progress-steps";
 import { PrintButton } from "@/components/handover/print-button";
 import { HandoverPrintSheet } from "@/components/handover/print-sheet";
 import { BlockNotes } from "@/components/handover/block-notes";
+import { DraftLines } from "@/components/handover/draft-lines";
 import { StatusBadge } from "@/components/status-badge";
 import {
   formatDate,
@@ -43,7 +44,7 @@ import {
   listWorks,
   roleIn,
 } from "@/lib/data";
-import { buildHandoverDraft } from "@/lib/handover-draft";
+import { buildHandoverDraft, draftBlockText } from "@/lib/handover-draft";
 import { requireViewer } from "@/lib/session";
 import { canMutate, isSupabaseConfigured } from "@/lib/env";
 import { handoverBlockAnchor, type HandoverNoteWithAuthor } from "@/lib/types";
@@ -346,7 +347,7 @@ export default async function HandoverPage({
                           </strong>
                           {/* 이 문단에는 지시가 들어 있지 않다(handover-draft.ts).
                               앞의 굵은 한 줄만 상태에 따라 갈린다. */}
-                          {block.paragraphs.join(" ")}
+                          {draftBlockText(block.paragraphs)}
                         </span>
                       </p>
                     ) : (
@@ -356,7 +357,7 @@ export default async function HandoverPage({
                             key={i}
                             className="rounded-sm bg-gray-5 px-4 py-3 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80"
                           >
-                            {p}
+                            <DraftLines lines={p} />
                           </p>
                         ))}
                       </div>

@@ -6,6 +6,7 @@ import { getDemoState, setDemoState } from "@/lib/demo-state";
 import { canMutate } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
+import { workTalkHref } from "@/lib/types";
 import { classifyError } from "./feedback";
 import { changed, finish, openWork } from "./guard";
 
@@ -43,7 +44,7 @@ export async function postComment(formData: FormData) {
   // 어느 업무인지 모르면 돌아갈 화면도 없다. 목록으로 보낸다.
   if (typeof workId !== "string" || !workId) finish("/works", "invalid");
 
-  const talk = `/works/${workId}?tab=talk`;
+  const talk = workTalkHref(workId);
   if (typeof raw !== "string") finish(talk, "invalid");
 
   const body = raw.trim().slice(0, MAX_BODY);
@@ -122,7 +123,7 @@ export async function deleteComment(formData: FormData) {
 
   if (typeof workId !== "string" || !workId) finish("/works", "invalid");
 
-  const talk = `/works/${workId}?tab=talk`;
+  const talk = workTalkHref(workId);
   if (typeof commentId !== "string" || !commentId) finish(talk, "invalid");
 
   // 여는 문은 'read'다. 대화는 볼 수 있는 사람이면 남길 수 있고,

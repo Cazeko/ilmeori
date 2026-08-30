@@ -55,7 +55,7 @@ import {
 } from "@/lib/data";
 import { canMutate, isSupabaseConfigured } from "@/lib/env";
 import { requireViewer } from "@/lib/session";
-import { ACCESS_KIND_LABEL, VISIBILITY_LABEL } from "@/lib/types";
+import { ACCESS_KIND_LABEL, VISIBILITY_LABEL, workTalkHref } from "@/lib/types";
 
 const TABS = ["doc", "talk", "approval", "history", "people"] as const;
 type Tab = (typeof TABS)[number];
@@ -204,7 +204,7 @@ export default async function WorkDetailPage({
     {
       key: "talk",
       label: "대화",
-      href: `/works/${work.id}?tab=talk`,
+      href: workTalkHref(work.id),
       icon: MessageSquare,
       count: comments.length,
     },
