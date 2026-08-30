@@ -228,6 +228,46 @@ export type HandoverDraft = {
   };
 };
 
+/**
+ * 갈래를 합친 한 줄 — **화면 맨 위 캡션이 읽는 숫자.**
+ *
+ * ── 왜 「출처가 붙은 문장 N개」를 세지 않는가 ──────────────────────────────
+ *
+ * 처음 계획은 문단의 줄 중 `ref` 가 달린 것을 세어 「47문장 중 41문장」처럼
+ * 적으려 했다. 그러면 **두 배 가까이 부풀려진다** — `atWork()` 가 업무 제목
+ * 줄에도 `ref` 를 달기 때문이다(아래 참조). 그건 출처가 아니라 이동 링크다.
+ * 실제로 세어 보면 목업에서 `ref` 붙은 줄 26개 중 인용은 7개뿐이다.
+ *
+ * 「지어내지 않는다」를 파는 제품이 자기 성능을 부풀려 세면, *"그 숫자는 어떻게
+ * 세셨습니까"* 한 마디에 제품 주장 전체가 같이 죽는다.
+ *
+ * 그래서 **새 비율을 만들지 않는다.** 이미 있고 이미 시험되는 숫자를 더한다 —
+ * `Screened` 의 항등식(seen === used + missed.length + omitted)이 갈래마다
+ * 성립하므로, 더한 값에서도 성립한다. 그 성질이 이 함수의 전부다.
+ *
+ * `notUsed` 는 뺄셈이 아니라 **더해서** 만든다. 뺄셈으로 만들면 두 값이
+ * 어긋나는 날 조용히 맞는 것처럼 보인다.
+ */
+export type ScreeningTotal = {
+  /** 규칙이 들여다본 기록 수 (대화 + 문서 항목) */
+  seen: number;
+  /** 그중 서식에 실은 수 */
+  used: number;
+  /** 안 실린 수 — 원문이 남은 것과 목록 상한에 잘린 것을 합친 값 */
+  notUsed: number;
+};
+
+export function screeningTotal(
+  screening: HandoverDraft["screening"],
+): ScreeningTotal {
+  const kinds = [screening.comments, screening.sections];
+  return {
+    seen: kinds.reduce((n, s) => n + s.seen, 0),
+    used: kinds.reduce((n, s) => n + s.used, 0),
+    notUsed: kinds.reduce((n, s) => n + s.missed.length + s.omitted, 0),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // 대화에서 현안을 고르기
 // ---------------------------------------------------------------------------

@@ -28,6 +28,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { ProgressSteps } from "@/components/handover/progress-steps";
 import { PrintButton } from "@/components/handover/print-button";
 import { HandoverPrintSheet } from "@/components/handover/print-sheet";
+import { SheetCaption } from "@/components/handover/sheet-caption";
 import { BlockNotes } from "@/components/handover/block-notes";
 import { DraftLines } from "@/components/handover/draft-lines";
 import { ScreeningPanel } from "@/components/handover/screening-panel";
@@ -187,6 +188,9 @@ export default async function HandoverPage({
           "print:border-0 print:bg-white print:p-0",
         )}
       >
+        {/* 서식의 캡션 — 이 문서가 무엇으로 만들어졌는지 한 줄.
+            래퍼 **안**이어야 한다(sheet-caption.tsx 의 「자리」 주석). */}
+        <SheetCaption screening={draft.screening} />
         <HandoverPrintSheet
           draft={draft}
           notesByBlock={notesByBlock}

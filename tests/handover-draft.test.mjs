@@ -28,9 +28,8 @@ import { readFileSync } from "node:fs";
 process.env.NEXT_PUBLIC_SUPABASE_URL = "";
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "";
 
-const { buildHandoverDraft, draftParagraphText, readDoc } = await import(
-  "@/lib/handover-draft.ts"
-);
+const { buildHandoverDraft, draftParagraphText, readDoc, screeningTotal } =
+  await import("@/lib/handover-draft.ts");
 const { workDocHref, workHref, workTalkHref } = await import("@/lib/types.ts");
 const { docChunks, fromSections } = await import("@/lib/editor/model.ts");
 const mock = await import("@/lib/data/mock.ts");
@@ -635,6 +634,50 @@ ok(
   "본문이 빈 항목은 안 실린 것으로 세지 않는다",
   withEmpty.missed.length === 0,
   withEmpty.missed.map((m) => m.piece.heading).join(", "),
+);
+
+// ---------------------------------------------------------------------------
+console.log("\n[9] 캡션이 읽는 숫자 — 부풀릴 자리가 없는가");
+// ---------------------------------------------------------------------------
+
+// 화면 맨 위 캡션이 「대화·문서 항목 N건을 들여다보고 M건을 실었습니다」로
+// 말하는 그 숫자다. **발표에서 말할 숫자이기도 하다.**
+//
+// 처음 계획은 문단의 줄 중 `ref` 가 달린 것을 세려 했다. 그러면 두 배 가까이
+// 부풀려진다 — 업무 제목 줄에도 `ref` 가 달려 있고 그건 출처가 아니라 이동
+// 링크이기 때문이다. 아래 첫 항목이 그 차이를 **실제 값으로** 못박는다.
+// 「지어내지 않는다」를 파는 제품이 자기 성능을 부풀려 세면 그 자리에서 끝난다.
+const total = screeningTotal(draft.screening);
+
+ok(
+  "캡션의 숫자는 갈래별 숫자를 그대로 더한 값이다",
+  total.seen === draft.screening.comments.seen + draft.screening.sections.seen &&
+    total.used === draft.screening.comments.used + draft.screening.sections.used,
+  `합계 들여다본 것 ${total.seen} · 실은 것 ${total.used}`,
+);
+// 갈래마다 성립하는 항등식(seen === used + missed + omitted)은 더한 값에서도
+// 성립해야 한다. 이게 이 함수의 존재 이유다 — 안 맞으면 캡션과 아래 미포착
+// 판이 같은 화면에서 다른 말을 한다.
+ok(
+  "들여다본 것 = 실은 것 + 안 실린 것",
+  total.seen === total.used + total.notUsed,
+  `${total.seen} vs ${total.used} + ${total.notUsed}`,
+);
+// 셀 것이 있는 인계로 지나가야 한다. 0 이면 위 두 항목은 무엇을 넣어도 통과한다.
+ok(
+  "그 대조가 실제로 세는 인계를 지나갔다",
+  total.seen > 0 && total.used > 0,
+  `들여다본 것 ${total.seen} · 실은 것 ${total.used}`,
+);
+// 「줄에 붙은 ref 를 세면 부풀려진다」를 값으로 남긴다. 이 두 수가 가까워지는
+// 날은 `atWork()` 가 제목 줄에 ref 를 안 달게 된 날이고, 그때는 캡션의 근거를
+// 다시 골라야 한다 — 조용히 지나가면 안 되는 종류의 변화다.
+const refLines = linked.length;
+const quoteLines = linked.filter((l) => l.ref.kind !== "work").length;
+ok(
+  "ref 붙은 줄을 세는 것은 인용을 세는 것과 다르다",
+  refLines > quoteLines * 1.5,
+  `ref 붙은 줄 ${refLines} · 그중 인용 ${quoteLines} (제목 줄이 ${refLines - quoteLines})`,
 );
 
 console.log(

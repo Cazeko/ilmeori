@@ -52,6 +52,14 @@ import { formatDate, formatFullDateTime } from "@/lib/format";
  * 아무리 커도 여백 등급이다. 아래 서식 항목 제목(17px)보다 커지면 확인 장치가
  * 확인 대상보다 무거워진다. 자바스크립트 없이 접힌다(`<details>`).
  */
+/**
+ * 서식 위 캡션이 이 판으로 보내는 자리.
+ *
+ * 두 곳이 같은 문자열을 손으로 적으면 한쪽만 고치는 날이 온다 —
+ * `handoverBlockAnchor()` 를 상수로 둔 것과 같은 이유다(types.ts:353).
+ */
+export const SCREENING_ANCHOR = "screening";
+
 export function ScreeningPanel({
   screening,
 }: {
@@ -71,7 +79,12 @@ export function ScreeningPanel({
   const omitted = sources.reduce((n, s) => n + s.screened.omitted, 0);
 
   return (
-    <section className="border-l border-l-rule-hair py-2 pl-3">
+    <section
+      // 캡션이 이리로 보낸다. 붙박이 머리줄에 가리지 않게 여백을 둔다
+      // (인계 항목들이 이미 쓰는 scroll-mt-20 과 같은 값).
+      id={SCREENING_ANCHOR}
+      className="scroll-mt-20 border-l border-l-rule-hair py-2 pl-3"
+    >
       <h3 className="flex items-center gap-2 text-body-sm font-bold text-gray-90">
         <Cog aria-hidden className="size-4 shrink-0 text-gray-40" />
         규칙이 무엇을 걸렀나
@@ -116,6 +129,21 @@ export function ScreeningPanel({
           반드시 놓치는 것이 있습니다.
         </strong>{" "}
         안 실린 것을 아래에 그대로 둡니다. 서식에 넣을 것은 인계자가 고릅니다.
+      </p>
+
+      {/* ── 이 판이 셀 수 없는 것 ────────────────────────────────────────────
+          인터뷰가 같은 것을 세 번 말했다. 후임자는 전임자에게 20~30회
+          전화하고(Q10), 사전 조율한 내용은 기록에 안 남고(Q27), 곤란한 것은
+          *"필요할 시, 구두 전달"* 한다(Q16). **가장 값진 맥락은 체계적으로
+          글이 아니라 말로 간다.**
+
+          위 숫자는 「규칙이 놓친 것」을 세지만, 애초에 여기 없는 말은 놓칠
+          수조차 없다. 세는 코드를 안 만들고 문장 하나로만 인정한다 —
+          못 세는 것을 세었다고 말하지 않는 것이 이 판의 규율이고, 세는 척하는
+          숫자를 하나 더 만드는 것이 정확히 그 규율을 어기는 일이다. */}
+      <p className="mt-2 text-body-sm leading-relaxed break-keep text-gray-70">
+        규칙이 세는 것은 일머리에 남은 기록뿐입니다. 결재 전 통화나 방문으로
+        오간 말은 애초에 여기 없어 이 수에도 안 잡힙니다.
       </p>
 
       {missed.length > 0 ? (
