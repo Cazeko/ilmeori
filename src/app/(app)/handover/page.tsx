@@ -30,6 +30,7 @@ import { PrintButton } from "@/components/handover/print-button";
 import { HandoverPrintSheet } from "@/components/handover/print-sheet";
 import { BlockNotes } from "@/components/handover/block-notes";
 import { DraftLines } from "@/components/handover/draft-lines";
+import { ScreeningPanel } from "@/components/handover/screening-panel";
 import { StatusBadge } from "@/components/status-badge";
 import {
   formatDate,
@@ -303,6 +304,12 @@ export default async function HandoverPage({
                 }
               />
               <CardBody className="flex flex-col gap-6">
+                {/* 「1-다. 현안사항」을 읽기 전에, 그 칸을 채운 규칙이 대화에서
+                    무엇을 놓쳤는지 먼저 밝힌다. 세는 범위는 **대화뿐**이다 —
+                    다른 칸이 무엇을 흘리는지는 여기서 세지 않는다.
+                    이 판은 서식이 아니므로 종이에는 나가지 않는다. */}
+                <ScreeningPanel screening={draft.screening} />
+
                 {draft.blocks.map((block) => {
                   const blockNotes = notesByBlock.get(block.key) ?? [];
                   // 원래 비어 있던 칸에 사람이 적어 넣었으면, 화면도 그 사실을

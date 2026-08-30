@@ -480,7 +480,8 @@ export async function getComments(workId: string): Promise<CommentWithAuthor[]> 
     )
     .eq("work_id", workId)
     .is("deleted_at", null)
-    .order("created_at");
+    .order("created_at")
+    .order("id");
   if (error) throw error;
 
   // 임베드는 [{ profile: {...} }] 로 온다. 화면이 쓰는 모양으로 편다.
@@ -556,7 +557,8 @@ export async function getNoteThread(
     .select(`${NOTE_SELECT}, work:work_id ( id, title )`)
     .eq("thread_id", threadId)
     .is("deleted_at", null)
-    .order("created_at");
+    .order("created_at")
+    .order("id");
   if (error) throw error;
 
   const rows = (data ?? []) as unknown as Array<
@@ -587,7 +589,8 @@ export async function getWorkNoteThreads(
     .select(NOTE_SELECT)
     .eq("work_id", workId)
     .is("deleted_at", null)
-    .order("created_at");
+    .order("created_at")
+    .order("id");
   if (error) throw error;
 
   return groupThreads(
@@ -785,7 +788,9 @@ export async function gatherForWorks(
       .select(`*, author:author_id ( ${PROFILE_SELECT} )`, { count: "exact" })
       .in("work_id", ids)
       .is("deleted_at", null)
-      .order("created_at"),
+      // 시각이 같으면 순서가 정해지지 않는다(mock.ts 의 같은 자리 주석 참조).
+      .order("created_at")
+      .order("id"),
   ]);
 
   for (const r of [documents, activities, attachments, comments]) {

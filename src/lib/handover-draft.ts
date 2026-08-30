@@ -119,6 +119,23 @@ export type DraftBlock = {
   needsHuman?: boolean;
 };
 
+/**
+ * 규칙이 **놓친** 대화 한 건. 화면의 「미포착」이 이걸 그대로 띄운다.
+ *
+ * 서식에는 들어가지 않는다 — 이건 문서의 내용이 아니라 **문서를 믿어도 되는지
+ * 확인하는 장치**다. 종이와 저장본은 blocks 만 본다.
+ */
+export type MissedComment = {
+  workId: string;
+  workTitle: string;
+  commentId: string;
+  author: string;
+  at: string;
+  /** 줄바꿈을 눕히고 220자에서 자른 글. 잘렸으면 아래가 참이다. */
+  body: string;
+  truncated: boolean;
+};
+
 export type HandoverDraft = {
   blocks: DraftBlock[];
   /** 초안을 만드는 데 실제로 참고한 기록 수 */
@@ -128,6 +145,31 @@ export type HandoverDraft = {
     activities: number;
     attachments: number;
     comments: number;
+  };
+  /**
+   * 대화를 몇 건 보고 몇 건을 걸렀는가 — **그리고 못 거른 것은 무엇인가.**
+   *
+   * 규칙 기반의 값은 정밀도이고 대가는 재현율이다. 이 제품은 그 대가를 숨기지
+   * 않기로 했다. 놓친 건 셀 수 있고, 지어낸 건 셀 수 없다.
+   */
+  screening: {
+    /** 규칙이 들여다본 대화 수 */
+    comments: number;
+    /** 갈래 하나 이상에 걸린 수 */
+    matched: number;
+    /** 그중 실제로 서식에 실은 수 (업무별 상한에 걸려 더 적을 수 있다) */
+    quoted: number;
+    /** 걸리지 않은 대화 (업무별 상한까지) */
+    missed: MissedComment[];
+    /**
+     * 상한에 걸려 화면에 안 실은 미포착 수.
+     *
+     * 미포착은 이 파일에서 **유일하게 상한이 없던 목록**이었다. 서식 쪽은
+     * QUOTES_PER_WORK·PROCESS_MAX 로 다 묶어 두고 정작 「다 보여 준다」는 판이
+     * 무제한이면, 업무 스무 건짜리 인계에서 목록이 수백 줄이 되어 두 초 만에
+     * 넘긴다는 이 판의 목적 자체가 깨진다. 잘랐으면 잘랐다고 적는다.
+     */
+    omitted: number;
   };
 };
 
@@ -223,6 +265,14 @@ const QUOTE_MAX = 220;
 const QUOTES_PER_WORK = 3;
 
 /**
+ * 한 업무에서 「미포착」에 보여 줄 대화 수 상한.
+ *
+ * 서식에 싣는 것(3건)보다 넉넉하게 둔다 — 이 판의 일은 고르는 것이 아니라
+ * 내놓는 것이다. 그래도 상한은 둔다. 넘친 수는 화면이 따로 밝힌다.
+ */
+const MISSED_PER_WORK = 5;
+
+/**
  * 볼 수 있는 대상 업무가 하나도 없을 때 쓰는 문장.
  * "없습니다"라고 단정하지 않는다 — 인계 자체는 있는데 보는 사람에게만 안 보이는
  * 경우가 있고(다른 과 인수자 + 부서 공개 업무), 그때 "없다"고 적으면 거짓이 된다.
@@ -234,10 +284,18 @@ function who(p: Pick<Profile, "name" | "position">): string {
   return [p.name, p.position].filter(Boolean).join(" ");
 }
 
-/** 줄바꿈을 눕혀 한 문단으로. 서식 안의 인용은 원문의 줄 모양까지 옮기지 않는다. */
-function quote(body: string): string {
+/**
+ * 줄바꿈을 눕혀 한 문단으로. 서식 안의 인용은 원문의 줄 모양까지 옮기지 않는다.
+ *
+ * **잘랐는지도 함께 돌려준다.** 「원문 그대로 싣는다」고 말해 놓고 220자에서
+ * 말없이 자르면 그 말이 거짓이 된다. 자른 것 자체는 어쩔 수 없지만(서식이
+ * 목록으로 변한다), 잘랐다는 사실은 화면이 말할 수 있다.
+ */
+function quote(body: string): { text: string; truncated: boolean } {
   const flat = body.replace(/\s*\n+\s*/g, " ").trim();
-  return flat.length > QUOTE_MAX ? `${flat.slice(0, QUOTE_MAX)}…` : flat;
+  return flat.length > QUOTE_MAX
+    ? { text: `${flat.slice(0, QUOTE_MAX)}…`, truncated: true }
+    : { text: flat, truncated: false };
 }
 
 /**
@@ -424,14 +482,30 @@ type IssueQuote = { comment: CommentWithAuthor; labels: string[] };
 function pickIssueComments(comments: CommentWithAuthor[]): {
   matched: number;
   picked: IssueQuote[];
+  /**
+   * **규칙에 걸리지 않은 대화.** 세는 것으로 끝내지 않고 원문을 그대로 돌려준다.
+   *
+   * 규칙 기반이라 놓치는 것이 반드시 있다. 그걸 숫자로만 말하면
+   * *"그럼 안 걸린 건 어떻게 됩니까"* 라는 물음에 답할 것이 없고, 화면은
+   * 서식이 다 채워진 것처럼 보인다. 원문을 그대로 내주면 그 물음이
+   * **물음으로 성립하지 않는다** — 못 걸렀다고 화면이 먼저 말하고, 고를 것은
+   * 사람 앞에 놓인다.
+   */
+  missed: CommentWithAuthor[];
 } {
   const matched: IssueQuote[] = [];
+  const missed: CommentWithAuthor[] = [];
   for (const c of comments) {
     const labels = issueLabels(c.body);
     if (labels.length > 0) matched.push({ comment: c, labels });
+    else missed.push(c);
   }
   // 최근 것부터 남기되, 남긴 것끼리는 오간 순서를 지킨다. 대화는 순서가 곧 맥락이다.
-  return { matched: matched.length, picked: matched.slice(-QUOTES_PER_WORK) };
+  return {
+    matched: matched.length,
+    picked: matched.slice(-QUOTES_PER_WORK),
+    missed,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -578,6 +652,8 @@ export async function buildHandoverDraft(
   const issues: DraftParagraph[] = [];
   let matchedComments = 0;
   let quotedComments = 0;
+  const missedComments: MissedComment[] = [];
+  let omittedMissed = 0;
 
   for (const { work: w, document, sections, comments } of gathered) {
     // 업무 한 건이 한 문단이다(DraftParagraph 주석 참조).
@@ -595,6 +671,24 @@ export async function buildHandoverDraft(
 
     const picks = pickIssueComments(comments);
     matchedComments += picks.matched;
+    // 못 거른 것은 서식에 넣지 않고 따로 모은다. 서식은 법이 정한 칸이고,
+    // 미포착은 그 칸을 믿어도 되는지 보는 장치라 사는 자리가 다르다.
+    // 최근 것부터 남긴다. 오래된 대화가 남으면 「지금 무엇을 놓쳤나」를 보러 온
+    // 사람에게 가장 먼 것부터 보이게 된다.
+    const shownMissed = picks.missed.slice(-MISSED_PER_WORK);
+    omittedMissed += picks.missed.length - shownMissed.length;
+    for (const c of shownMissed) {
+      const q = quote(c.body);
+      missedComments.push({
+        workId: w.id,
+        workTitle: w.title,
+        commentId: c.id,
+        author: who(c.author),
+        at: c.created_at,
+        body: q.text,
+        truncated: q.truncated,
+      });
+    }
     for (const { comment: c, labels } of picks.picked) {
       quotedComments += 1;
       lines.push(
@@ -605,7 +699,7 @@ export async function buildHandoverDraft(
           w.id,
           c.id,
         ),
-        plain(`  “${quote(c.body)}”`),
+        plain(`  “${quote(c.body).text}”`),
       );
     }
 
@@ -811,6 +905,13 @@ export async function buildHandoverDraft(
 
   return {
     blocks,
+    screening: {
+      comments: commentCount,
+      matched: matchedComments,
+      quoted: quotedComments,
+      missed: missedComments,
+      omitted: omittedMissed,
+    },
     evidence: {
       works: works.length,
       documents: documentCount,

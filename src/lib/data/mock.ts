@@ -345,7 +345,14 @@ export async function getComments(workId: string): Promise<CommentWithAuthor[]> 
       // 담기 시작하면 4KB 를 더 빨리 넘긴다. 화면은 빈 배열에서도 그대로 돈다.
       mentions: [],
     }))
-    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+  // 시각이 같은 대화가 둘 있으면 순서가 정해지지 않는다. 그러면 「같은 기록에서
+  // 두 번 뽑으면 같은 문서가 나온다」가 깨지고, 업무별 상한(최근 3건)이 다른
+  // 대화를 고를 수도 있다 — 화면에 뜬 서식과 저장해 둔 판이 달라진다.
+  // uuid 는 단조롭지 않지만 **안정적**이라 가름쇠로는 충분하다.
+    .sort(
+      (a, b) =>
+        a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id),
+    );
 }
 
 /**

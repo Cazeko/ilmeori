@@ -261,7 +261,51 @@ ok(
 );
 
 // ---------------------------------------------------------------------------
-console.log("\n[4] 지어낸 앵커가 없다 — 누르면 실제로 그 기록으로 간다");
+console.log("\n[4] 미포착 — 놓친 것을 세고, 원문으로 내놓는다");
+// ---------------------------------------------------------------------------
+
+const sc = draft.screening;
+// 셋을 더하면 전체가 되어야 한다. 어긋나면 어느 한쪽을 조용히 빠뜨리고 있다는 뜻이고,
+// 「다 봤다」고 말하는 화면에서 그건 가장 비싼 거짓말이다.
+// 상한이 생긴 뒤로는 화면에 보이는 수만 더해서는 전체가 안 된다.
+// 뺀 수(omitted)까지 넣어야 「다 세었다」가 성립한다.
+ok(
+  "걸린 것 + 보여 준 것 + 뺀 것 = 들여다본 것",
+  sc.matched + sc.missed.length + sc.omitted === sc.comments,
+  `${sc.matched} + ${sc.missed.length} + ${sc.omitted} ≠ ${sc.comments}`,
+);
+ok("걸리지 않은 대화가 실제로 있다", sc.missed.length > 0, `${sc.missed.length}건`);
+
+// 놓친 것은 **원문 그대로** 내놓는다. 요약하면 규칙이 못 한 판단을 요약이 대신
+// 하게 되고, 그러면 사람이 두 초 만에 넘길 수가 없다.
+const missedIds = new Set(sc.missed.map((m) => m.commentId));
+ok(
+  "놓친 대화가 전부 실재하고, 본문·글쓴이가 그 대화의 것이다",
+  sc.missed.every((m) => {
+    const c = records.get(m.workId)?.comments.find((x) => x.id === m.commentId);
+    return c && m.author.includes(c.author.name) && c.body.startsWith(m.body.slice(0, 20));
+  }),
+  sc.missed.map((m) => m.commentId).join(", "),
+);
+// 서식에 실린 대화가 미포착에도 있으면 같은 글을 두 번 세는 것이다.
+const quotedIds = new Set(lines.map((l) => l.ref?.commentId).filter(Boolean));
+ok(
+  "서식에 실은 대화는 미포착에 없다",
+  [...quotedIds].every((id) => !missedIds.has(id)),
+  [...quotedIds].filter((id) => missedIds.has(id)).join(", "),
+);
+
+// 잘랐으면 잘랐다고 말해야 한다. 「그대로 둡니다」라고 적어 놓고 220자에서
+// 말없이 자르면 이 판이 스스로 어기는 규칙이 된다.
+ok(
+  "220자를 넘는 글만 잘렸다고 표시된다",
+  sc.missed.every((m) => m.truncated === m.body.endsWith("…")),
+  sc.missed.filter((m) => m.truncated !== m.body.endsWith("…")).map((m) => m.commentId).join(", "),
+);
+ok("상한에 걸려 뺀 수를 따로 센다", typeof sc.omitted === "number" && sc.omitted >= 0);
+
+// ---------------------------------------------------------------------------
+console.log("\n[5] 지어낸 앵커가 없다 — 누르면 실제로 그 기록으로 간다");
 // ---------------------------------------------------------------------------
 
 ok(
@@ -290,7 +334,7 @@ ok(
 );
 
 // ---------------------------------------------------------------------------
-console.log("\n[5] 주소 모양");
+console.log("\n[6] 주소 모양");
 // ---------------------------------------------------------------------------
 
 // 업무 줄까지 대화 탭으로 보내면 업무를 누른 사람이 대화 목록에 떨어진다.
