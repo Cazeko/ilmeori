@@ -107,6 +107,17 @@ const OUT = new URL("../docs/screenshots/", import.meta.url);
  *  재 보니 그 목표가 지표의 성질을 잘못 본 것이었다. 목표를 바꾼 것이 아니라
  *  목표를 재는 자를 고쳤다 — 각 화면의 「문서」는 §5 표대로 전부 세웠다.)
  *
+ * ── 계정을 바꿔야 열리는 화면이 하나 있다 ──────────────────────────────────
+ *
+ * 위 「인계·인수」는 첫 데모 계정(김서연)이 보는 화면인데, 그 사람은 인계
+ * 당사자가 아니라 **대기 화면**이 열린다. 정작 이 제품의 결론인 **초안이 선
+ * 화면**은 박준호로 들어가야 나오고, 그래서 이 시험은 그것을 한 번도 본 적이
+ * 없었다. 인계 서식에 손대면서 「그림 두 장을 전후로 남긴다」고 정했는데
+ * (발전/차별점-보이게하기.md T5), 남는 그림이 다른 화면이면 남기는 뜻이 없다.
+ *
+ * 그래서 화면마다 **어느 계정으로 보는지**를 함께 적는다. 계정이 바뀔 때만
+ * 다시 들어간다 — 화면마다 다시 하면 여섯 번이 열 번이 된다.
+ *
  * ── 실측 (2026-08-23, 1440×1000) ───────────────────────────────────────────
  *              고치기 전   고친 뒤
  *   홈           1.34 ✗     1.66 ✓
@@ -115,14 +126,44 @@ const OUT = new URL("../docs/screenshots/", import.meta.url);
  * 1.78 로 **내려갔다.** 아래쪽 목록의 글자 무게가 위쪽을 희석한 탓이었다.
  * 첫 화면만 재도록 고치자 방향이 뒤집혔다 — 지표를 고른 방식이 결론을 바꾼
  * 자리라 여기 적어 둔다. 재는 자리를 첫 화면으로 정한 근거는 아래 clip 주석에.
+ *
+ * ── 실측 (2026-08-31, 1440×1000) — 출처 층을 붙이기 **전** ──────────────────
+ *
+ *   홈                1.58 ✓
+ *   업무 보드         2.53 ✗ 자리   ← 아래 「고쳐야 할 것」 참조
+ *   결재함            3.36
+ *   쪽지함            1.23 (문서 선언 없음)
+ *   인계·인수(대기)   1.14
+ *   인계·인수(초안)   1.09        ← 이번 작업이 손대는 화면. 이것이 「전」이다
+ *   업무 상세         1.21
+ *
+ * 위 2026-08-23 표와 값이 다른 것은 화면이 바뀌어서만이 아니다. 이 지표는
+ * **화면에 실제로 담긴 데이터**에 흔들리고(기한이 지난 업무가 몇 건이냐),
+ * 목업의 기한은 오늘 날짜를 기준으로 도니까 날이 가면 값이 움직인다.
+ * 그래서 **다른 날 잰 값끼리 빼지 않는다.**
+ *
+ * 🔴 **고쳐야 할 것 — 업무 보드의 자리 검사가 빨간불이다.** 1등 칸 아랫변
+ * y=292 인데 문서 윗변이 y=373 이라, 가장 무거운 칸이 문서에 한 픽셀도 안 닿고
+ * 그보다 위에 있다. 이 시험은 `npm run check` 에 없어서(playwright 가 의존성이
+ * 아니다) 아무도 못 보고 있었다. 이번 작업 범위 밖이라 **여기 적어만 둔다.**
  */
+/** 기본 계정 — 로그인 화면의 첫 단추. */
+const DEFAULT_ACCOUNT = "김서연";
+
 const SCREENS = [
   { name: "home", path: "/", label: "홈", assert: true },
   { name: "works", path: "/works", label: "업무 보드", assert: false },
   { name: "approvals", path: "/approvals", label: "결재함", assert: false },
   { name: "notes", path: "/notes", label: "쪽지함", assert: false },
-  { name: "handover", path: "/handover", label: "인계·인수", assert: false },
-  { name: "work", path: null, label: "업무 상세", assert: false },
+  { name: "handover", path: "/handover", label: "인계·인수(대기)", assert: false },
+  {
+    name: "handover-draft",
+    path: "/handover",
+    label: "인계·인수(초안)",
+    as: "박준호",
+    assert: false,
+  },
+  { name: "work", path: null, label: "업무 상세", as: DEFAULT_ACCOUNT, assert: false },
 ];
 
 /** 이 아래로 떨어지면 히어로가 주변과 같은 무게가 된 것이다. */
@@ -147,16 +188,37 @@ const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 const page = await ctx.newPage();
 
-// 데모 계정으로 들어간다. 로그인 화면의 첫 계정 단추가 김서연이다.
-await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
-await Promise.all([
-  page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 30_000 }),
-  page.locator("form button").first().click(),
-]);
+/**
+ * 데모 계정으로 들어간다.
+ *
+ * 이름으로 고른다 — 단추의 **차례**로 고르면 org.ts 에 계정이 하나 끼어드는
+ * 날 이 시험이 조용히 다른 사람의 화면을 재고, 그림 파일 이름은 그대로 남는다.
+ * 못 찾으면 그 자리에서 멈춘다. 아무나로 들어가 계속 도는 것보다 낫다.
+ */
+let signedInAs = null;
+async function loginAs(name) {
+  if (signedInAs === name) return;
+  // 이미 들어와 있으면 먼저 세션을 끊는다. proxy 가 로그인한 사람을 /login 에서
+  // 홈으로 되돌리기 때문에(proxy.ts), 안 끊으면 계정 단추를 아예 못 만난다.
+  // 화면의 「계정 전환」 단추를 누르는 대신 쿠키를 지운다 — 이 시험이 재는 것은
+  // 화면의 무게이지 세션 동작이 아니고, 머리 줄 마크업에 매달지 않는 편이 낫다.
+  if (signedInAs) await ctx.clearCookies();
+  await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+  const button = page.locator("form button").filter({ hasText: name });
+  if ((await button.count()) === 0) {
+    throw new Error(`로그인 화면에 「${name}」 계정 단추가 없다.`);
+  }
+  await Promise.all([
+    page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 30_000 }),
+    button.first().click(),
+  ]);
+  signedInAs = name;
+}
 
 await mkdir(OUT, { recursive: true });
 
 for (const screen of SCREENS) {
+  await loginAs(screen.as ?? DEFAULT_ACCOUNT);
   if (screen.path) {
     await page.goto(`${BASE}${screen.path}`, { waitUntil: "networkidle" });
   } else {
