@@ -222,8 +222,14 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
               // 넓은 화면: 오른쪽에 붙는 서랍. 머리 줄 아래에서 시작한다.
               "top-header right-0 bottom-0 w-96 max-w-full border-l border-rule-frame",
               // 좁은 화면: 아래에서 올라오는 시트. 서식 좌우 여백은 그대로 둔다.
-              "max-sm:inset-x-0 max-sm:top-auto max-sm:max-h-[70dvh] max-sm:w-full",
-              "max-sm:border-t max-sm:border-l-0",
+              //
+              // 문턱이 `sm`(640px)이었는데, 서랍은 폭이 384px 로 고정이라
+              // **641~1023px 구간에서 서식의 절반을 덮었다**(768 실측: 서식
+              // 630px 중 315px). 문서를 계속 보이게 하려고 만든 물건이 문서를
+              // 반으로 자르고 있었다. 곁칸이 아래로 내려가는 문턱과 같은
+              // 자리(`xl` 격자가 풀리는 구간)에서 서랍도 아래로 내린다.
+              "max-lg:inset-x-0 max-lg:top-auto max-lg:max-h-[70dvh] max-lg:w-full",
+              "max-lg:border-t max-lg:border-l-0",
             ].join(" ")}
           >
             <div className="flex items-start justify-between gap-3">
