@@ -29,6 +29,7 @@ import { ProgressSteps } from "@/components/handover/progress-steps";
 import { PrintButton } from "@/components/handover/print-button";
 import { HandoverPrintSheet } from "@/components/handover/print-sheet";
 import { SheetCaption } from "@/components/handover/sheet-caption";
+import { SourceDrawer } from "@/components/handover/source-drawer";
 import { BlockNotes } from "@/components/handover/block-notes";
 import {
   SCREENING_ANCHOR,
@@ -214,17 +215,25 @@ export default async function HandoverPage({
         {/* 서식의 캡션 — 이 문서가 무엇으로 만들어졌는지 한 줄.
             래퍼 **안**이어야 한다(sheet-caption.tsx 의 「자리」 주석). */}
         <SheetCaption screening={draft.screening} />
-        <HandoverPrintSheet
-          draft={draft}
-          notesByBlock={notesByBlock}
-          from={from}
-          to={to}
-          fromDept={fromDept}
-          toDept={toDept}
-          generatedAt={handover.generated_at}
-          completedAt={handover.completed_at}
-          method={handover.ai_model ?? "rule-based/v1"}
-        />
+        {/* 인용 꼬리표를 누르면 원문이 옆에 열린다 — **문서를 떠나지 않는다.**
+            서버 컴포넌트인 서식을 자식으로 받는다(RSC 에서 정상적인 모양이고,
+            서식은 여전히 서버에서 그려진다). 조각으로 감싸므로 DOM 모양은 한
+            겹도 안 는다 — `#handover-prov:checked ~ .sheet` 가 형제를 찾는다.
+            자바스크립트가 없으면 아무 일도 안 하고 꼬리표는 예전처럼 업무
+            화면으로 간다. */}
+        <SourceDrawer>
+          <HandoverPrintSheet
+            draft={draft}
+            notesByBlock={notesByBlock}
+            from={from}
+            to={to}
+            fromDept={fromDept}
+            toDept={toDept}
+            generatedAt={handover.generated_at}
+            completedAt={handover.completed_at}
+            method={handover.ai_model ?? "rule-based/v1"}
+          />
+        </SourceDrawer>
       </div>
 
       <div className="print:hidden">

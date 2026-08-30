@@ -564,18 +564,25 @@ function declaredProps(cssText, selector) {
   );
 }
 
-const onProps = declaredProps(css, "#handover-prov:checked ~ .sheet [data-src]");
+// 화면에서 `[data-src]` 를 건드리는 규칙은 하나가 아니다 — 출처 층(토글)과
+// 서랍이 열린 줄 표시가 각각 있고, **둘 다** 종이에서 되돌려야 한다.
+const SCREEN_RULES = [
+  "#handover-prov:checked ~ .sheet [data-src]",
+  ".sheet a[data-src][data-open]",
+];
+const screenProps = SCREEN_RULES.map((sel) => declaredProps(css, sel));
+const onProps = new Set(screenProps.flatMap((s) => [...(s ?? [])]));
 const printBlock = css.slice(css.indexOf("@media print"));
 const offProps = declaredProps(printBlock, ".sheet [data-src]");
 ok(
   "화면 규칙과 인쇄 규칙을 둘 다 찾았다",
-  onProps !== null && offProps !== null,
-  `화면 ${onProps ? [...onProps].join(",") : "없음"} / 인쇄 ${offProps ? [...offProps].join(",") : "없음"}`,
+  screenProps.every((s) => s !== null) && offProps !== null,
+  `화면 규칙 ${screenProps.filter(Boolean).length}/${SCREEN_RULES.length} · 속성 [${[...onProps].join(",")}] / 인쇄 [${offProps ? [...offProps].join(",") : "없음"}]`,
 );
-const notReset = [...(onProps ?? [])].filter((p) => !offProps?.has(p));
+const notReset = [...onProps].filter((p) => !offProps?.has(p));
 ok(
-  "켜짐이 바꾸는 속성을 인쇄가 하나도 빠짐없이 되돌린다",
-  (onProps?.size ?? 0) > 0 && notReset.length === 0,
+  "화면이 바꾸는 속성을 인쇄가 하나도 빠짐없이 되돌린다",
+  onProps.size > 0 && notReset.length === 0,
   notReset.join(", "),
 );
 // 링크는 색만 되돌리면 안 된다. 굵기를 두면 업무 제목과 인용 꼬리표가 종이에
