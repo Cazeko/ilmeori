@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Cog } from "lucide-react";
+import { ChevronRight, Cog } from "lucide-react";
 import { draftRefHref } from "@/components/handover/draft-lines";
 import {
   screeningTotal,
@@ -137,7 +137,7 @@ export function ScreeningPanel({
         <strong className="font-bold text-gray-90">
           반드시 놓치는 것이 있습니다.
         </strong>{" "}
-        안 실린 것은 위 표에서 갈래별로 세고, 원문도 아래에 그대로 둡니다.
+        안 실린 것은 바로 위에서 갈래별로 세고, 원문도 아래에 그대로 둡니다.
         서식에 넣을 것은 인계자가 고릅니다.
       </p>
 
@@ -162,7 +162,14 @@ export function ScreeningPanel({
 
       {missed.length > 0 ? (
         <details className="mt-2">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center py-2 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
+          {/* 펼침 표시가 없었다. `list-none` 으로 브라우저 기본 삼각형을 지워
+              놓고 대신 놓은 것이 없어서, **증명 목록으로 들어가는 유일한 문**이
+              그냥 회색 글줄로 보였다. 이 저장소가 이미 쓰는 꺾쇠를 놓는다. */}
+          <summary className="group flex min-h-11 cursor-pointer list-none items-center gap-1 py-2 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
+            <ChevronRight
+              aria-hidden
+              className="size-4 shrink-0 transition-transform duration-150 group-open:rotate-90"
+            />
             {/* 「안 실린 것 N건」이라고 부르면 안 된다 — 위 표와 캡션이 세는
                 「안 실린 것」은 상한에 잘린 것까지 더한 수이고, 여기 목록에
                 있는 것은 원문이 남은 것뿐이다. 같은 이름으로 두 수가 서면

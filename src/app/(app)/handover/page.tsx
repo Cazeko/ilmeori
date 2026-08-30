@@ -423,12 +423,20 @@ export default async function HandoverPage({
                           className="size-3 text-accent-text"
                         />
                         근거:
-                        {block.sources.map((s) => (
-                          <span
-                            key={s}
-                            className="font-bold text-accent-text"
-                          >
-                            {s}
+                        {/* 예전에는 칩 사이가 8px 공백 하나뿐이라 「업무 4건의
+                            기본 정보와 참여자 목록 업무 이력 중 결재 상신·서명…」
+                            처럼 **한 문장으로 읽혔다.** 이 줄은 이 제품이 파는
+                            증거이므로, 몇 갈래에서 나왔는지가 먼저 보여야 한다.
+                            새 색이나 채움을 더하지 않고 가운뎃점 하나로 가른다 —
+                            이 저장소가 메타 줄에서 이미 쓰는 구분자다. */}
+                        {block.sources.map((s, i) => (
+                          <span key={s} className="inline-flex items-center gap-2">
+                            {i > 0 ? (
+                              <span aria-hidden className="text-gray-40">
+                                ·
+                              </span>
+                            ) : null}
+                            <span className="font-bold text-accent-text">{s}</span>
                           </span>
                         ))}
                       </p>
@@ -555,14 +563,12 @@ export default async function HandoverPage({
                         </span>
                       ) : null}
                     </span>
-                    {/* 인수자 화면에서는 주담당을 안 적는다 — 넘어온 뒤라
-                        줄마다 자기 이름이 되고, 그건 아무것도 안 알려 준다.
-                        (열람기록의 「사람」 칸을 같은 이유로 지웠다) */}
-                    {receiverDone ? null : (
-                      <span className="mt-1 block text-body-xs text-gray-60">
-                        주담당 {work.owner.name} {work.owner.position}
-                      </span>
-                    )}
+                    {/* 「주담당 …」 줄을 아예 지웠다.
+                        인계 **전**에는 대상이 정의상 전부 인계자 소유라 네 줄이
+                        같은 이름이고, 인계 **후**에는 전부 인수자 이름이다.
+                        어느 쪽이든 줄마다 같은 값이라 아무것도 안 가리킨다 —
+                        열람기록의 「사람」 칸을 같은 이유로 지웠다. 누가 넘기고
+                        누가 받는지는 바로 위 서식의 사람 표가 말한다. */}
                   </li>
                 ))}
               </ul>

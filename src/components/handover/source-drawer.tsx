@@ -109,7 +109,17 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
       trigger.current?.removeAttribute("data-open");
       anchor.setAttribute("data-open", "");
       trigger.current = anchor;
-      setSource({ label: (anchor.textContent ?? "").trim(), body, href });
+      setSource({
+        label: (anchor.textContent ?? "").trim(),
+        body,
+        href,
+        // 어느 **업무**의 대화인지. 문단의 첫 줄이 업무 제목이고 그 줄만
+        // `data-src` 가 없다(이동 링크라서). 서식에서는 그 제목이 스크롤
+        // 위로 사라진 뒤일 수 있으므로, 서랍이 그것까지 들고 온다 —
+        // 꼬리표에 없는 정보를 하나라도 더 주지 않으면 서랍은 화면에 이미
+        // 있는 문장을 덮어 가며 다시 보여 주는 것에 지나지 않는다.
+        work: workTitleOf(anchor),
+      });
     }
 
     function onKeyDown(event: KeyboardEvent) {
@@ -165,6 +175,39 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
     if (source) closeButton.current?.focus();
   }, [source]);
 
+  /**
+   * 「문장마다 출처 보기」를 켜면 **첫 출처로 데려간다.**
+   *
+   * 실측: 1440×1000 에서 단추는 y=286 인데 첫 빗살은 y=1,523 이다. 즉 누르면
+   * 단추만 먹색으로 뒤집히고 **화면은 한 픽셀도 안 바뀐다.** 처음 보는 사람에게
+   * 그건 「눌렀는데 아무 일도 없었다」이고, 시연에서 정점으로 삼은 동작이 정확히
+   * 그 자리에서 죽는다.
+   *
+   * 층을 켜고 끄는 것은 여전히 CSS 뿐이다(자바스크립트를 꺼도 켜진다).
+   * 여기는 **데려다주기만** 한다 — 없으면 스크롤을 손으로 내리면 되는,
+   * 말 그대로의 점진적 향상이다.
+   *
+   * 끌 때는 안 움직인다. 끄는 사람은 이미 그 자리를 보고 있다.
+   */
+  useEffect(() => {
+    const box = document.getElementById(PROVENANCE_TOGGLE_ID);
+    if (!(box instanceof HTMLInputElement)) return;
+
+    function onChange() {
+      if (!(box instanceof HTMLInputElement) || !box.checked) return;
+      const first = document.querySelector(".sheet [data-src]");
+      if (!first) return;
+      const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      first.scrollIntoView({
+        behavior: still ? "auto" : "smooth",
+        block: "center",
+      });
+    }
+
+    box.addEventListener("change", onChange);
+    return () => box.removeEventListener("change", onChange);
+  }, []);
+
   return (
     <>
       {children}
@@ -184,15 +227,22 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
             ].join(" ")}
           >
             <div className="flex items-start justify-between gap-3">
-              <p className="min-w-0 text-body-sm font-bold break-keep text-gray-90">
-                {source.label}
-              </p>
+              <div className="min-w-0">
+                {source.work ? (
+                  <p className="text-body-xs break-keep text-gray-60">
+                    {source.work}
+                  </p>
+                ) : null}
+                <p className="mt-1 text-body-sm font-bold break-keep text-gray-90">
+                  {source.label}
+                </p>
+              </div>
               {/* 44px 표적. 아이콘만 있는 단추라 이름은 sr-only 로 준다. */}
               <button
                 ref={closeButton}
                 type="button"
                 onClick={() => close()}
-                className="-m-2 inline-flex size-11 shrink-0 items-center justify-center rounded-sm text-gray-60 transition-colors duration-150 hover:bg-gray-5 hover:text-gray-90"
+                className="-m-2 inline-flex size-11 shrink-0 items-center justify-center rounded-sm text-gray-60 transition-colors duration-150 hover:bg-gray-5 hover:text-gray-90 active:bg-gray-10"
               >
                 <X aria-hidden className="size-5" />
                 <span className="sr-only">닫기</span>
@@ -225,7 +275,7 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
   );
 }
 
-type Source = { label: string; body: string; href: string };
+type Source = { label: string; body: string; href: string; work: string | null };
 
 /**
  * 서랍 자신을 알아보는 표시.
@@ -234,6 +284,22 @@ type Source = { label: string; body: string; href: string };
  * 찾으면 Tailwind 클래스를 하나 고치는 날 조용히 안 맞는다.
  */
 const DRAWER_MARK = "data-source-drawer";
+
+/**
+ * 「문장마다 출처 보기」 체크박스의 id.
+ *
+ * sheet-caption.tsx 와 globals.css 가 같은 문자열을 쓴다. 세 곳이 손으로 적고
+ * 있는 셈이라, 고치는 날 셋을 같이 고쳐야 한다 — 안 고치면 화면은 멀쩡한데
+ * 켜도 데려다주지 않는다.
+ */
+const PROVENANCE_TOGGLE_ID = "handover-prov";
+
+/** 같은 문단의 업무 제목 줄. 문단 안에서 `data-src` 가 없는 첫 링크다. */
+function workTitleOf(anchor: Element): string | null {
+  const paragraph = anchor.closest("p");
+  const title = paragraph?.querySelector("a:not([data-src])");
+  return title?.textContent?.replace(/^\s*·\s*/, "").trim() ?? null;
+}
 
 /**
  * 인용문이 실제로 실려 있는 **따옴표 줄 한 줄**을 꺼낸다.

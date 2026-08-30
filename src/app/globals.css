@@ -691,6 +691,11 @@
   .prov-toggle:hover {
     background: var(--color-gray-5);
   }
+  /* 눌리는 순간을 말한다. DESIGN.md §17.5 가 규약으로 못박은 자리인데
+     새로 만든 조작기가 그걸 안 지키고 있었다. */
+  .prov-toggle:active {
+    background: var(--color-gray-10);
+  }
 
   /* 켜져 있다는 것을 단추 자신이 말한다. 색이 아니라 **뒤집기**(먹 바탕 +
      흰 글자)라 색 예산에 안 잡힌다 — 상태 배지가 이미 쓰는 수법이다.
@@ -702,6 +707,9 @@
   }
   #handover-prov:checked ~ .prov-row .prov-toggle:hover {
     background: var(--color-gray-80);
+  }
+  #handover-prov:checked ~ .prov-row .prov-toggle:active {
+    background: var(--color-gray-70);
   }
 
   /* 키보드로 왔을 때 테두리가 뜨는 것은 화면 밖 체크박스가 아니라 이 단추다.

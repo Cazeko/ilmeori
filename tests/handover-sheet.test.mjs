@@ -537,6 +537,47 @@ ok(
   [...new Set(marked)].join(", "),
 );
 
+// 서랍(source-drawer.tsx)이 서 있는 전제를 여기서 지킨다.
+//
+// 그 컴포넌트는 대화 꼬리표 **바로 다음 줄**을 그 대화의 원문으로 읽어 옆에
+// 띄운다. 브라우저 안에서 도는 코드라 이 시험이 직접 부를 수는 없지만,
+// **그 전제는 데이터에 있고 여기서 잴 수 있다.** 전제가 무너지면 서랍이
+// 사람이 하지 않은 말을 사람의 말로 보여 준다 — 실제로 한 번 그랬다.
+//
+// 서랍은 모양(따옴표)까지 확인하고 안 맞으면 안 열리므로, 이 시험이 빨간불이
+// 되어도 거짓말이 화면에 뜨지는 않는다. 대신 **기능이 조용히 죽는다.**
+const quoteLead = draft.blocks
+  .flatMap((b) => (b.needsHuman ? [] : b.paragraphs))
+  .flatMap((p) =>
+    p.map((line, i) => ({ line, next: p[i + 1] })).filter(
+      ({ line }) => line.ref?.kind === "comment",
+    ),
+  );
+const badLead = quoteLead.filter(
+  ({ next }) => !next || !/^\s*“[\s\S]*”( \(뒤가 잘렸습니다\))?$/.test(next.text),
+);
+ok(
+  "대화 꼬리표 바로 다음 줄이 언제나 따옴표로 두른 인용이다",
+  quoteLead.length > 0 && badLead.length === 0,
+  `꼬리표 ${quoteLead.length}개 중 ${badLead.length}개가 어긋난다` +
+    (badLead[0] ? ` — 「${(badLead[0].next?.text ?? "(다음 줄 없음)").slice(0, 40)}」` : ""),
+);
+// 그 다음다음 줄까지 삼키면 안 된다는 것도 값으로 남긴다. 「1-다」의 마지막
+// 인용 뒤에는 규칙이 지어낸 「기한이 지났습니다 …」가 붙는다.
+const afterQuote = quoteLead
+  .map(({ next }, i) => {
+    const p = draft.blocks
+      .flatMap((b) => (b.needsHuman ? [] : b.paragraphs))
+      .find((par) => par.includes(next));
+    return p?.[p.indexOf(next) + 1];
+  })
+  .filter(Boolean);
+ok(
+  "인용 다음 줄에 규칙이 지은 문장이 실제로 온다 — 서랍이 그걸 삼키면 안 된다",
+  afterQuote.some((l) => !/^\s*“/.test(l.text)),
+  `${afterQuote.length}개 중 인용이 아닌 것 ${afterQuote.filter((l) => !/^\s*“/.test(l.text)).length}개`,
+);
+
 // ---------------------------------------------------------------------------
 console.log("\n[10] 종이는 출처 층을 모른다 — 인쇄가 되돌리는 것을 센다");
 // ---------------------------------------------------------------------------
