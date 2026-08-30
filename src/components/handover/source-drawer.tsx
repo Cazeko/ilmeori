@@ -57,15 +57,23 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
   const trigger = useRef<HTMLElement | null>(null);
   const closeButton = useRef<HTMLButtonElement | null>(null);
 
-  const close = useCallback(() => {
+  /**
+   * 닫는다.
+   *
+   * `refocus` 를 나눠 둔 이유: `Esc` 나 닫기 단추로 닫으면 포커스가 사라진 채로
+   * 남아 키보드 사용자가 문서 맨 위로 돌아가므로 **꼬리표로 되돌려야** 하고,
+   * 바깥을 눌러서 닫을 때는 사용자가 이미 다른 곳을 누른 참이라 거기서
+   * 포커스를 빼앗으면 안 된다.
+   */
+  const close = useCallback((refocus = true) => {
     setSource(null);
     // 어느 줄을 열어 둔 것인지 문서에서도 보여야 한다. 열 때 표시를 달았으니
     // 닫을 때 뗀다(globals.css 의 `.sheet a[data-src][data-open]`).
     trigger.current?.removeAttribute("data-open");
-    // 포커스가 사라진 채로 남으면 키보드 사용자는 문서 맨 위로 돌아간다.
-    trigger.current?.focus();
+    if (refocus) trigger.current?.focus();
     trigger.current = null;
   }, []);
+
 
   useEffect(() => {
     function onClick(event: MouseEvent) {
@@ -108,6 +116,27 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
       if (event.key === "Escape") close();
     }
 
+    /**
+     * 바깥을 누르면 닫는다.
+     *
+     * ⚠ 처음에는 화면 전체에 투명한 단추를 깔았다. 그러면 **서랍이 열려 있는
+     * 동안 화면의 모든 손짓을 그 단추가 먹는다** — 다른 인용을 눌러도 서랍이
+     * 닫히기만 하고, 옆칸 링크도 인쇄 단추도 한 번은 헛손질이 된다. 시연에서
+     * 인용 두 개를 잇달아 누르는 것이 정확히 그 동작이다.
+     *
+     * 덮개를 걷고 **누른 자리를 보고 판단한다.** 서랍 안이거나 다른 인용
+     * 꼬리표면 그대로 두고(위 onClick 이 내용을 갈아 끼운다), 그 밖이면 닫되
+     * **손짓 자체는 막지 않는다.** 눌린 것은 눌린 대로 동작한다.
+     */
+    function onPointerDown(event: PointerEvent) {
+      if (!source) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(`[${DRAWER_MARK}]`)) return;
+      if (target.closest('.sheet a[data-src="comment"]')) return;
+      close(false);
+    }
+
     // ⚠ **잡는 단계(capture)** 로 듣는다.
     //
     // 처음에는 기본값(거품 단계)으로 걸었고, 서랍이 한 번도 안 열렸다.
@@ -118,11 +147,17 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
     // 거품을 멈춘다 — 열 수 없으면 아무것도 안 하고 Link 가 그대로 동작한다.
     document.addEventListener("click", onClick, true);
     document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown, true);
     return () => {
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown, true);
     };
-  }, [close]);
+    // `source` 가 딸린 이유: 바깥 클릭 판정이 「지금 열려 있나」를 봐야 한다.
+    // ref 에 담아 두면 렌더 중에 ref 를 쓰게 되고, 이 저장소의 린트가 그걸
+    // 막는다(react-hooks/refs). 열고 닫을 때마다 손짓 셋을 다시 거는 값은
+    // 사실상 0 이라, 규칙을 우회하는 것보다 다시 거는 편이 낫다.
+  }, [close, source]);
 
   // 열리면 포커스를 서랍 안으로 옮긴다. 안 옮기면 스크린리더 사용자에게는
   // 아무 일도 안 일어난 화면이 된다.
@@ -135,16 +170,8 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
       {children}
       {source ? (
         <>
-          {/* 바깥을 눌러도 닫힌다. 서식을 가리지 않으려고 **채움 없이** 깔기만
-              한다 — 이 서랍의 목적은 문서를 계속 보이게 하는 것이다. */}
-          <button
-            type="button"
-            aria-hidden
-            tabIndex={-1}
-            onClick={close}
-            className="fixed inset-0 z-30 cursor-default print:hidden"
-          />
           <aside
+            {...{ [DRAWER_MARK]: "" }}
             role="dialog"
             aria-label="인용한 대화 원문"
             className={[
@@ -164,7 +191,7 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
               <button
                 ref={closeButton}
                 type="button"
-                onClick={close}
+                onClick={() => close()}
                 className="-m-2 inline-flex size-11 shrink-0 items-center justify-center rounded-sm text-gray-60 transition-colors duration-150 hover:bg-gray-5 hover:text-gray-90"
               >
                 <X aria-hidden className="size-5" />
@@ -182,7 +209,7 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
               <Link
                 href={source.href}
                 className="font-bold text-primary"
-                onClick={close}
+                onClick={() => close(false)}
               >
                 업무 화면에서 원문 보기
               </Link>
@@ -199,6 +226,14 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
 }
 
 type Source = { label: string; body: string; href: string };
+
+/**
+ * 서랍 자신을 알아보는 표시.
+ *
+ * 「바깥을 눌렀나」를 판정하려면 서랍 안인지 알아야 하는데, 클래스 이름으로
+ * 찾으면 Tailwind 클래스를 하나 고치는 날 조용히 안 맞는다.
+ */
+const DRAWER_MARK = "data-source-drawer";
 
 /**
  * 인용문이 실제로 실려 있는 **따옴표 줄 한 줄**을 꺼낸다.
