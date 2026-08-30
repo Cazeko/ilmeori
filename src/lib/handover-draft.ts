@@ -6,8 +6,13 @@ import {
   type HandoverView,
   type WorkRecords,
 } from "@/lib/data";
+import { docChunks, docTitle, parseRichDoc } from "@/lib/editor/model";
 import { formatDate, formatDueLabel, josa } from "@/lib/format";
-import { ISSUE_CUE_NAMES, issueLabels } from "@/lib/handover-cues";
+import {
+  ISSUE_CUE_NAMES,
+  issueLabels,
+  sectionCueFor,
+} from "@/lib/handover-cues";
 import {
   STATUS_LABEL,
   VISIBILITY_LABEL,
@@ -57,11 +62,22 @@ import {
  * `workTalkHref()`(types.ts)가 하고, 그건 화면의 몫이다. 문서 모델이 주소를
  * 들고 있으면 라우트가 바뀌는 날 결재로 올라간 문서에 옛 주소가 남는다.
  */
-export type DraftRef = {
-  workId: string;
-  /** 대화를 가리킬 때만. 업무 화면의 그 글로 바로 간다. */
-  commentId?: string;
-};
+export type DraftRef =
+  /** 업무 화면 */
+  | { kind: "work"; workId: string }
+  /** 업무 화면의 그 대화 */
+  | { kind: "comment"; workId: string; commentId: string }
+  /** 업무 문서의 그 항목 */
+  | { kind: "section"; workId: string; sectionId: string }
+  /**
+   * 업무의 문서 탭 — **가리킬 자리 없이.**
+   *
+   * 서식 문서의 블록에는 화면에 자리표가 없다(doc-preview.tsx 는 React key 만
+   * 쓴다). 여기서 블록 id 로 앵커를 만들면 아무 데도 안 가는 링크가 되고,
+   * 그 실패는 404 도 콘솔 오류도 남기지 않는다. 실제로 대화 쪽에서 한 번 냈다.
+   * 없는 자리를 가리키느니 문서 탭에 세운다.
+   */
+  | { kind: "doc"; workId: string };
 
 /** 문단을 이루는 한 줄. `ref` 가 있으면 **화면에서만** 누를 수 있다. */
 export type DraftLine = { text: string; ref?: DraftRef };
@@ -120,20 +136,68 @@ export type DraftBlock = {
 };
 
 /**
- * 규칙이 **놓친** 대화 한 건. 화면의 「미포착」이 이걸 그대로 띄운다.
+ * 서식에 안 실린 이유. 둘뿐이고, 둘의 뜻이 아주 다르다.
+ *
+ * **값이 곧 화면에 찍히는 글자다.** 짧은 코드값을 두고 화면이 따로 사람 말로
+ * 옮기면, 그 대응표가 이 파일에서 가장 어긋나기 쉬운 자리가 된다 —
+ * 이 저장소가 이미 두 번 겪은 실패다(handover-cues.ts 머리말).
+ */
+export type MissedWhy =
+  /** 규칙이 찾는 표현이 없었다 — 규칙 기반이 치르는 대가 */
+  | "규칙 밖"
+  /** 규칙에는 걸렸는데 칸마다 정한 수에 잘렸다 — 우리가 정한 상한 */
+  | "상한에 잘림";
+
+/**
+ * 서식에 **안 실린** 기록 한 건. 화면의 「규칙이 무엇을 걸렀나」가 그대로 띄운다.
  *
  * 서식에는 들어가지 않는다 — 이건 문서의 내용이 아니라 **문서를 믿어도 되는지
  * 확인하는 장치**다. 종이와 저장본은 blocks 만 본다.
  */
-export type MissedComment = {
+export type MissedRecord = {
   workId: string;
   workTitle: string;
-  commentId: string;
-  author: string;
-  at: string;
+  /** 목록에서 이 줄을 구분하는 키. 대화 id · 항목 id · 블록 id */
+  key: string;
+  /** 「홍길동 주무관」(대화) 또는 항목 제목(문서) */
+  label: string;
+  /** 대화만 갖는다. 서식 문서의 덩어리에는 조각마다의 시각이 없다. */
+  at: string | null;
   /** 줄바꿈을 눕히고 220자에서 자른 글. 잘렸으면 아래가 참이다. */
   body: string;
   truncated: boolean;
+  ref: DraftRef;
+  why: MissedWhy;
+};
+
+/**
+ * 한 갈래의 기록을 규칙이 어떻게 갈랐는가.
+ *
+ * ── 셋을 더하면 반드시 본 수가 된다 ────────────────────────────────────────
+ *
+ *     seen === used + missed.length + omitted
+ *
+ * 이 항등식이 이 타입의 전부다. 예전에는 「본 것 · 걸린 것 · 안 걸린 것」을
+ * 셌는데, 거기에는 **걸렸지만 상한에 잘린 것**이 어느 칸에도 없었다.
+ * 세 숫자가 서로 안 맞는 것을 아무도 눈치채지 못하는 구조였다.
+ * 지금은 기록 하나하나가 정확히 한 칸에 들어가고, 시험이 그걸 본다.
+ */
+export type Screened = {
+  /** 규칙이 들여다본 수 */
+  seen: number;
+  /** 서식에 실은 수 */
+  used: number;
+  /** 안 실린 것의 원문 (업무별 상한까지) */
+  missed: MissedRecord[];
+  /**
+   * 목록 상한에 걸려 화면에도 못 실은 수.
+   *
+   * 미포착은 이 파일에서 **유일하게 상한이 없던 목록**이었다. 서식 쪽은
+   * QUOTES_PER_WORK·PROCESS_MAX 로 다 묶어 두고 정작 「다 보여 준다」는 판이
+   * 무제한이면, 업무 스무 건짜리 인계에서 목록이 수백 줄이 되어 두 초 만에
+   * 넘긴다는 이 판의 목적 자체가 깨진다. 잘랐으면 잘랐다고 적는다.
+   */
+  omitted: number;
 };
 
 export type HandoverDraft = {
@@ -147,29 +211,20 @@ export type HandoverDraft = {
     comments: number;
   };
   /**
-   * 대화를 몇 건 보고 몇 건을 걸렀는가 — **그리고 못 거른 것은 무엇인가.**
+   * 무엇을 몇 건 보고 몇 건을 실었는가 — **그리고 안 실은 것은 무엇인가.**
    *
    * 규칙 기반의 값은 정밀도이고 대가는 재현율이다. 이 제품은 그 대가를 숨기지
    * 않기로 했다. 놓친 건 셀 수 있고, 지어낸 건 셀 수 없다.
+   *
+   * 갈래가 둘인 이유는 초안이 읽는 것이 둘이기 때문이다. 예전에는 대화만
+   * 셌고, 그래서 화면의 제목도 「대화에서 무엇을 걸렀나」로 좁혀 두어야 했다 —
+   * 「1-나」가 항목 하나만 싣고 나머지 본문을 어디에도 안 내는데 그걸 세는
+   * 자리가 없었다. 못 세는 것을 세었다고 말하지 않으려는 좁힘이었고,
+   * 이제 세므로 넓힌다.
    */
   screening: {
-    /** 규칙이 들여다본 대화 수 */
-    comments: number;
-    /** 갈래 하나 이상에 걸린 수 */
-    matched: number;
-    /** 그중 실제로 서식에 실은 수 (업무별 상한에 걸려 더 적을 수 있다) */
-    quoted: number;
-    /** 걸리지 않은 대화 (업무별 상한까지) */
-    missed: MissedComment[];
-    /**
-     * 상한에 걸려 화면에 안 실은 미포착 수.
-     *
-     * 미포착은 이 파일에서 **유일하게 상한이 없던 목록**이었다. 서식 쪽은
-     * QUOTES_PER_WORK·PROCESS_MAX 로 다 묶어 두고 정작 「다 보여 준다」는 판이
-     * 무제한이면, 업무 스무 건짜리 인계에서 목록이 수백 줄이 되어 두 초 만에
-     * 넘긴다는 이 판의 목적 자체가 깨진다. 잘랐으면 잘랐다고 적는다.
-     */
-    omitted: number;
+    comments: Screened;
+    sections: Screened;
   };
 };
 
@@ -186,20 +241,29 @@ export type HandoverDraft = {
  */
 const CUE_MENTION = `${ISSUE_CUE_NAMES}${josa(ISSUE_CUE_NAMES, "이", "가")}`;
 
-// 문단을 짓는 세 가지 줄. 어느 줄이 눌리는지가 여기서 한눈에 보이도록 이름을 준다.
+// 문단을 짓는 줄들. 어느 줄이 눌리는지가 여기서 한눈에 보이도록 이름을 준다.
 /** 가리킬 곳이 없는 줄 */
 const plain = (text: string): DraftLine => ({ text });
 /** 업무를 가리키는 줄 */
 const atWork = (text: string, workId: string): DraftLine => ({
   text,
-  ref: { workId },
+  ref: { kind: "work", workId },
 });
 /** 인용한 대화를 가리키는 줄 */
 const atComment = (
   text: string,
   workId: string,
   commentId: string,
-): DraftLine => ({ text, ref: { workId, commentId } });
+): DraftLine => ({ text, ref: { kind: "comment", workId, commentId } });
+/** 인용한 문서 항목을 가리키는 줄 */
+const atPiece = (text: string, workId: string, p: DocPiece): DraftLine => ({
+  text,
+  ref: pieceRef(workId, p),
+});
+const pieceRef = (workId: string, p: DocPiece): DraftRef =>
+  p.sectionId
+    ? { kind: "section", workId, sectionId: p.sectionId }
+    : { kind: "doc", workId };
 
 /**
  * 업무 제목 줄. 다섯 칸이 같은 모양으로 시작한다.
@@ -457,6 +521,153 @@ function collectContacts(
     .map(({ dept, detail }) => ({ dept, detail }));
 }
 
+// ---------------------------------------------------------------------------
+// 문서를 읽는 단위
+// ---------------------------------------------------------------------------
+
+/**
+ * 문서에서 읽어 낸 덩어리 하나 — **항목 문서든 서식 문서든 같은 모양으로.**
+ *
+ * 아래 `readDoc` 이 두 갈래를 여기로 모은다. 초안 만드는 쪽은 어느 갈래였는지
+ * 몰라도 되고, 알면 안 된다 — 「서식 문서면 이렇게」가 칸마다 흩어지는 순간
+ * 새 편집기를 쓴 문서만 조용히 다르게 취급받는 자리가 생긴다.
+ */
+type DocPiece = {
+  /** 목록에서 구분하는 키. 항목 id 또는 블록 id */
+  key: string;
+  heading: string | null;
+  body: string;
+  /**
+   * 항목 문서일 때만 있다. 이것이 있으면 화면에서 그 항목으로 바로 갈 수 있다
+   * (`sectionAnchor`). 서식 문서의 덩어리에는 자리표가 없다.
+   */
+  sectionId?: string;
+  /** 문서에서의 차례. 최근순이 같을 때 이걸로 가른다 */
+  order: number;
+  /** 마지막으로 고친 때 */
+  updated_at: string;
+};
+
+/**
+ * 한 업무의 문서를 읽은 결과 — 무엇을 어느 칸이 가져갔고 무엇이 남았는가.
+ */
+export type DocRead = {
+  /** 화면에 보이는 그 제목. 서식 문서는 본문의 제목 블록이 이긴다 */
+  title: string | null;
+  pieces: DocPiece[];
+  /** 「1-나」가 가져간 것 */
+  progress: DocPiece | null;
+  /** 「1-다」가 가져간 것 */
+  issue: DocPiece | null;
+  /** 본문이 있는데 어느 칸도 안 가져간 것 */
+  missed: Array<{ piece: DocPiece; why: MissedWhy }>;
+};
+
+/**
+ * 문서를 서식이 읽을 수 있는 조각들로 편다.
+ *
+ * ── 서식 문서를 못 읽고 있었다 ─────────────────────────────────────────────
+ *
+ * 초안은 `doc_section` 만 읽었다. 그런데 서식 문서로 옮기면 그 행들은 **옮긴
+ * 시점에서 얼어붙고**(rich-doc.ts 머리말), `createRichDocument` 로 처음부터
+ * 서식 문서를 만들면 행이 **아예 없다.** 그래서 우리가 앞세우는 동시편집으로
+ * 쓴 문서일수록 인계서에서 사라졌고, 「2. 관련 문서 현황」에는 스무 문단짜리
+ * 문서가 「항목 0개」로 찍혔다. 자기 기능이 자기 대표 기능을 지우고 있었다.
+ *
+ * `blocks` 가 있으면 그쪽이 사실이다 — 화면이 이미 그렇게 그린다
+ * (works/[id]/page.tsx 의 `richDoc ? … : <DocSections>`). 모양이 아니면
+ * `parseRichDoc` 이 null 을 주고, 그때는 얼어붙은 항목이라도 읽는 편이 낫다.
+ *
+ * ⚠ **시험 때문에 내보낸다.** 목업의 인계 대상 세 건에는 서식 문서가 하나도
+ * 없어서(감량 시범사업 계획은 다른 사람 것이다) `buildHandoverDraft` 를 아무리
+ * 돌려도 이 갈래를 한 번도 지나가지 않는다. 시드가 결함을 드러낼 수 없던 그때와
+ * 같은 자리다 — 시연은 통과하고 실데이터에서 무너진다. 그래서 시험이 여기로
+ * 직접 들어온다(tests/handover-draft.test.mjs [7]).
+ */
+export function readDoc(
+  document: Document | null,
+  sections: DocSectionWithEditor[],
+): DocRead {
+  if (!document) return { title: null, pieces: [], progress: null, issue: null, missed: [] };
+
+  const rich = document.blocks ? parseRichDoc(document.blocks) : null;
+  const pieces: DocPiece[] = rich
+    ? docChunks(rich).map((c, i) => ({
+        key: c.id,
+        heading: c.heading,
+        body: c.body,
+        order: i,
+        // 덩어리마다의 시각이 없다. 문서 한 벌이 통째로 한 판이라 그렇다.
+        updated_at: document.blocks_updated_at ?? document.updated_at,
+      }))
+    : sections.map((s, i) => ({
+        key: s.id,
+        heading: s.heading,
+        body: s.body,
+        sectionId: s.id,
+        order: i,
+        updated_at: s.updated_at,
+      }));
+
+  return { ...pickPieces(pieces), title: (rich ? docTitle(rich) : "") || document.title, pieces };
+}
+
+/**
+ * 어느 조각을 어느 칸이 가져가는가.
+ *
+ * ── 「1-다」가 먼저 고른다 ──────────────────────────────────────────────────
+ *
+ * 예전에는 두 칸이 각자 골랐고, 그래서 **같은 항목이 두 칸에 두 번 실릴 수
+ * 있었다.** 「현안 및 유의사항」 하나뿐인 문서에서 「1-나」는 제목에 「진행」이
+ * 없으니 폴백(가장 최근에 고친 것)으로 그 항목을 집었고, 「1-다」도 같은 것을
+ * 집었다. 인계서 한 장에 같은 글이 두 번 실리면 읽는 사람은 둘 중 하나가
+ * 잘못 실렸다고 읽는다.
+ *
+ * 「1-다」에 우선권을 준다. 제목에서 「현안」을 찾는 것은 규칙이고, 「1-나」의
+ * 폴백은 **아무 규칙도 못 맞췄을 때의 차선**이기 때문이다.
+ *
+ * 본문이 빈 항목은 세지 않는다. 이 함수가 가르는 것은 「이 글이 인계서에
+ * 실렸는가」이고, 글이 없는 항목에는 잃을 것이 없다. (제목은 「2. 관련 문서
+ * 현황」에 그대로 나온다)
+ */
+function pickPieces(pieces: DocPiece[]): Omit<DocRead, "title" | "pieces"> {
+  const withBody = pieces.filter((p) => p.body.trim());
+
+  const issue = withBody.find((p) => sectionCueFor(p.heading) === "1-다") ?? null;
+  const rest = withBody.filter((p) => p !== issue);
+  const progress =
+    rest.find((p) => sectionCueFor(p.heading) === "1-나") ??
+    // 규칙에 걸리는 제목이 없으면 가장 최근에 고친 것. 시각이 같으면(서식
+    // 문서는 전부 같다) 문서에 적힌 차례를 따른다 — 같은 자료에서 두 번 뽑아
+    // 같은 인계서가 나와야 한다.
+    //
+    // ⚠ 폴백은 **아무 규칙도 안 걸린 것 중에서만** 고른다. 「현안 및 유의사항」이
+    // 둘인 문서에서 이 줄이 남은 하나를 집으면, 제목에 현안이라고 적힌 글이
+    // 「주요 업무계획 및 진행사항」 칸에 실린다. 규칙이 이미 자리를 정해 준
+    // 항목을 폴백이 다른 칸으로 끌어가는 것은 규칙이 있으나 마나로 만든다.
+    [...rest.filter((p) => !sectionCueFor(p.heading))].sort(
+      (a, b) => b.updated_at.localeCompare(a.updated_at) || a.order - b.order,
+    )[0] ??
+    null;
+
+  const taken = new Set([issue?.key, progress?.key]);
+  return {
+    progress,
+    issue,
+    missed: withBody
+      .filter((p) => !taken.has(p.key))
+      .map((piece) => ({
+        piece,
+        // 규칙에 걸리는 제목인데도 안 실렸다면 규칙이 놓친 것이 아니라
+        // **칸이 하나만 싣기 때문**이다. 두 사실을 한 이름으로 부르면
+        // 규칙을 고쳐야 할 자리와 상한을 고쳐야 할 자리가 뒤섞인다.
+        why: sectionCueFor(piece.heading) ? ("상한에 잘림" as const) : ("규칙 밖" as const),
+      })),
+  };
+}
+
+// ---------------------------------------------------------------------------
+
 type IssueQuote = { comment: CommentWithAuthor; labels: string[] };
 
 /**
@@ -483,29 +694,40 @@ function pickIssueComments(comments: CommentWithAuthor[]): {
   matched: number;
   picked: IssueQuote[];
   /**
-   * **규칙에 걸리지 않은 대화.** 세는 것으로 끝내지 않고 원문을 그대로 돌려준다.
+   * **서식에 안 실린 대화.** 세는 것으로 끝내지 않고 원문을 그대로 돌려준다.
    *
    * 규칙 기반이라 놓치는 것이 반드시 있다. 그걸 숫자로만 말하면
    * *"그럼 안 걸린 건 어떻게 됩니까"* 라는 물음에 답할 것이 없고, 화면은
    * 서식이 다 채워진 것처럼 보인다. 원문을 그대로 내주면 그 물음이
    * **물음으로 성립하지 않는다** — 못 걸렀다고 화면이 먼저 말하고, 고를 것은
    * 사람 앞에 놓인다.
+   *
+   * 안 실린 이유가 둘이고 뜻이 다르다. **규칙 밖**은 규칙을 고쳐야 하는
+   * 일이고, **상한**은 우리가 정한 수를 고쳐야 하는 일이다. 예전에는 앞의
+   * 것만 돌려주었고, 뒤의 것은 어느 목록에도 없이 사라졌다.
    */
-  missed: CommentWithAuthor[];
+  missed: Array<{ comment: CommentWithAuthor; why: MissedWhy }>;
 } {
   const matched: IssueQuote[] = [];
-  const missed: CommentWithAuthor[] = [];
+  const missed: Array<{ comment: CommentWithAuthor; why: MissedWhy }> = [];
   for (const c of comments) {
     const labels = issueLabels(c.body);
     if (labels.length > 0) matched.push({ comment: c, labels });
-    else missed.push(c);
+    else missed.push({ comment: c, why: "규칙 밖" });
   }
   // 최근 것부터 남기되, 남긴 것끼리는 오간 순서를 지킨다. 대화는 순서가 곧 맥락이다.
-  return {
-    matched: matched.length,
-    picked: matched.slice(-QUOTES_PER_WORK),
-    missed,
-  };
+  const picked = matched.slice(-QUOTES_PER_WORK);
+  for (const { comment } of matched.slice(0, matched.length - picked.length)) {
+    missed.push({ comment, why: "상한에 잘림" });
+  }
+  // 원문 목록은 최근 것부터 자르므로(MISSED_PER_WORK) 시간순으로 세워 둔다.
+  // 두 갈래를 이어 붙인 자리라 여기서 다시 세우지 않으면 순서가 뒤섞인다.
+  missed.sort(
+    (a, b) =>
+      a.comment.created_at.localeCompare(b.comment.created_at) ||
+      a.comment.id.localeCompare(b.comment.id),
+  );
+  return { matched: matched.length, picked, missed };
 }
 
 // ---------------------------------------------------------------------------
@@ -514,7 +736,14 @@ function pickIssueComments(comments: CommentWithAuthor[]): {
 type Gathered = {
   work: WorkListItem;
   document: Document | null;
-  sections: DocSectionWithEditor[];
+  /**
+   * 문서를 **한 번만** 읽어 둔 결과.
+   *
+   * 「1-나」·「1-다」·「2」가 각자 읽으면 서식 문서의 blocks(최대 1.5MB jsonb)를
+   * 업무마다 세 번 파싱하게 된다. 그보다 나쁜 것은 세 곳이 각자 고르다가
+   * 서로 다른 조각을 집는 일이다 — 실제로 그래서 같은 항목이 두 칸에 실렸다.
+   */
+  doc: DocRead;
   activities: ActivityWithActor[];
   attachments: AttachmentWithUploader[];
   comments: CommentWithAuthor[];
@@ -553,7 +782,7 @@ export async function buildHandoverDraft(
     return {
       work,
       document: r.document,
-      sections: r.sections,
+      doc: readDoc(r.document, r.sections),
       activities: r.activities,
       attachments: r.attachments,
       comments: r.comments,
@@ -616,18 +845,24 @@ export async function buildHandoverDraft(
 
   // --- 나. 주요 업무계획 및 진행사항 ---------------------------------------
   const progress: DraftParagraph[] = gathered.map(
-    ({ work: w, document, sections, activities }) => {
+    ({ work: w, doc, activities }) => {
       const lines = [workTitle(w)];
       if (w.description) lines.push(plain(`  ${w.description}`));
 
       // 진행 상황이 적힌 항목을 우선 가져온다. 없으면 마지막으로 고친 항목을 쓴다.
-      const progressSection =
-        sections.find((s) => s.heading?.includes("진행")) ??
-        [...sections].sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
-      if (progressSection?.body) {
+      // 어느 것을 고를지는 readDoc 이 이미 정했다 — 「1-다」와 같은 것을 집지
+      // 않으려면 두 칸을 한자리에서 갈라야 한다(pickPieces).
+      if (doc.progress) {
         lines.push(
-          plain(`  [${document?.title} — ${progressSection.heading ?? "본문"}]`),
-          ...progressSection.body.split("\n").map((l) => plain(`  ${l}`)),
+          // 문서 항목도 누를 수 있어야 한다. 대화 근거는 눌러서 원문으로 가는데
+          // 문서 근거는 못 가면, 확인할 수 있는 근거와 못 하는 근거가 한 장에
+          // 섞인다. 읽는 사람은 그 차이를 규칙이 아니라 실수로 읽는다.
+          atPiece(
+            `  [${doc.title} — ${doc.progress.heading ?? "본문"}]`,
+            w.id,
+            doc.progress,
+          ),
+          ...doc.progress.body.split("\n").map((l) => plain(`  ${l}`)),
         );
       }
 
@@ -652,21 +887,42 @@ export async function buildHandoverDraft(
   const issues: DraftParagraph[] = [];
   let matchedComments = 0;
   let quotedComments = 0;
-  const missedComments: MissedComment[] = [];
-  let omittedMissed = 0;
+  let usedSections = 0;
+  const missedComments: MissedRecord[] = [];
+  const missedSections: MissedRecord[] = [];
+  let omittedComments = 0;
+  let omittedSections = 0;
 
-  for (const { work: w, document, sections, comments } of gathered) {
+  for (const g of gathered) {
+    const { work: w, doc, comments } = g;
     // 업무 한 건이 한 문단이다(DraftParagraph 주석 참조).
     const lines: DraftLine[] = [];
 
-    const issueSection = sections.find(
-      (s) => s.heading?.includes("현안") || s.heading?.includes("유의"),
-    );
-    if (issueSection?.body) {
+    if (doc.issue) {
       lines.push(
-        plain(`  [${document?.title} — ${issueSection.heading}]`),
-        ...issueSection.body.split("\n").map((l) => plain(`  ${l}`)),
+        atPiece(`  [${doc.title} — ${doc.issue.heading}]`, w.id, doc.issue),
+        ...doc.issue.body.split("\n").map((l) => plain(`  ${l}`)),
       );
+    }
+
+    // 서식이 안 가져간 문서 항목 — 대화와 같은 자리에서, 같은 규칙으로 센다.
+    usedSections += (doc.progress ? 1 : 0) + (doc.issue ? 1 : 0);
+    const shownPieces = doc.missed.slice(0, MISSED_PER_WORK);
+    omittedSections += doc.missed.length - shownPieces.length;
+    for (const { piece, why } of shownPieces) {
+      const q = quote(piece.body);
+      missedSections.push({
+        workId: w.id,
+        workTitle: w.title,
+        key: piece.key,
+        label: piece.heading ?? "제목 없는 항목",
+        // 조각마다의 시각이 없다(DocPiece). 없는 것을 지어내지 않는다.
+        at: null,
+        body: q.text,
+        truncated: q.truncated,
+        ref: pieceRef(w.id, piece),
+        why,
+      });
     }
 
     const picks = pickIssueComments(comments);
@@ -676,17 +932,19 @@ export async function buildHandoverDraft(
     // 최근 것부터 남긴다. 오래된 대화가 남으면 「지금 무엇을 놓쳤나」를 보러 온
     // 사람에게 가장 먼 것부터 보이게 된다.
     const shownMissed = picks.missed.slice(-MISSED_PER_WORK);
-    omittedMissed += picks.missed.length - shownMissed.length;
-    for (const c of shownMissed) {
+    omittedComments += picks.missed.length - shownMissed.length;
+    for (const { comment: c, why } of shownMissed) {
       const q = quote(c.body);
       missedComments.push({
         workId: w.id,
         workTitle: w.title,
-        commentId: c.id,
-        author: who(c.author),
+        key: c.id,
+        label: who(c.author),
         at: c.created_at,
         body: q.text,
         truncated: q.truncated,
+        ref: { kind: "comment", workId: w.id, commentId: c.id },
+        why,
       });
     }
     for (const { comment: c, labels } of picks.picked) {
@@ -734,14 +992,19 @@ export async function buildHandoverDraft(
 
   // --- 2. 관련 문서 현황 ---------------------------------------------------
   const docs: DraftParagraph[] = [];
-  for (const { work: w, document, sections, attachments } of gathered) {
+  for (const { work: w, document, doc, attachments } of gathered) {
     if (!document && attachments.length === 0) continue;
 
     const lines = [workTitle(w)];
     if (document) {
+      // 항목 수는 **읽을 수 있는 덩어리 수**다. 서식 문서에서는 제목이 이끄는
+      // 묶음이 그것이다(docChunks). 예전에는 doc_section 행만 세어서, 처음부터
+      // 서식 문서로 만든 스무 문단짜리 문서가 「항목 0개」로 찍혔다.
       lines.push(
-        plain(`  문서 「${document.title}」 (항목 ${sections.length}개)`),
-        ...sections.map((s) => plain(`    - ${s.heading ?? "제목 없는 항목"}`)),
+        plain(`  문서 「${doc.title}」 (항목 ${doc.pieces.length}개)`),
+        ...doc.pieces.map((p) =>
+          plain(`    - ${p.heading ?? "제목 없는 항목"}`),
+        ),
       );
     }
     if (attachments.length > 0) {
@@ -903,14 +1166,29 @@ export async function buildHandoverDraft(
     },
   ];
 
+  // 본문이 있는 항목만 센다 — 이 판이 말하는 것은 「이 글이 인계서에 안 실렸다」
+  // 이고, 글이 없는 항목에는 잃을 것이 없다(pickPieces 와 같은 기준이라야
+  // seen === used + missed + omitted 가 성립한다).
+  const sectionCount = gathered.reduce(
+    (n, g) => n + g.doc.pieces.filter((p) => p.body.trim()).length,
+    0,
+  );
+
   return {
     blocks,
     screening: {
-      comments: commentCount,
-      matched: matchedComments,
-      quoted: quotedComments,
-      missed: missedComments,
-      omitted: omittedMissed,
+      comments: {
+        seen: commentCount,
+        used: quotedComments,
+        missed: missedComments,
+        omitted: omittedComments,
+      },
+      sections: {
+        seen: sectionCount,
+        used: usedSections,
+        missed: missedSections,
+        omitted: omittedSections,
+      },
     },
     evidence: {
       works: works.length,

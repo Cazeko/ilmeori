@@ -109,3 +109,60 @@ export function issueLabels(body: string): string[] {
  * 갈래가 여섯 개로 읽힌다. 그래서 쉼표로 잇는다.
  */
 export const ISSUE_CUE_NAMES = ISSUE_CUES.map((c) => c.label).join(", ");
+
+// ---------------------------------------------------------------------------
+// 문서 항목 → 서식의 어느 칸으로
+// ---------------------------------------------------------------------------
+
+/**
+ * 문서 항목의 **제목**만 보고 서식의 칸을 정하는 규칙.
+ *
+ * 본문을 읽지 않는다. 「진행」이라는 말이 본문 어딘가에 있다고 그 항목이 진행
+ * 사항인 것은 아니고, 제목은 사람이 그 항목을 무엇이라고 부르는지를 담은
+ * 유일한 자리이기 때문이다.
+ *
+ * ── 이 표가 여기 있는 이유 ─────────────────────────────────────────────────
+ *
+ * 이 규칙은 `handover-draft.ts` 안에 `s.heading?.includes("진행")` 처럼 흩어져
+ * 있었다. 그래서 **화면이 규칙의 이름을 부를 수 없었다.** 「대화에서 무엇을
+ * 걸렀나」는 갈래 이름을 표에서 가져와 적는데 문서 쪽은 적을 표가 없었고,
+ * 그래서 그 판은 제목부터 대화로 좁혀져 있었다. 규칙을 셀 수 있게 하려면
+ * 규칙이 먼저 이름을 가져야 한다.
+ *
+ * 「1-나」의 규칙은 여기서 끝나지 않는다는 점을 짚어 둔다 — 제목에서 「진행」을
+ * 못 찾으면 **가장 최근에 고친 항목**을 대신 싣는다(handover-draft.ts 의
+ * `readDoc`). 그건 제목 규칙이 아니라 폴백이라 이 표에 없다.
+ */
+export const SECTION_CUES = [
+  { block: "1-나", words: ["진행"] },
+  { block: "1-다", words: ["현안", "유의"] },
+] as const satisfies ReadonlyArray<{
+  /** 서식에서 이 항목을 가져가는 칸 */
+  block: string;
+  /** 제목에서 찾는 말 */
+  words: readonly string[];
+}>;
+
+/**
+ * 칸 이름을 **표에서 뽑는다.**
+ *
+ * `sectionCueFor` 가 그냥 `string` 을 돌려주던 때에는 부르는 쪽이
+ * `=== "1-다"` 처럼 글자로 비교했고, 표의 이름을 고치는 날 그 비교가 조용히
+ * 늘 거짓이 됐다 — 타입은 통과하고 인계서만 이상해진다. 이 파일이 막으려고
+ * 생긴 드리프트가 정확히 그것이라, 그 실패를 컴파일 오류로 바꾼다.
+ */
+export type SectionBlock = (typeof SECTION_CUES)[number]["block"];
+
+/** 이 제목은 어느 칸이 가져가는가. 아무 데도 안 걸리면 null. */
+export function sectionCueFor(
+  heading: string | null | undefined,
+): SectionBlock | null {
+  if (!heading) return null;
+  const hit = SECTION_CUES.find((c) => c.words.some((w) => heading.includes(w)));
+  return hit ? hit.block : null;
+}
+
+/** 화면이 규칙을 설명할 때 쓰는 말들 — 「진행, 현안, 유의」 */
+export const SECTION_CUE_WORDS = SECTION_CUES.flatMap((c) => [...c.words]).join(
+  ", ",
+);

@@ -28,10 +28,11 @@ import { readFileSync } from "node:fs";
 process.env.NEXT_PUBLIC_SUPABASE_URL = "";
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "";
 
-const { buildHandoverDraft, draftParagraphText } = await import(
+const { buildHandoverDraft, draftParagraphText, readDoc } = await import(
   "@/lib/handover-draft.ts"
 );
-const { workHref, workTalkHref } = await import("@/lib/types.ts");
+const { workDocHref, workHref, workTalkHref } = await import("@/lib/types.ts");
+const { docChunks, fromSections } = await import("@/lib/editor/model.ts");
 const mock = await import("@/lib/data/mock.ts");
 const { profiles } = await import("@/lib/mock/org.ts");
 
@@ -163,8 +164,18 @@ ok(
 ok("인용한 대화의 꼬리표 줄이 있다", quoteTagLines.length > 0);
 ok(
   "그 줄은 전부 대화를 가리킨다",
-  quoteTagLines.every((l) => l.ref?.commentId),
-  `${quoteTagLines.filter((l) => !l.ref?.commentId).length}줄이 안 가리킨다`,
+  quoteTagLines.every((l) => l.ref?.kind === "comment"),
+  `${quoteTagLines.filter((l) => l.ref?.kind !== "comment").length}줄이 안 가리킨다`,
+);
+// 문서 항목 근거도 누를 수 있어야 한다. 대화 근거는 눌러서 원문으로 가는데
+// 문서 근거는 못 가면, 확인할 수 있는 근거와 못 하는 근거가 한 장에 섞이고
+// 읽는 사람은 그 차이를 규칙이 아니라 실수로 읽는다.
+const docTagLines = lines.filter((l) => /^ {2}\[.+ — .+\]$/.test(l.text) && !/^ {2}\[대화 — /.test(l.text));
+ok("인용한 문서 항목의 꼬리표 줄이 있다", docTagLines.length > 0, `${docTagLines.length}줄`);
+ok(
+  "그 줄은 전부 문서를 가리킨다",
+  docTagLines.every((l) => l.ref?.kind === "section" || l.ref?.kind === "doc"),
+  docTagLines.filter((l) => l.ref?.kind !== "section" && l.ref?.kind !== "doc").map((l) => l.text).join(" / "),
 );
 // 인용문에 링크를 걸면 굵은 글자가 원문을 덮어 「원문 그대로」가 원문처럼 안 보인다.
 ok(
@@ -261,48 +272,105 @@ ok(
 );
 
 // ---------------------------------------------------------------------------
-console.log("\n[4] 미포착 — 놓친 것을 세고, 원문으로 내놓는다");
+console.log("\n[4] 규칙이 무엇을 걸렀나 — 안 실은 것을 세고, 원문으로 내놓는다");
 // ---------------------------------------------------------------------------
 
 const sc = draft.screening;
-// 셋을 더하면 전체가 되어야 한다. 어긋나면 어느 한쪽을 조용히 빠뜨리고 있다는 뜻이고,
-// 「다 봤다」고 말하는 화면에서 그건 가장 비싼 거짓말이다.
-// 상한이 생긴 뒤로는 화면에 보이는 수만 더해서는 전체가 안 된다.
-// 뺀 수(omitted)까지 넣어야 「다 세었다」가 성립한다.
-ok(
-  "걸린 것 + 보여 준 것 + 뺀 것 = 들여다본 것",
-  sc.matched + sc.missed.length + sc.omitted === sc.comments,
-  `${sc.matched} + ${sc.missed.length} + ${sc.omitted} ≠ ${sc.comments}`,
-);
-ok("걸리지 않은 대화가 실제로 있다", sc.missed.length > 0, `${sc.missed.length}건`);
+
+// **기록 하나는 정확히 한 칸에 들어간다.** 어긋나면 어느 한쪽을 조용히 빠뜨리고
+// 있다는 뜻이고, 「다 봤다」고 말하는 화면에서 그건 가장 비싼 거짓말이다.
+//
+// 예전 항등식은 「걸린 것 + 안 걸린 것 + 뺀 것 = 본 것」이었는데, 거기에는
+// **걸렸지만 상한에 잘린 것**이 어느 칸에도 없었다. 세 숫자가 서로 안 맞는 것을
+// 아무도 눈치채지 못하는 구조였다. 지금은 실은 것을 세므로 빠질 자리가 없다.
+for (const [name, s] of Object.entries(sc)) {
+  ok(
+    `[${name}] 실은 것 + 보여 준 것 + 뺀 것 = 들여다본 것`,
+    s.used + s.missed.length + s.omitted === s.seen,
+    `${s.used} + ${s.missed.length} + ${s.omitted} ≠ ${s.seen}`,
+  );
+  ok(`[${name}] 안 실린 것이 실제로 있다`, s.missed.length > 0, `${s.missed.length}건`);
+  // 잘랐으면 잘랐다고 말해야 한다. 「그대로 둡니다」라고 적어 놓고 220자에서
+  // 말없이 자르면 이 판이 스스로 어기는 규칙이 된다.
+  ok(
+    `[${name}] 220자를 넘는 글만 잘렸다고 표시된다`,
+    s.missed.every((m) => m.truncated === m.body.endsWith("…")),
+    s.missed.filter((m) => m.truncated !== m.body.endsWith("…")).map((m) => m.key).join(", "),
+  );
+  // 안 실린 이유는 둘뿐이고, 뜻이 다르다. 「규칙 밖」은 규칙을 고칠 일이고
+  // 「상한」은 수를 고칠 일이다. 셋째 값이 생기면 화면이 설명할 말이 없다.
+  ok(
+    `[${name}] 안 실린 이유가 아는 것 둘 중 하나다`,
+    s.missed.every((m) => m.why === "규칙 밖" || m.why === "상한에 잘림"),
+    [...new Set(s.missed.map((m) => m.why))].join(", "),
+  );
+  ok(
+    `[${name}] 안 실린 것마다 갈 곳이 있다`,
+    s.missed.every((m) => m.ref && workIds.has(m.ref.workId)),
+  );
+}
 
 // 놓친 것은 **원문 그대로** 내놓는다. 요약하면 규칙이 못 한 판단을 요약이 대신
 // 하게 되고, 그러면 사람이 두 초 만에 넘길 수가 없다.
-const missedIds = new Set(sc.missed.map((m) => m.commentId));
 ok(
-  "놓친 대화가 전부 실재하고, 본문·글쓴이가 그 대화의 것이다",
-  sc.missed.every((m) => {
-    const c = records.get(m.workId)?.comments.find((x) => x.id === m.commentId);
-    return c && m.author.includes(c.author.name) && c.body.startsWith(m.body.slice(0, 20));
+  "안 실린 대화가 전부 실재하고, 본문·글쓴이가 그 대화의 것이다",
+  sc.comments.missed.every((m) => {
+    const c = records.get(m.workId)?.comments.find((x) => x.id === m.key);
+    return c && m.label.includes(c.author.name) && c.body.startsWith(m.body.slice(0, 20));
   }),
-  sc.missed.map((m) => m.commentId).join(", "),
+  sc.comments.missed.map((m) => m.key).join(", "),
 );
 // 서식에 실린 대화가 미포착에도 있으면 같은 글을 두 번 세는 것이다.
-const quotedIds = new Set(lines.map((l) => l.ref?.commentId).filter(Boolean));
+const missedIds = new Set(sc.comments.missed.map((m) => m.key));
+const quotedIds = new Set(
+  lines.filter((l) => l.ref?.kind === "comment").map((l) => l.ref.commentId),
+);
 ok(
   "서식에 실은 대화는 미포착에 없다",
   [...quotedIds].every((id) => !missedIds.has(id)),
   [...quotedIds].filter((id) => missedIds.has(id)).join(", "),
 );
-
-// 잘랐으면 잘랐다고 말해야 한다. 「그대로 둡니다」라고 적어 놓고 220자에서
-// 말없이 자르면 이 판이 스스로 어기는 규칙이 된다.
-ok(
-  "220자를 넘는 글만 잘렸다고 표시된다",
-  sc.missed.every((m) => m.truncated === m.body.endsWith("…")),
-  sc.missed.filter((m) => m.truncated !== m.body.endsWith("…")).map((m) => m.commentId).join(", "),
+// 같은 축을 문서 쪽에서도 본다. 「1-나」·「1-다」가 실은 항목이 미포착에도 있으면
+// 같은 글을 실었다고도 하고 안 실었다고도 하는 것이다.
+const missedSectionIds = new Set(sc.sections.missed.map((m) => m.key));
+const usedSectionIds = new Set(
+  lines.filter((l) => l.ref?.kind === "section").map((l) => l.ref.sectionId),
 );
-ok("상한에 걸려 뺀 수를 따로 센다", typeof sc.omitted === "number" && sc.omitted >= 0);
+ok(
+  "서식에 실은 문서 항목은 미포착에 없다",
+  [...usedSectionIds].every((id) => !missedSectionIds.has(id)),
+  [...usedSectionIds].filter((id) => missedSectionIds.has(id)).join(", "),
+);
+// 안 실린 문서 항목의 글이 서식 어디에도 없어야 한다. 위의 id 대조는 「같은
+// 항목인가」만 보므로, 다른 항목이 같은 글을 나르는 경우를 못 잡는다.
+//
+// ⚠ 두 쪽의 공백을 **같은 모양으로 눕히고** 비교해야 한다. 서식은 줄바꿈을
+// 살리고 들여쓰기를 두 칸 붙이는데 인용문은 quote() 가 눕힌다. 그대로 대면
+// 앞 40자에 줄바꿈이 하나만 있어도 영영 안 맞아, 실려 있어도 통과하는
+// — 즉 절대 실패하지 못하는 — 항목이 된다.
+const flatten = (s) => s.replace(/\s+/g, " ").trim();
+const formText = flatten(
+  draft.blocks.flatMap((b) => b.paragraphs.map(draftParagraphText)).join("\n"),
+);
+const leaked = sc.sections.missed.filter((m) =>
+  formText.includes(flatten(m.body).slice(0, 40)),
+);
+ok(
+  "안 실렸다고 한 문서 항목의 글은 서식에 없다",
+  leaked.length === 0,
+  leaked.map((m) => m.label).join(", "),
+);
+// 그리고 그 대조가 **실제로 무언가를 볼 수 있는지** 함께 본다. 실린 항목의 글은
+// 같은 방법으로 찾으면 반드시 나와야 한다. 안 나오면 위 항목은 늘 통과한다.
+const usedBodies = lines
+  .filter((l) => l.ref?.kind === "section")
+  .map((l) => l.text);
+ok(
+  "같은 방법으로 실린 항목은 서식에서 찾아진다 — 대조가 헛돌지 않는다",
+  usedBodies.length > 0 &&
+    usedBodies.every((t) => formText.includes(flatten(t).slice(0, 30))),
+  `${usedBodies.length}줄`,
+);
 
 // ---------------------------------------------------------------------------
 console.log("\n[5] 지어낸 앵커가 없다 — 누르면 실제로 그 기록으로 간다");
@@ -320,7 +388,7 @@ ok(
 // 한 번에 본다. 앵커가 없으면 아래 find 가 undefined 라 여기서 같이 걸린다 —
 // 「있는가」를 따로 물으면 이 항목이 통과할 때 절대 실패하지 못하는 항목이 된다.
 const misattributed = linked
-  .filter((l) => l.ref.commentId)
+  .filter((l) => l.ref.kind === "comment")
   .filter((l) => {
     const c = records
       .get(l.ref.workId)
@@ -331,6 +399,19 @@ ok(
   "가리키는 대화가 그 업무에 실제로 있고, 꼬리표의 이름이 그 대화를 쓴 사람이다",
   misattributed.length === 0,
   misattributed.map((l) => l.text.trim()).join(" / "),
+);
+// 문서 항목도 같은 축으로 본다. 앵커가 그 문서에 없는 항목을 가리키면 눌렀을 때
+// 아무 일도 일어나지 않는다 — 404 도 콘솔 오류도 없이.
+const badSection = linked
+  .filter((l) => l.ref.kind === "section")
+  .filter(
+    (l) =>
+      !records.get(l.ref.workId)?.sections.some((s) => s.id === l.ref.sectionId),
+  );
+ok(
+  "가리키는 문서 항목이 그 업무의 문서에 실제로 있다",
+  badSection.length === 0,
+  badSection.map((l) => l.text.trim()).join(" / "),
 );
 
 // ---------------------------------------------------------------------------
@@ -353,6 +434,174 @@ ok(
   workTalkHref("w1", "c9") ===
     "/works/w1?tab=talk#comment-c9",
   workTalkHref("w1", "c9"),
+);
+ok(
+  "문서 항목까지 가리키면 문서 탭의 그 항목으로 간다",
+  workDocHref("w1", "s3") === "/works/w1?tab=doc#section-s3",
+  workDocHref("w1", "s3"),
+);
+// 서식 문서의 블록에는 화면에 자리표가 없다(doc-preview.tsx 는 React key 만
+// 쓴다). 블록 id 로 앵커를 만들면 아무 데도 안 가는 링크가 된다.
+ok(
+  "가리킬 자리가 없으면 앵커 없이 문서 탭으로만 간다",
+  workDocHref("w1") === "/works/w1?tab=doc",
+  workDocHref("w1"),
+);
+
+// ---------------------------------------------------------------------------
+console.log("\n[7] 서식 문서 — 목업이 한 번도 안 지나가는 갈래");
+// ---------------------------------------------------------------------------
+
+// ⚠ 목업의 인계 대상 세 건에는 서식 문서가 **하나도 없다**(감량 시범사업 계획은
+// 다른 사람 것이다). buildHandoverDraft 를 아무리 돌려도 이 갈래를 지나가지
+// 않으므로, 시험이 readDoc 으로 직접 들어간다. 시드가 개조식 결함을 드러낼 수
+// 없던 그때와 같은 자리다 — 시연은 통과하고 실데이터에서 무너진다.
+const richDoc = (sections, title = "감량 시범사업 추진계획") => ({
+  id: "d-rich",
+  work_id: "w1",
+  title: "옛 문서 제목",
+  created_by: "p1",
+  created_at: "2026-01-01T00:00:00+09:00",
+  updated_at: "2026-01-01T00:00:00+09:00",
+  // 저장되는 값은 RichDoc 한 벌 그대로다(actions/rich-doc.ts 의 createRichDocument).
+  blocks: fromSections(sections, title, () => 0.5),
+  blocks_rev: 3,
+  blocks_updated_by: "p1",
+  blocks_updated_at: "2026-08-20T00:00:00+09:00",
+});
+// 옮기기(convertToRichDoc) 뒤에도 doc_section 은 남는다 — 안전망으로 두기 때문에.
+// 다만 그 행들은 **옮긴 시점에서 얼어붙는다.** 초안이 그걸 읽으면 몇 달 전 글이
+// 인계서에 실린다.
+const frozen = [
+  {
+    id: "s-frozen",
+    document_id: "d-rich",
+    sort_order: 0,
+    heading: "옛 항목",
+    body: "얼어붙은 옛 글입니다.",
+    locked_by: null,
+    locked_at: null,
+    updated_by: null,
+    updated_at: "2026-01-01T00:00:00+09:00",
+  },
+];
+
+const rich = readDoc(
+  richDoc([
+    { heading: "1. 추진 배경", body: "생활폐기물 감량 목표를 정한다." },
+    { heading: "2. 진행사항", body: "8월 현재 3개 동에서 시범 운영 중이다." },
+    { heading: "3. 현안 및 유의사항", body: "수거 업체와 단가 협의가 필요함." },
+  ]),
+  frozen,
+);
+ok(
+  "서식 문서의 본문을 읽는다 — 얼어붙은 항목이 아니라",
+  rich.pieces.length === 3 &&
+    !JSON.stringify(rich.pieces).includes("얼어붙은"),
+  `${rich.pieces.length}덩어리 / ${rich.pieces.map((p) => p.heading).join(" | ")}`,
+);
+ok(
+  "화면에 보이는 그 제목을 쓴다",
+  rich.title === "감량 시범사업 추진계획",
+  rich.title,
+);
+// 서식 문서의 덩어리에는 자리표가 없으므로 앵커를 지어내면 안 된다.
+ok(
+  "서식 문서의 덩어리에는 항목 앵커를 붙이지 않는다",
+  rich.pieces.every((p) => p.sectionId === undefined),
+);
+ok(
+  "제목 규칙대로 두 칸이 각각 가져간다",
+  rich.progress?.heading === "2. 진행사항" &&
+    rich.issue?.heading === "3. 현안 및 유의사항",
+  `진행=${rich.progress?.heading} / 현안=${rich.issue?.heading}`,
+);
+ok(
+  "남은 덩어리는 「규칙 밖」으로 셈에 들어간다",
+  rich.missed.length === 1 &&
+    rich.missed[0].piece.heading === "1. 추진 배경" &&
+    rich.missed[0].why === "규칙 밖",
+  rich.missed.map((m) => `${m.piece.heading}(${m.why})`).join(", "),
+);
+
+// 제목 블록은 항목이 아니다(부르는 쪽이 docTitle 로 따로 쓴다). 제목보다 앞에
+// 오는 글은 버리지 않고 제목 없는 덩어리 하나로 묶는다.
+const lead = docChunks(fromSections([{ heading: null, body: "머리말입니다." }], "제목", () => 0.5));
+ok(
+  "제목 없이 시작한 글도 덩어리가 된다",
+  lead.length === 1 && lead[0].heading === null && lead[0].body.includes("머리말"),
+  JSON.stringify(lead),
+);
+
+// ---------------------------------------------------------------------------
+console.log("\n[8] 같은 항목이 두 칸에 실리지 않는다");
+// ---------------------------------------------------------------------------
+
+// 예전에는 두 칸이 각자 골랐다. 「현안 및 유의사항」 하나뿐인 문서에서 「1-나」는
+// 제목에 「진행」이 없으니 폴백(가장 최근에 고친 것)으로 그 항목을 집었고,
+// 「1-다」도 같은 것을 집었다. 인계서 한 장에 같은 글이 두 번 실리면 읽는 사람은
+// 둘 중 하나가 잘못 실렸다고 읽는다.
+const section = (id, heading, body, updated_at = "2026-08-01T00:00:00+09:00") => ({
+  id,
+  document_id: "d1",
+  sort_order: 0,
+  heading,
+  body,
+  locked_by: null,
+  locked_at: null,
+  updated_by: null,
+  updated_at,
+});
+const plainDoc = {
+  id: "d1",
+  work_id: "w1",
+  title: "추진계획",
+  created_by: "p1",
+  created_at: "2026-01-01T00:00:00+09:00",
+  updated_at: "2026-01-01T00:00:00+09:00",
+  blocks: null,
+  blocks_rev: 0,
+  blocks_updated_by: null,
+  blocks_updated_at: null,
+};
+
+const onlyIssue = readDoc(plainDoc, [
+  section("s1", "현안 및 유의사항", "단가 협의가 필요함."),
+]);
+ok(
+  "「현안」 항목 하나뿐이면 「1-다」만 가져간다",
+  onlyIssue.issue?.key === "s1" && onlyIssue.progress === null,
+  `진행=${onlyIssue.progress?.heading ?? "없음"} / 현안=${onlyIssue.issue?.heading ?? "없음"}`,
+);
+ok(
+  "그 항목은 미포착에도 없다 — 실렸으니까",
+  onlyIssue.missed.length === 0,
+  onlyIssue.missed.map((m) => m.piece.heading).join(", "),
+);
+
+// 규칙에 걸리는 제목인데도 안 실렸다면 규칙이 놓친 것이 아니라 **칸이 하나만
+// 싣기 때문**이다. 두 사실을 한 이름으로 부르면 규칙을 고칠 자리와 상한을 고칠
+// 자리가 뒤섞인다.
+const twoIssues = readDoc(plainDoc, [
+  section("s1", "현안 및 유의사항", "첫째 현안."),
+  section("s2", "유의사항 추가", "둘째 현안."),
+]);
+ok(
+  "규칙에 걸렸는데 칸이 하나라 밀린 것은 「상한」이라고 부른다",
+  twoIssues.missed.length === 1 && twoIssues.missed[0].why === "상한에 잘림",
+  twoIssues.missed.map((m) => `${m.piece.heading}(${m.why})`).join(", "),
+);
+
+// 본문이 빈 항목에는 잃을 것이 없다. 세면 「안 실린 것」이 부풀고,
+// seen === used + missed + omitted 도 안 맞는다.
+const withEmpty = readDoc(plainDoc, [
+  section("s1", "진행사항", "진행 중."),
+  section("s2", "빈 항목", "   "),
+]);
+ok(
+  "본문이 빈 항목은 안 실린 것으로 세지 않는다",
+  withEmpty.missed.length === 0,
+  withEmpty.missed.map((m) => m.piece.heading).join(", "),
 );
 
 console.log(

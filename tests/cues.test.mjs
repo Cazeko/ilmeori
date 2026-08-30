@@ -25,7 +25,14 @@
 const { basisLabels, BASIS_CUES, BASIS_CUE_NAMES } = await import(
   "../src/lib/approval-cues.ts"
 );
-const { issueLabels, ISSUE_CUES, ISSUE_CUE_NAMES } = await import(
+const {
+  issueLabels,
+  ISSUE_CUES,
+  ISSUE_CUE_NAMES,
+  SECTION_CUES,
+  SECTION_CUE_WORDS,
+  sectionCueFor,
+} = await import(
   "../src/lib/handover-cues.ts"
 );
 
@@ -257,6 +264,64 @@ for (const [이름, cues, labelsOf, 갈래수, names] of [
     names,
   );
 }
+
+// ---------------------------------------------------------------------------
+console.log("\n[9] 문서 항목 표 — 제목만 보고 칸을 정한다");
+// ---------------------------------------------------------------------------
+
+// 이 규칙은 원래 `handover-draft.ts` 안에 `s.heading?.includes("진행")` 처럼
+// 흩어져 있었다. 그래서 화면이 규칙의 이름을 부를 수 없었고, 「규칙이 무엇을
+// 걸렀나」 판은 문서 쪽을 셀 수도 이름 부를 수도 없어 제목부터 좁혀져 있었다.
+// 표로 옮긴 이상 시험이 닿아야 한다 — 이 파일이 있는 이유가 그것이다.
+
+ok(
+  "칸마다 규칙이 하나씩 있다",
+  SECTION_CUES.length === 2,
+  SECTION_CUES.map((c) => c.block).join(", "),
+);
+ok(
+  "같은 칸이 두 번 나오지 않는다",
+  new Set(SECTION_CUES.map((c) => c.block)).size === SECTION_CUES.length,
+);
+// 제목이 없거나 빈 항목에 칸을 배정하면, 사람이 이름 붙이지 않은 글이
+// 「진행사항」이라는 이름을 달고 서식에 실린다.
+ok("제목이 없으면 아무 칸도 아니다", sectionCueFor(null) === null);
+ok("제목이 빈 글자면 아무 칸도 아니다", sectionCueFor("") === null);
+ok("모르는 제목은 아무 칸도 아니다", sectionCueFor("추진 근거 및 경과") === null);
+
+// 표에 적힌 말은 **하나도 빠짐없이** 실제로 그 칸을 가리켜야 한다.
+// 손으로 적은 목록이 표와 어긋난 것이 이 저장소에서 두 번 있었다.
+for (const cue of SECTION_CUES) {
+  for (const word of cue.words) {
+    ok(
+      `「${word}」이(가) 들어간 제목은 ${cue.block} 으로 간다`,
+      sectionCueFor(`3. ${word}사항`) === cue.block,
+      sectionCueFor(`3. ${word}사항`) ?? "없음",
+    );
+  }
+}
+// 화면이 읽어 주는 말과 실제로 찾는 말이 같아야 한다. 갈래 이름을 손으로 적어
+// 두었다가 표와 어긋난 것이 정확히 이 자리의 실패다.
+ok(
+  "화면이 부르는 이름이 표에서 나온다",
+  SECTION_CUES.every((c) => c.words.every((w) => SECTION_CUE_WORDS.includes(w))),
+  SECTION_CUE_WORDS,
+);
+ok(
+  "표에 없는 말이 화면에 끼어 있지 않다",
+  SECTION_CUE_WORDS.split(", ").every((w) =>
+    SECTION_CUES.some((c) => c.words.includes(w)),
+  ),
+  SECTION_CUE_WORDS,
+);
+// 앞의 규칙이 먼저 가져간다. 「진행 현안」처럼 두 말이 다 든 제목이 그때그때
+// 다른 칸으로 가면 같은 자료에서 두 번 뽑은 인계서가 달라진다.
+ok(
+  "두 말이 다 든 제목도 늘 같은 칸으로 간다",
+  sectionCueFor("진행 및 현안") === sectionCueFor("진행 및 현안") &&
+    sectionCueFor("진행 및 현안") === SECTION_CUES[0].block,
+  sectionCueFor("진행 및 현안") ?? "없음",
+);
 
 console.log(
   `\n${fails.length === 0 ? "전부 통과" : "실패"} — ${pass}건 통과, ${fails.length}건 실패`,

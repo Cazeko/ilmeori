@@ -748,38 +748,103 @@ export function parseRichDoc(
  */
 export function docPlainText(doc: RichDoc): string {
   const ordinals = computeOrdinals(doc.blocks);
-  const lines: string[] = [];
+  const lines = doc.blocks.flatMap((b, i) => blockLines(b, ordinals[i]));
+  return trimTrailingBlanks(lines).join("\n");
+}
+
+/**
+ * 블록 하나가 평문에서 차지하는 줄.
+ *
+ * `docPlainText` 와 `docChunks` 가 **같은 글자**를 내야 한다. 두 곳에 따로
+ * 적어 두면 한쪽만 고친 날 문서 전체를 뽑은 평문과 항목별로 뽑은 평문이
+ * 달라지고, 그 둘을 나란히 놓는 화면이 바로 인계 초안이다.
+ */
+function blockLines(b: Block, ordinal: number): string[] {
+  switch (b.kind) {
+    case "spacer":
+      return [""];
+    case "divider":
+      return ["─".repeat(30)];
+    case "pagebreak":
+      return [""];
+    case "table":
+      return b.table
+        ? b.table.rows.map((row) =>
+            row.cells.map((c) => spansText(c.spans)).join("\t"),
+          )
+        : [];
+    default: {
+      const indent = "  ".repeat(clampIndent(b.indent));
+      const marker = markerFor(b.kind, b.indent ?? 0, ordinal);
+      const text = spansText(b.spans);
+      return [marker ? `${indent}${marker} ${text}` : `${indent}${text}`];
+    }
+  }
+}
+
+/** 끝에 붙은 빈 줄은 저장할 이유가 없다. */
+function trimTrailingBlanks(lines: string[]): string[] {
+  const out = [...lines];
+  while (out.length && out[out.length - 1] === "") out.pop();
+  return out;
+}
+
+/** 제목이 이끄는 덩어리 하나 — 항목 문서의 「항목」에 해당한다. */
+export type DocChunk = {
+  /** 제목 블록의 id. 제목 없이 시작한 덩어리는 그 첫 블록의 id */
+  id: string;
+  heading: string | null;
+  body: string;
+};
+
+/**
+ * 서식 문서를 **항목처럼** 읽는다.
+ *
+ * ── 왜 필요한가 ────────────────────────────────────────────────────────────
+ *
+ * 서식 문서로 옮기면 `doc_section` 은 옮긴 시점에서 얼어붙는다(rich-doc.ts 의
+ * 머리말). 그리고 `createRichDocument` 로 처음부터 서식 문서를 만들면 항목
+ * 행은 **아예 하나도 없다.** 그런데 인계 초안은 항목만 읽고 있었다. 그래서
+ * 이 제품이 미는 동시편집으로 쓴 문서일수록 인계서에서 사라지고, 「2. 관련
+ * 문서 현황」에는 스무 문단짜리 문서가 「항목 0개」로 찍혔다.
+ *
+ * 읽는 쪽이 그때그때 만든다 — 평문을 `doc_section.body` 에 되받아 적지 않는
+ * 이유는 rich-doc.ts 에 적혀 있다(자동 저장마다 이력 한 줄씩 쌓인다).
+ *
+ * ── 나누는 규칙 ────────────────────────────────────────────────────────────
+ *
+ * heading·subheading 이 새 덩어리를 연다. subheading 도 덩어리를 여는 이유는
+ * 이것이 목차가 아니라 **읽을 단위**이기 때문이다 — 소제목 아래 글이 위
+ * 덩어리에 딸려 들어가면 인계서에 실리는 인용이 통째로 길어진다.
+ * 문서 제목(title)은 빼놓는다. 부르는 쪽이 `docTitle()` 로 따로 쓴다.
+ * 제목보다 앞에 있는 글은 제목 없는 덩어리 하나로 묶는다 — 버리지 않는다.
+ */
+export function docChunks(doc: RichDoc): DocChunk[] {
+  const ordinals = computeOrdinals(doc.blocks);
+  const chunks: DocChunk[] = [];
+  let open: { id: string; heading: string | null; lines: string[] } | null = null;
+
+  const close = () => {
+    if (!open) return;
+    const body = trimTrailingBlanks(open.lines).join("\n");
+    // 제목도 없고 글도 없으면 덩어리가 아니다(빈 줄만 이어진 자리).
+    if (open.heading || body) chunks.push({ id: open.id, heading: open.heading, body });
+    open = null;
+  };
 
   doc.blocks.forEach((b, i) => {
-    switch (b.kind) {
-      case "spacer":
-        lines.push("");
-        return;
-      case "divider":
-        lines.push("─".repeat(30));
-        return;
-      case "pagebreak":
-        lines.push("");
-        return;
-      case "table": {
-        if (!b.table) return;
-        for (const row of b.table.rows) {
-          lines.push(row.cells.map((c) => spansText(c.spans)).join("\t"));
-        }
-        return;
-      }
-      default: {
-        const indent = "  ".repeat(clampIndent(b.indent));
-        const marker = markerFor(b.kind, b.indent ?? 0, ordinals[i]);
-        const text = spansText(b.spans);
-        lines.push(marker ? `${indent}${marker} ${text}` : `${indent}${text}`);
-      }
+    if (b.kind === "title") return;
+    if (b.kind === "heading" || b.kind === "subheading") {
+      close();
+      open = { id: b.id, heading: spansText(b.spans).trim() || null, lines: [] };
+      return;
     }
+    const cur = (open ??= { id: b.id, heading: null, lines: [] });
+    cur.lines.push(...blockLines(b, ordinals[i]));
   });
+  close();
 
-  // 끝에 붙은 빈 줄은 저장할 이유가 없다.
-  while (lines.length && lines[lines.length - 1] === "") lines.pop();
-  return lines.join("\n");
+  return chunks;
 }
 
 /** 글자 수 · 낱말 수 — 상태 표시줄이 쓴다. */

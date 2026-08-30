@@ -372,6 +372,34 @@ export function workHref(workId: string): string {
 }
 
 /**
+ * 문서 항목 한 개의 자리표 — `commentAnchor` 와 같은 이유로 여기 둔다.
+ *
+ * ⚠ 같은 화면의 편집 폼이 `section-<id>-heading` · `section-<id>-body` 를 이미
+ * 쓴다(doc-sections.tsx). 접미사가 붙어 있어 겹치지 않지만, 이 규칙을 바꿀
+ * 때는 저 둘을 함께 봐야 한다 — id 가 겹치면 브라우저는 아무 말도 하지 않고
+ * 먼저 나온 것으로 간다.
+ */
+export function sectionAnchor(sectionId: string): string {
+  return `section-${sectionId}`;
+}
+
+/**
+ * 업무의 「문서」 자리.
+ *
+ * 지금은 문서가 기본 탭이라 `?tab=doc` 없이도 닿는다. 그래도 적는다 —
+ * 기본 탭이 바뀌는 날 조용히 엉뚱한 화면으로 가는 링크가 되고, 그 실패는
+ * 404 도 콘솔 오류도 남기지 않는다(`workTalkHref` 주석의 그 실패다).
+ *
+ * `sectionId` 는 **항목 문서일 때만** 준다. 서식 문서의 블록에는 화면에
+ * 자리표가 없어서(doc-preview.tsx 는 React key 만 쓴다) 앵커를 붙이면
+ * 아무 데도 안 가는 링크가 된다. 없는 자리를 가리키느니 문서 탭에 세운다.
+ */
+export function workDocHref(workId: string, sectionId?: string): string {
+  const doc = `${workHref(workId)}?tab=doc`;
+  return sectionId ? `${doc}#${sectionAnchor(sectionId)}` : doc;
+}
+
+/**
  * 업무의 「대화」 자리.
  *
  * ⚠ **`?tab=talk` 를 빼면 안 된다.** 업무 상세의 대화는 탭 안에서만 그려지므로

@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import type { DraftParagraph, DraftRef } from "@/lib/handover-draft";
-import { workHref, workTalkHref } from "@/lib/types";
+import { workDocHref, workHref, workTalkHref } from "@/lib/types";
 
 /**
  * 근거 줄이 가리키는 자리.
@@ -9,9 +9,24 @@ import { workHref, workTalkHref } from "@/lib/types";
  * 대화를 인용한 줄만 대화 탭으로 보낸다. 업무 제목 줄까지 `?tab=talk` 로
  * 보내면 업무를 누른 사람이 대화 목록에 떨어진다 — 업무를 보러 눌렀는데
  * 대화가 열리는 것은 다른 화면이다.
+ *
+ * 갈래를 문자열 하나에 담지 않고 나눠 둔 값은 여기서 값을 한다. `switch` 가
+ * 모든 갈래를 덮지 않으면 타입이 막으므로, 갈래를 하나 더하는 날 **주소를
+ * 안 만들어 준 채로 배포되는 길이 없다.** 예전에는 `ref.commentId ? … : …`
+ * 였고, 그 모양에서는 새 갈래가 조용히 업무 화면으로 떨어졌을 것이다.
  */
-const hrefFor = (ref: DraftRef): string =>
-  ref.commentId ? workTalkHref(ref.workId, ref.commentId) : workHref(ref.workId);
+export function draftRefHref(ref: DraftRef): string {
+  switch (ref.kind) {
+    case "comment":
+      return workTalkHref(ref.workId, ref.commentId);
+    case "section":
+      return workDocHref(ref.workId, ref.sectionId);
+    case "doc":
+      return workDocHref(ref.workId);
+    case "work":
+      return workHref(ref.workId);
+  }
+}
 
 /**
  * 초안 문단 한 개 — **화면판.**
@@ -50,7 +65,7 @@ export function DraftLines({ lines }: { lines: DraftParagraph }) {
           {i > 0 ? "\n" : null}
           {line.ref ? (
             <Link
-              href={hrefFor(line.ref)}
+              href={draftRefHref(line.ref)}
               className="font-bold text-gray-90 transition-colors duration-150 hover:text-primary"
             >
               {line.text}

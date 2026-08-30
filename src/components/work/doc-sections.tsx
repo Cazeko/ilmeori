@@ -28,6 +28,7 @@ import { cn } from "@/lib/cn";
 import { formatDateTime } from "@/lib/format";
 import {
   SECTION_LOCK_MINUTES,
+  sectionAnchor,
   sectionLockActive,
   type DocSectionWithEditor,
   type Document,
@@ -242,8 +243,11 @@ export function DocSections({
             return (
               <li
                 key={s.id}
+                // 인계 초안의 근거 꼬리표가 이 자리를 가리킨다(sectionAnchor).
+                // 머리글에 가리지 않도록 대화 쪽과 같은 만큼 띄운다.
+                id={sectionAnchor(s.id)}
                 className={cn(
-                  "rounded-sm border bg-surface",
+                  "scroll-mt-24 rounded-sm border bg-surface",
                   heldByOther
                     ? "border-status-doing/30 bg-status-doing-bg/40"
                     : editing
