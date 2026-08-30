@@ -533,6 +533,39 @@ ok(
   JSON.stringify(lead),
 );
 
+// ⚠ 실제 목업에서 잡은 결함이다. 서식 문서는 제목 아래 부서명·기준일 같은
+// 머리말이 오는 일이 흔한데(「자원순환과 · 2026. 8. 5. 기준」), 「1-나」의 폴백이
+// 차례대로만 고르면 **그 한 줄이 「주요 업무계획 및 진행사항」 칸에 실린다.**
+// 사람이 이름을 붙인 덩어리가 내용일 가능성이 훨씬 높다.
+const frontMatter = readDoc(
+  richDoc([
+    { heading: null, body: "자원순환과 · 2026. 8. 5. 기준" },
+    { heading: "1. 추진 배경", body: "감량기 보급을 넓힌다." },
+  ]),
+  [],
+);
+ok(
+  "머리말이 아니라 제목 붙은 덩어리를 「1-나」에 싣는다",
+  frontMatter.progress?.heading === "1. 추진 배경",
+  `고른 것: ${frontMatter.progress ? `「${frontMatter.progress.heading ?? "제목없음"}」` : "없음"}`,
+);
+// 그렇다고 머리말을 버리지는 않는다. 안 실렸으면 안 실렸다고 세는 자리에 있어야 한다.
+ok(
+  "머리말은 버리지 않고 안 실린 것으로 센다",
+  frontMatter.missed.some((m) => m.piece.heading === null),
+  frontMatter.missed.map((m) => m.piece.heading).join(", "),
+);
+// 제목 붙은 것이 하나도 없으면 머리말이라도 싣는다 — 빈 칸보다 낫다.
+const onlyFrontMatter = readDoc(
+  richDoc([{ heading: null, body: "제목 없이 적은 글입니다." }]),
+  [],
+);
+ok(
+  "제목 붙은 덩어리가 없으면 머리말이라도 싣는다",
+  onlyFrontMatter.progress?.body.includes("제목 없이"),
+  `고른 것: ${onlyFrontMatter.progress?.body ?? "없음"}`,
+);
+
 // ---------------------------------------------------------------------------
 console.log("\n[8] 같은 항목이 두 칸에 실리지 않는다");
 // ---------------------------------------------------------------------------

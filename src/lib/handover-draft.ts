@@ -635,19 +635,31 @@ function pickPieces(pieces: DocPiece[]): Omit<DocRead, "title" | "pieces"> {
 
   const issue = withBody.find((p) => sectionCueFor(p.heading) === "1-다") ?? null;
   const rest = withBody.filter((p) => p !== issue);
+
+  // 가장 최근에 고친 것. 시각이 같으면(서식 문서는 덩어리마다의 시각이 없어
+  // 전부 같다) 문서에 적힌 차례를 따른다 — 같은 자료에서 두 번 뽑아 같은
+  // 인계서가 나와야 한다.
+  const recent = (list: DocPiece[]): DocPiece | undefined =>
+    [...list].sort(
+      (a, b) => b.updated_at.localeCompare(a.updated_at) || a.order - b.order,
+    )[0];
+
+  // ⚠ 폴백은 **아무 규칙도 안 걸린 것 중에서만** 고른다. 「현안 및 유의사항」이
+  // 둘인 문서에서 폴백이 남은 하나를 집으면, 제목에 현안이라고 적힌 글이
+  // 「주요 업무계획 및 진행사항」 칸에 실린다. 규칙이 이미 자리를 정해 준
+  // 항목을 폴백이 다른 칸으로 끌어가는 것은 규칙이 있으나 마나로 만든다.
+  const pool = rest.filter((p) => !sectionCueFor(p.heading));
+
   const progress =
     rest.find((p) => sectionCueFor(p.heading) === "1-나") ??
-    // 규칙에 걸리는 제목이 없으면 가장 최근에 고친 것. 시각이 같으면(서식
-    // 문서는 전부 같다) 문서에 적힌 차례를 따른다 — 같은 자료에서 두 번 뽑아
-    // 같은 인계서가 나와야 한다.
-    //
-    // ⚠ 폴백은 **아무 규칙도 안 걸린 것 중에서만** 고른다. 「현안 및 유의사항」이
-    // 둘인 문서에서 이 줄이 남은 하나를 집으면, 제목에 현안이라고 적힌 글이
-    // 「주요 업무계획 및 진행사항」 칸에 실린다. 규칙이 이미 자리를 정해 준
-    // 항목을 폴백이 다른 칸으로 끌어가는 것은 규칙이 있으나 마나로 만든다.
-    [...rest.filter((p) => !sectionCueFor(p.heading))].sort(
-      (a, b) => b.updated_at.localeCompare(a.updated_at) || a.order - b.order,
-    )[0] ??
+    // **제목이 있는 것을 먼저 본다.** 서식 문서는 제목 아래 부서명·기준일 같은
+    // 머리말이 오는 일이 흔하고(docChunks 가 그걸 제목 없는 덩어리로 묶는다),
+    // 차례로만 고르면 「자원순환과 · 2026. 8. 5. 기준」 한 줄이 「주요 업무계획
+    // 및 진행사항」 칸에 실린다. 실제로 목업에서 그랬다. 사람이 이름을 붙인
+    // 덩어리가 내용일 가능성이 훨씬 높다.
+    recent(pool.filter((p) => p.heading)) ??
+    // 제목 붙은 것이 하나도 없을 때만 머리말이라도 싣는다. 빈 칸보다 낫다.
+    recent(pool) ??
     null;
 
   const taken = new Set([issue?.key, progress?.key]);

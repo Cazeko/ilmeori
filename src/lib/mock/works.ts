@@ -1785,6 +1785,17 @@ export const handoverItems: HandoverItem[] = [
   { handover_id: HANDOVER_ID, work_id: workId(5), transferred: false },
   { handover_id: HANDOVER_ID, work_id: workId(8), transferred: false },
   { handover_id: HANDOVER_ID, work_id: workId(9), transferred: false },
+  // 감량 시범사업 — **데모에 하나뿐인 서식 문서**가 붙어 있는 업무다(docId 8).
+  //
+  // 이 업무의 항목(secId 21·22)에는 이미 「박준호 → 인계 대상」이라고 적어
+  // 두었는데 정작 이 목록에는 빠져 있었다. 그래서 인계 대상 세 건에 서식
+  // 문서가 하나도 없었고, 초안이 서식 문서를 읽는 길을 **화면에서는 한 번도
+  // 지나가지 않았다.** 시드가 결함을 드러낼 수 없던 그때와 같은 자리다.
+  //
+  // 이야기로도 여기 있는 것이 맞다. 이 업무의 문서가 「감량 실적은 다음 해
+  // 원가산정의 물량 추계에 그대로 들어간다」고 적고 있고, 그 원가산정이
+  // workId(5) — 인계 대상 첫 번째다. 넘겨받는 사람이 둘을 같이 봐야 한다.
+  { handover_id: HANDOVER_ID, work_id: workId(24), transferred: false },
 ];
 
 // ---------------------------------------------------------------------------
