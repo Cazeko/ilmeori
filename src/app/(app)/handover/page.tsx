@@ -30,7 +30,6 @@ import { PrintButton } from "@/components/handover/print-button";
 import { HandoverPrintSheet } from "@/components/handover/print-sheet";
 import { SheetCaption } from "@/components/handover/sheet-caption";
 import { BlockNotes } from "@/components/handover/block-notes";
-import { DraftLines } from "@/components/handover/draft-lines";
 import { ScreeningPanel } from "@/components/handover/screening-panel";
 import { StatusBadge } from "@/components/status-badge";
 // 생성 시각을 화면에서 따로 찍던 자리가 사라졌다 — 서식 맨 아래 「출처」 문단이
@@ -175,8 +174,10 @@ export default async function HandoverPage({
           이 판만 print:hidden 밖에 있다 — 인쇄하면 이 한 벌만 나온다.
           바깥 테두리와 여백은 종이에서 지운다(종이가 곧 테두리다).
 
-          항목마다 붙는 근거 꼬리표는 여기 없다. 그것은 아래 확인 구역의 일이고,
-          결재에 올라가는 종이에서 꼬리표는 서식을 어지럽힌다. */}
+          한동안 여기 「항목마다 붙는 근거 꼬리표는 여기 없다」고 적혀 있었다.
+          지금은 있다 — 문장마다 어디서 왔는지가 서식 안에 붙고, 위 캡션의
+          토글이 그것을 비춘다. 다만 **종이에는 여전히 없다**(globals.css 의
+          @media print). 결재에 올라가는 장에서 꼬리표는 서식을 어지럽힌다. */}
       <div
         data-rank="doc"
         className={cn(
@@ -355,22 +356,32 @@ export default async function HandoverPage({
                           {draftBlockText(block.paragraphs)}
                         </span>
                       </p>
-                    ) : (
-                      <div className="mt-2 flex flex-col gap-3">
-                        {block.paragraphs.map((p, i) => (
-                          <p
-                            key={i}
-                            className="rounded-sm bg-gray-5 px-4 py-3 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80"
-                          >
-                            <DraftLines lines={p} />
-                          </p>
-                        ))}
-                      </div>
-                    )}
+                    ) : null}
 
-                    {/* 근거 꼬리표는 **위 문단만** 가리킨다. 그래서 사람이 보탠
-                        글보다 앞에 둔다. 아래로 내리면 인계자가 손으로 적은
-                        문장까지 "이 기록에서 나왔다"고 말하는 꼴이 된다. */}
+                    {/* ── 여기 본문이 한 벌 더 있었다 ──────────────────────────
+                        같은 인계서가 한 화면에 **두 번** 그려지고 있었다 —
+                        위의 별지 제12호서식 약 4,500px, 여기 다시 약 4,500px,
+                        합쳐 8,965px. 2분 30초짜리 시연에서 첫 사본을 스크롤로
+                        지나야 두 번째 사본의 누를 수 있는 근거에 닿았다.
+
+                        그때는 그럴 이유가 있었다 — 서식에는 링크가 없었으므로
+                        **근거를 누를 수 있는 자리가 여기뿐**이었다. 이제 서식
+                        자신이 문장마다 출처를 달고 있으므로(print-sheet.tsx 의
+                        <DraftLines>), 이 판이 본문을 다시 그릴 이유가 없다.
+
+                        지우는 것은 **본문 한 가지뿐**이다. 위의 needsHuman 설명
+                        박스는 서식의 파선 빈칸이 못 하는 말을 하고, 아래
+                        BlockNotes 는 사람이 타이핑하는 유일한 자리다. 둘 다 남는다.
+                        이 판은 서식의 사본이 아니라 **확인하고 채우는 작업대**다.
+
+                        ⚠ 순서가 중요했다. 서식에 출처 층을 붙이기 **전에** 이걸
+                        지웠으면, 그 사이 배포본에는 근거를 누를 자리가 아예
+                        없었을 것이다. */}
+
+                    {/* 근거 꼬리표는 **규칙이 뽑은 문단만** 가리킨다. 그래서
+                        사람이 보탠 글보다 앞에 둔다. 아래로 내리면 인계자가
+                        손으로 적은 문장까지 "이 기록에서 나왔다"고 말하는 꼴이
+                        된다. */}
                     {block.sources.length > 0 ? (
                       <p className="mt-2 flex flex-wrap items-center gap-2 text-body-xs text-gray-60">
                         <Cog
