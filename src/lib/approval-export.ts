@@ -10,7 +10,7 @@ import { isStruckOut, splitSteps } from "@/lib/approval";
 // 근거를 고르는 규칙은 따로 산다 — 이 파일은 server-only 라 시험이 못 부른다.
 // 그 표는 온나라로 나가는 문서에 무엇이 「근거」로 실릴지를 혼자 정하므로
 // 시험이 닿는 자리에 두어야 한다(approval-cues.ts 머리말).
-import { basisLabels } from "@/lib/approval-cues";
+import { BASIS_CUE_NAMES, basisLabels } from "@/lib/approval-cues";
 import { formatDate, formatFullDateTime, josa } from "@/lib/format";
 import type { HwpxDoc, HwpxParagraph, HwpxTable } from "@/lib/hwpx/pack";
 import {
@@ -316,7 +316,9 @@ export async function buildApprovalExport(
   if (omitted > 0) {
     basisLines.push({
       text: `근거가 될 만한 대화가 ${omitted}건 더 있습니다. 위에는 최근 ${quoted.length}건만 실었습니다.`,
-      source: `업무 대화 ${comments.length}건 중 협의·확인·법령·수치·기한·약속이 언급된 ${matchedComments}건`,
+      // 갈래 이름은 표에서 그대로 가져온다. 손으로 적어 두었더니 이미 어긋나
+      // 있었다 — 위 인용문 옆 배지는 「확인·회신」인데 이 줄은 「확인」이었다.
+      source: `업무 대화 ${comments.length}건 중 ${BASIS_CUE_NAMES}${josa(BASIS_CUE_NAMES, "이", "가")} 언급된 ${matchedComments}건`,
     });
   }
 

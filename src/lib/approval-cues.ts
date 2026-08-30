@@ -82,3 +82,19 @@ export const BASIS_CUES: readonly BasisCue[] = [
 export function basisLabels(body: string): string[] {
   return BASIS_CUES.filter((cue) => cue.test.test(body)).map((cue) => cue.label);
 }
+
+/**
+ * 근거 꼬리표에 「…이 언급된 N건」으로 적을 갈래 이름들.
+ *
+ * 이 목록은 `approval-export.ts` 안에 **문장으로 박혀 있었고, 이미 표와 어긋나
+ * 있었다** — 표는 「확인·회신」·「법령·기준」·「금액·수치」인데 문장은
+ * 「확인」·「법령」·「수치」였다. 같은 문서에서 인용문 옆 배지는 표의 이름을
+ * 그대로 부르므로(`approval-export.ts` 의 `labels.join`), **한 장 안에서 배지와
+ * 요약줄이 서로 다른 이름을 불렀다.** 규칙이 왜 이 대화를 골랐는지 설명하려고
+ * 만든 장치가 오히려 헷갈리게 한 셈이고, 이 문서는 온나라로 나가 감사에 남는다.
+ *
+ * 이름표에 이미 `·` 가 들어 있으므로(「확인·회신」) 이어 붙일 때도 `·` 를 쓰면
+ * 갈래 수가 부풀어 읽힌다. 그래서 쉼표로 잇는다.
+ * (인계서 쪽 `handover-cues.ts` 의 `ISSUE_CUE_NAMES` 와 같은 이유·같은 방식이다)
+ */
+export const BASIS_CUE_NAMES = BASIS_CUES.map((c) => c.label).join(", ");
