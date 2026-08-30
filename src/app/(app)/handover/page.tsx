@@ -844,16 +844,15 @@ export default async function HandoverPage({
  * 「평소 협업의 부산물이 곧 인수인계서가 된다」가 이 제품의 설계 원리다.
  * 그 원리는 인계가 시작되기 **전에도** 참이어야 하고, 이 화면이 그것을 말한다.
  *
- * 세는 것은 listWorks 가 이미 돌려주는 값뿐이다(대화·문서·첨부 수). 문서 수는
- * 오래 빠져 있었고 이 자리에 「업무마다 질의를 더 돌려야 한다」고 적혀 있었는데,
- * 세는 방법이 대화와 똑같아서(목업은 필터, Supabase 는 임베드 count) 이미 도는
- * 질의에 칸 하나를 더하는 일이었다. **이력**은 여전히 안 센다 — 그건 정말로
- * 업무마다 질의가 하나 더 필요하고, 아직 시작하지도 않은 인계의 미리보기가
- * 그만큼의 비용을 쓸 이유가 없다.
+ * 세는 것은 listWorks 가 이미 돌려주는 값뿐이다(대화·첨부 수). 이력을 함께
+ * 세려면 업무마다 질의를 더 돌려야 하는데, 아직 시작하지도 않은 인계의
+ * 미리보기가 그만큼의 비용을 쓸 이유가 없다.
  *
- * 여기서 세는 것은 전부 **있는 그대로의 개수**다. 「현안 3건」처럼 규칙이
- * 판정한 수는 안 적는다 — 규칙은 인계를 시작해야 돌고, 돌기 전에 화면이 먼저
- * 판정하면 다음 화면의 수와 어긋날 때 어느 쪽이 맞는지 알 수 없게 된다.
+ * ⚠ **여기에 숫자를 더 세우지 않는다.** 문서 수는 이제 `listWorks` 가 돌려주므로
+ * 한 칸 더할 수 있었고, 실제로 더해 봤다가 걷어냈다 — 실눈 시험의 자리 검사가
+ * 그 순간 빨간불이 됐다(1등 칸이 문서 사각형보다 위로 올라갔다). 이 판은
+ * 여백 등급이고 아래 「넘길 수 있는 업무」가 문서다. 문서 수가 값하는 자리는
+ * 여기가 아니라 **업무마다 붙는 「인계 시작」 화면**이다(handover/new).
  */
 async function HandoverStandby({
   viewer,
@@ -867,7 +866,6 @@ async function HandoverStandby({
 
   const comments = owned.reduce((n, w) => n + w.comment_count, 0);
   const attachments = owned.reduce((n, w) => n + w.attachment_count, 0);
-  const documentCount = owned.reduce((n, w) => n + w.document_count, 0);
   const repeating = owned.filter((w) => w.previous_year).length;
   const departments = new Set(owned.map((w) => w.department_id)).size;
   const overdue = owned.filter((w) => w.derived === "overdue").length;
@@ -942,7 +940,7 @@ async function HandoverStandby({
             <Card variant="quiet" className="mb-6">
               <CardHeader variant="quiet" title="지금 넘긴다면" as="h2" />
               <CardBody variant="quiet">
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-5">
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
                   {/* 꼬리말은 그 숫자가 서식 어디로 가는지만 적는다.
                       「대화」에 「원문 그대로 실린다」고 적었다가 고쳤다 —
                       대화가 전부 실리는 것이 아니라 현안 규칙에 걸린 것만
@@ -951,7 +949,6 @@ async function HandoverStandby({
                   {[
                     ["업무", owned.length, "주담당인 것만"],
                     ["대화", comments, "현안에 걸린 것이 원문 그대로 인용된다"],
-                    ["문서", documentCount, "진행·현안 항목이 서식 1장으로"],
                     ["첨부", attachments, "서식 2장에 목록으로"],
                     ["연간 반복", repeating, "작년 판이 붙어 있다"],
                   ].map(([label, value, hint]) => (
