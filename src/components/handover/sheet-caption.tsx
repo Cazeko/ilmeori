@@ -33,10 +33,14 @@ import { HANDOVER_SHEET_ID } from "@/components/handover/print-sheet";
  * **이 줄은 토글과 무관하게 늘 보인다** — 층이 꺼져 있어도 「이 문서는
  * 기록에서 나왔다」는 사실이 첫 화면에 남는다.
  *
- * ── 종이에는 안 나간다 ─────────────────────────────────────────────────────
+ * ── 종이에는 이 **줄**이 안 나간다. 사실은 나간다 ─────────────────────────
  *
- * 결재에 올라가는 서식에 화면 장치가 섞이면 안 된다. 같은 사실은 서식 맨
- * 아래 「출처」 문단이 종이용 어투로 이미 적고 있다(print-sheet.tsx).
+ * 결재에 올라가는 서식에 토글 같은 화면 장치가 섞이면 안 되므로 이 줄은
+ * `print:hidden` 이다. **다만 숫자까지 종이에서 사라지면 안 된다** — 결재로
+ * 올라가는 것은 종이이고, 「놓친 건 셀 수 있다」가 이 제품이 파는 유일한
+ * 정직성이다. 그래서 같은 사실을 서식 맨 아래 「출처」 문단이 종이용 어투로
+ * 한 문장 적는다(print-sheet.tsx 의 footer). 한동안 이 주석은 그렇게 적혀
+ * 있었지만 실제로는 종이에 그 문장이 **없었다.**
  *
  * ── 토글이 왜 체크박스인가 ────────────────────────────────────────────────
  *
@@ -80,15 +84,38 @@ export function SheetCaption({
       {/* prov-row·prov-toggle 은 globals.css 가 :checked 상태를 그리는 데 쓴다.
           Tailwind 의 `peer-checked:` 로는 안 된다 — 그 변형은 형제만 맞히는데
           단추는 이 줄 **안**에 있고, 체크박스는 서식과 형제로 남아야 한다. */}
-      <div className="prov-row mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-rule-hair pb-3 print:hidden">
+      {/* 아래 선을 긋지 않는다. 이 저장소에서 `border-b` 는 **머리줄**의
+          관용구이고(카드 머리·탭·붙박이 머리줄·표), 이 줄에 그으면 캡션이
+          별지 제12호서식의 **letterhead 처럼** 읽힌다. 이 줄은 서식의 일부가
+          아니라 서식을 설명하는 화면 장치다. 사이는 여백으로 벌린다. */}
+      <div className="prov-row mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 print:hidden">
         <p className="min-w-0 flex-1 text-body-sm leading-relaxed break-keep text-gray-70">
-          규칙이 대화·문서 항목 <Count n={total.seen} />을 들여다보고{" "}
-          <Count n={total.used} />을 이 서식에 실었습니다. 안 실린{" "}
-          <Count n={total.notUsed} />은{" "}
-          <Link href={`#${SCREENING_ANCHOR}`} className="font-bold text-primary">
-            아래 「규칙이 무엇을 걸렀나」
-          </Link>
-          에 있습니다.
+          {/* 「일머리에 남은」이 빠지면 안 된다. 16 = 7 + 9 는 **닫힌 셈**으로
+              읽히는데, 실제로는 결재 전 통화나 방문으로 오간 말이 애초에 이
+              셈 밖에 있다(인터뷰 Q10·Q16·Q27). 그 단서는 스크롤 한참 아래
+              미포착 판에도 적혀 있지만, 첫 화면에 단서 없는 숫자를 세우고
+              단서는 아래에 두는 것은 이 저장소가 P3 에서 지적한 배치다. */}
+          <strong className="font-bold text-gray-90">일머리에 남은</strong>{" "}
+          대화·문서 항목 <Count n={total.seen} /> 중{" "}
+          {/* 「실었다」가 아니라 「본문을 실었다」다. 안 실렸다는 문서 항목도
+              「2. 관련 문서 현황」에는 **제목이** 실려 있다 — 한 낱말 차이로
+              심사장에서 「저기 있잖아요」가 된다. */}
+          <Count n={total.used} />의 본문을 이 서식에 실었습니다.{" "}
+          {total.notUsed > 0 ? (
+            <>
+              {/* 「아래에 **있다**」고 말하지 않는다. 판이 원문으로 내놓는 것은
+                  `missed` 뿐이고 상한에 잘린 `omitted` 는 수로만 남는다.
+                  판이 갈래별로 **세는** 것은 둘을 합친 이 수가 맞다. */}
+              안 실린 <Count n={total.notUsed} />은 아래 <PanelLink />에서
+              갈래별로 셉니다.
+            </>
+          ) : (
+            /* 「안 실린 0건은 아래에 있습니다」로 나가던 갈래다. 판은 같은
+               상태에서 「이번에는 안 실린 것이 없습니다」를 그린다. */
+            <>
+              안 실린 것은 없습니다. 고른 기준은 아래 <PanelLink />에 있습니다.
+            </>
+          )}
         </p>
         <label htmlFor={PROVENANCE_TOGGLE_ID} className="prov-toggle">
           <Quote aria-hidden className="size-4 shrink-0" />
@@ -116,9 +143,29 @@ const PROVENANCE_TOGGLE_ID = "handover-prov";
  * 자릿수가 흔들리지 않게 tabular-nums.
  */
 function Count({ n }: { n: number }) {
+  return <b className="font-bold tabular-nums text-gray-90">{n}건</b>;
+}
+
+/**
+ * 미포착 판으로 가는 링크.
+ *
+ * **파랑을 안 쓴다.** 별지 제12호서식 면은 이 앱에서 유일하게 색이 한 갈래도
+ * 안 든 자리이고(print-sheet.tsx 에 색 유틸리티가 0건이다), 그 면의 맨 위에
+ * 파란 글자를 놓으면 문서에서 처음 눈에 드는 색이 **문서 밖으로 나가라는
+ * 링크**가 된다. 서식 안의 링크 규약을 그대로 쓴다 — 굵은 먹색, hover 에서만
+ * 파랑(draft-lines.tsx 와 같은 모양).
+ *
+ * 판 이름은 고유명이라 줄바꿈에 잘리면 안 된다. `break-keep` 은 어절 안쪽만
+ * 막으므로, 여는 「 와 닫는 」 가 서로 다른 줄에 놓여 파란 덩어리가 링크 둘로
+ * 읽히던 자리다(같은 이유로 미포착 판도 whitespace-nowrap 을 쓴다).
+ */
+function PanelLink() {
   return (
-    <b className="font-bold tabular-nums text-gray-90">
-      {n}건
-    </b>
+    <Link
+      href={`#${SCREENING_ANCHOR}`}
+      className="font-bold whitespace-nowrap text-gray-90 transition-colors duration-150 hover:text-primary"
+    >
+      「규칙이 무엇을 걸렀나」
+    </Link>
   );
 }

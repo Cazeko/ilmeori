@@ -260,7 +260,10 @@ export type ScreeningTotal = {
 export function screeningTotal(
   screening: HandoverDraft["screening"],
 ): ScreeningTotal {
-  const kinds = [screening.comments, screening.sections];
+  // 갈래 이름을 손으로 적지 않는다. `[screening.comments, screening.sections]`
+  // 로 두면 갈래가 하나 느는 날 **타입은 통과하고 화면의 대표 숫자만 조용히
+  // 적게 센다.** 이 숫자는 발표에서 말할 숫자라, 조용히 틀리는 것이 가장 나쁘다.
+  const kinds = Object.values(screening);
   return {
     seen: kinds.reduce((n, s) => n + s.seen, 0),
     used: kinds.reduce((n, s) => n + s.used, 0),

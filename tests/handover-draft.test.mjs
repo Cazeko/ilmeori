@@ -648,12 +648,18 @@ console.log("\n[9] 캡션이 읽는 숫자 — 부풀릴 자리가 없는가");
 // 링크이기 때문이다. 아래 첫 항목이 그 차이를 **실제 값으로** 못박는다.
 // 「지어내지 않는다」를 파는 제품이 자기 성능을 부풀려 세면 그 자리에서 끝난다.
 const total = screeningTotal(draft.screening);
+// 갈래 이름을 여기서 다시 적지 않는다. `comments + sections` 로 적으면 **구현을
+// 그대로 다시 쓴** 셈이라, 갈래가 하나 늘어 화면 숫자만 조용히 적게 세는
+// 사고에 대해 이 항목이 절대 실패하지 못한다. 같은 파일 [4]가 이미
+// Object.entries 로 돌아 새 갈래를 알아본다 — 같은 방식으로 센다.
+const kinds = Object.values(draft.screening);
 
 ok(
-  "캡션의 숫자는 갈래별 숫자를 그대로 더한 값이다",
-  total.seen === draft.screening.comments.seen + draft.screening.sections.seen &&
-    total.used === draft.screening.comments.used + draft.screening.sections.used,
-  `합계 들여다본 것 ${total.seen} · 실은 것 ${total.used}`,
+  "캡션의 숫자는 갈래를 하나도 빠뜨리지 않고 더한 값이다",
+  kinds.length >= 2 &&
+    total.seen === kinds.reduce((n, s) => n + s.seen, 0) &&
+    total.used === kinds.reduce((n, s) => n + s.used, 0),
+  `갈래 ${kinds.length}개 · 합계 들여다본 것 ${total.seen} · 실은 것 ${total.used}`,
 );
 // 갈래마다 성립하는 항등식(seen === used + missed + omitted)은 더한 값에서도
 // 성립해야 한다. 이게 이 함수의 존재 이유다 — 안 맞으면 캡션과 아래 미포착
@@ -669,15 +675,32 @@ ok(
   total.seen > 0 && total.used > 0,
   `들여다본 것 ${total.seen} · 실은 것 ${total.used}`,
 );
-// 「줄에 붙은 ref 를 세면 부풀려진다」를 값으로 남긴다. 이 두 수가 가까워지는
-// 날은 `atWork()` 가 제목 줄에 ref 를 안 달게 된 날이고, 그때는 캡션의 근거를
-// 다시 골라야 한다 — 조용히 지나가면 안 되는 종류의 변화다.
+// 「줄에 붙은 ref 를 세면 부풀려진다」를 값으로 남긴다.
+//
+// ⚠ 처음에는 `refLines > quoteLines * 1.5` 로 적었다. refLines 는 정의상
+// workLines + quoteLines 라서 그 부등식은 `workLines > 0.5 × quoteLines` 로
+// 줄고, 목업을 어떻게 바꿔도 안 뒤집힌다 — **데이터로는 절대 못 깨지는 조건**을
+// 데이터 검사처럼 적어 둔 것이었다. 지금은 실제로 깨질 수 있는 두 가지를 본다.
+//   ① 제목 줄에 ref 가 달려 있다 — 이게 부풀림의 원인이고, 없어지면 캡션의
+//      근거를 다시 골라야 하므로 조용히 지나가면 안 된다
+//   ② 인용 줄이 실제로 있다 — 없으면 아래 비교가 뜻을 잃는다
 const refLines = linked.length;
 const quoteLines = linked.filter((l) => l.ref.kind !== "work").length;
+const workLines = refLines - quoteLines;
 ok(
-  "ref 붙은 줄을 세는 것은 인용을 세는 것과 다르다",
-  refLines > quoteLines * 1.5,
-  `ref 붙은 줄 ${refLines} · 그중 인용 ${quoteLines} (제목 줄이 ${refLines - quoteLines})`,
+  "제목 줄에 ref 가 달려 있다 — 이것이 부풀림의 원인이다",
+  workLines > 0 && quoteLines > 0 && refLines === workLines + quoteLines,
+  `ref 붙은 줄 ${refLines} = 제목 ${workLines} + 인용 ${quoteLines}`,
+);
+// 캡션이 그 부풀린 수를 쓰지 않는다는 것까지 못박는다. 두 수가 우연히 같아지는
+// 인계가 있을 수 있으므로 **값**이 아니라 **출처**로 가른다 — screeningTotal 은
+// blocks 를 아예 안 읽고 screening 만 읽는다.
+ok(
+  "캡션의 수는 줄을 세어 나온 값이 아니다",
+  total.seen === kinds.reduce((n, s) => n + s.seen, 0) &&
+    total.seen !== refLines &&
+    total.used !== refLines,
+  `캡션 ${total.seen}/${total.used} · 줄을 세면 ${refLines}`,
 );
 
 console.log(

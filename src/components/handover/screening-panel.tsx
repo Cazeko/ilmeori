@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { Cog } from "lucide-react";
 import { draftRefHref } from "@/components/handover/draft-lines";
-import type { HandoverDraft, MissedRecord } from "@/lib/handover-draft";
+import {
+  screeningTotal,
+  type HandoverDraft,
+  type MissedRecord,
+} from "@/lib/handover-draft";
 import {
   ISSUE_CUES,
   ISSUE_CUE_NAMES,
@@ -71,7 +75,12 @@ export function ScreeningPanel({
   ];
 
   // 볼 것이 아예 없으면 셀 것도 없다. 0 만 늘어놓으면 규칙이 실패한 것처럼 읽힌다.
-  if (sources.every((s) => s.screened.seen === 0)) return null;
+  //
+  // 판단을 `screeningTotal` 하나로 모은다. 위 캡션도 같은 것을 물어야 하는데
+  // (sheet-caption.tsx), 두 곳이 갈래 목록을 각자 들고 있으면 갈라지는 날이
+  // 온다. 그때 캡션은 그려지고 이 판은 사라져서, **캡션의 링크가 문서에
+  // 없는 앵커를 가리킨다** — 눌러도 아무 일이 안 일어나고 오류도 안 난다.
+  if (screeningTotal(screening).seen === 0) return null;
 
   const missed = sources.flatMap((s) =>
     s.screened.missed.map((m) => ({ ...m, source: s.name })),
@@ -128,7 +137,8 @@ export function ScreeningPanel({
         <strong className="font-bold text-gray-90">
           반드시 놓치는 것이 있습니다.
         </strong>{" "}
-        안 실린 것을 아래에 그대로 둡니다. 서식에 넣을 것은 인계자가 고릅니다.
+        안 실린 것은 위 표에서 갈래별로 세고, 원문도 아래에 그대로 둡니다.
+        서식에 넣을 것은 인계자가 고릅니다.
       </p>
 
       {/* ── 이 판이 셀 수 없는 것 ────────────────────────────────────────────
@@ -141,7 +151,11 @@ export function ScreeningPanel({
           수조차 없다. 세는 코드를 안 만들고 문장 하나로만 인정한다 —
           못 세는 것을 세었다고 말하지 않는 것이 이 판의 규율이고, 세는 척하는
           숫자를 하나 더 만드는 것이 정확히 그 규율을 어기는 일이다. */}
-      <p className="mt-2 text-body-sm leading-relaxed break-keep text-gray-70">
+      {/* 등급을 한 칸 낮춘다. 앞 문단과 클래스가 한 글자도 안 다르면 이 문장은
+          「덧붙인 말」이 아니라 **앞 문단의 네 번째 줄**로 읽힌다 — 실제로
+          그렇게 보였다. 이 판의 주석이 스스로 경계하는 것과 같은 자리다
+          (「확인 장치가 확인 대상보다 무거워진다」). */}
+      <p className="mt-3 text-body-xs leading-relaxed break-keep text-gray-60">
         규칙이 세는 것은 일머리에 남은 기록뿐입니다. 결재 전 통화나 방문으로
         오간 말은 애초에 여기 없어 이 수에도 안 잡힙니다.
       </p>
@@ -149,7 +163,11 @@ export function ScreeningPanel({
       {missed.length > 0 ? (
         <details className="mt-2">
           <summary className="flex min-h-11 cursor-pointer list-none items-center py-2 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
-            서식에 안 실린 것 {missed.length}건 보기
+            {/* 「안 실린 것 N건」이라고 부르면 안 된다 — 위 표와 캡션이 세는
+                「안 실린 것」은 상한에 잘린 것까지 더한 수이고, 여기 목록에
+                있는 것은 원문이 남은 것뿐이다. 같은 이름으로 두 수가 서면
+                둘 중 하나가 틀렸을 때 어느 쪽이 맞는지 알 수 없게 된다. */}
+            안 실린 것의 원문 {missed.length}건 보기
           </summary>
           {/* 요약하지 않는다. 규칙이 왜 안 실었는지 설명하는 것보다, 글을
               그대로 두고 사람이 두 초 만에 넘기게 하는 편이 정직하다.

@@ -3,7 +3,11 @@ import type {
   HandoverNoteWithAuthor,
   Profile,
 } from "@/lib/types";
-import { draftBlockText, type HandoverDraft } from "@/lib/handover-draft";
+import {
+  draftBlockText,
+  screeningTotal,
+  type HandoverDraft,
+} from "@/lib/handover-draft";
 import { DraftLines } from "@/components/handover/draft-lines";
 import { formatDate, formatFullDateTime, todayKST } from "@/lib/format";
 
@@ -81,6 +85,7 @@ export function HandoverPrintSheet({
   const hasNotes = draft.blocks.some(
     (b) => (notesByBlock.get(b.key)?.length ?? 0) > 0,
   );
+  const screened = screeningTotal(draft.screening);
 
   return (
     /* id 는 「문장마다 출처 보기」가 `aria-controls` 로 가리키는 자리다.
@@ -228,8 +233,17 @@ export function HandoverPrintSheet({
           이 초안은 「일머리」에 쌓인 기록(업무 {draft.evidence.works}건 · 문서{" "}
           {draft.evidence.documents}건 · 대화 {draft.evidence.comments}건 · 이력{" "}
           {draft.evidence.activities}건 · 첨부 {draft.evidence.attachments}건)
-          에서 서식 순서대로 뽑아 정리한 것입니다. 항목별 근거는 화면에서 확인할 수
-          있습니다. 사람이 확인하고 보태야 하는 초안이며, 그대로 제출하는 문서가
+          에서 서식 순서대로 뽑아 정리한 것입니다.{" "}
+          {/* ── 놓친 것을 종이에서도 센다 ────────────────────────────────────
+              「서식 순서대로 뽑아 정리한 것」만 적어 두면 **다 실었다는 쪽으로**
+              읽힌다. 화면에는 미포착 판이 있어서 그 오해가 안 생기는데, 결재로
+              올라가는 것은 종이다. 이 제품이 파는 유일한 정직성(「놓친 건 셀 수
+              있고 지어낸 건 셀 수 없다」)이 종이에서만 사라지고 있었다.
+              한 문장이면 된다 — 목록은 화면의 일이고, 종이는 수만 밝힌다. */}
+          {screened.notUsed > 0
+            ? `규칙은 일머리에 남은 대화·문서 항목 ${screened.seen}건을 들여다보고 그중 ${screened.used}건의 본문을 실었으며, 안 실린 ${screened.notUsed}건은 이 종이에 없습니다. 무엇을 기준으로 골랐고 무엇이 안 실렸는지는 화면에서 항목별로 확인할 수 있습니다.`
+            : `규칙은 일머리에 남은 대화·문서 항목 ${screened.seen}건을 들여다보고 그 전부의 본문을 실었습니다. 무엇을 기준으로 골랐는지는 화면에서 확인할 수 있습니다.`}{" "}
+          사람이 확인하고 보태야 하는 초안이며, 그대로 제출하는 문서가
           아닙니다.
           {/* 보탠 글이 있을 때만 적는다. 없는데 적어 두면 종이만 든 사람이
               어딘가에 사람이 쓴 문장이 있다고 여기고 찾게 된다. */}

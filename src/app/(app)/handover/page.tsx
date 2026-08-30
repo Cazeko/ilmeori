@@ -33,12 +33,9 @@ import { BlockNotes } from "@/components/handover/block-notes";
 import { DraftLines } from "@/components/handover/draft-lines";
 import { ScreeningPanel } from "@/components/handover/screening-panel";
 import { StatusBadge } from "@/components/status-badge";
-import {
-  formatDate,
-  formatDueLabel,
-  formatFullDateTime,
-  josa,
-} from "@/lib/format";
+// 생성 시각을 화면에서 따로 찍던 자리가 사라졌다 — 서식 맨 아래 「출처」 문단이
+// 같은 값을 이미 적고 있고, 그 서식은 이제 인쇄 뒤가 아니라 화면에 서 있다.
+import { formatDate, formatDueLabel, josa } from "@/lib/format";
 import {
   getDepartment,
   getHandoverFor,
@@ -214,68 +211,52 @@ export default async function HandoverPage({
               심사에서 모델 이름을 묻는 한 마디에 무너진다. 자동으로 뽑았다는 것은
               그 자체로 충분히 설득력 있는 사실이고, 근거를 붙일 수 있다는 점에서
               오히려 더 강한 주장이다. */}
-            <Notice
-              tone="ai"
-              title="이 초안은 사람이 쓰지 않았습니다"
-              className="mb-4"
-            >
-              {/* 겉에 남는 것은 두 문장뿐이다. 예전에는 여기가 472자였고,
-                  초안 카드가 250px 아래로 밀렸다. 두 번째로 이 화면을 여는
-                  사람에게 그 문단은 비용만 남는다. 다만 「대화에서도 가져온다」는
-                  이 제품의 핵심 주장이라 접지 않고 겉에 둔다. */}
-              쌓인 기록(업무 {draft.evidence.works}건 · 문서{" "}
-              {draft.evidence.documents}건 · 대화 {draft.evidence.comments}건 ·
-              이력 {draft.evidence.activities}건 · 첨부{" "}
-              {draft.evidence.attachments}건)에서 서식 순서대로 뽑았습니다.{" "}
-              <strong className="font-bold text-gray-90">
-                「현안사항」은 문서만이 아니라 대화에서도 가져오며,
-              </strong>{" "}
-              근거를 붙일 수 없는 항목은 채우지 않고 비워 둡니다.
-              {/* 생성 시각·생성 방식은 감사 기록이다. 접으면 안 된다. */}
-              {handover.generated_at ? (
-                <>
-                  <br />
-                  생성 {formatFullDateTime(handover.generated_at)} · 생성 방식{" "}
-                  {handover.ai_model ?? "rule-based/v1"}
-                </>
-              ) : null}
-              <details className="mt-2">
-                <summary className="cursor-pointer text-body-xs font-bold text-gray-70">
-                  어떻게 뽑았는지 더 보기
-                </summary>
-                <div className="mt-2 flex flex-col gap-2 text-body-sm leading-relaxed break-keep text-gray-70">
+            {/* ── 왜 대화까지 보는가 ────────────────────────────────────────
+              한동안 이 자리가 **주황 채움 판**이었고 제목이 「이 초안은 사람이
+              쓰지 않았습니다」였다. 화면에서 가장 강한 색이 증명이 아니라
+              **주장 문장**에 쓰이고 있었다는 뜻이다. 그리고 이 화면은 파랑·
+              주황·빨강 세 갈래로 이미 색 예산을 넘겨 있었다(DESIGN.md §2 —
+              무채색 + 최대 둘). 주장에 쓰던 예산을 회수한다.
+
+              그 판이 하던 말의 절반은 **서식 맨 아래 「출처」 문단이 이미
+              하고 있었다** — 쌓인 기록의 수, 생성 방식과 생성 시각, 「그대로
+              제출하는 문서가 아니다」. 서식이 인쇄 뒤에 숨어 있던 시절에는
+              그것이 되풀이가 아니었지만, 지금은 같은 화면에서 같은 말을 두 번
+              하는 것이다. 되풀이는 지우고 **여기서만 할 수 있는 말**만 남긴다.
+
+              등급은 여백이다 — 채움도 네 변도 없이 왼쪽 선 하나
+              (미포착 판·대기 화면이 이미 쓰는 모양, DESIGN.md §17.3). */}
+            <section className="mb-4 flex gap-2 border-l border-l-rule-hair py-2 pl-3">
+              <Cog aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
+              <div className="flex flex-col gap-2 text-body-sm leading-relaxed break-keep text-gray-70">
+                <p>
+                  <strong className="font-bold text-gray-90">
+                    「현안사항」은 문서만이 아니라 대화에서도 가져옵니다.
+                  </strong>{" "}
+                  아직 답이 없는 질문이나 서로 어긋난 일정은 문서에 정리되기
+                  전이라 대화에만 남아 있고, 인계 때 가장 먼저 사라지는 것이
+                  그것이기 때문입니다. 근거를 붙일 수 없는 항목은 채우지 않고
+                  비워 둡니다.
+                </p>
+                {/* 「칸을 뒀습니다」는 그 칸이 실제로 보이는 사람에게만 하는 말이다.
+                    인수자가 볼 때·실행이 끝난 뒤·데모 모드에서는 BlockNotes가
+                    입력칸을 그리지 않으므로, 없는 칸을 있다고 적으면 안 된다. */}
+                {canWriteNotes ? (
                   <p>
-                    아직 답이 없는 질문이나 서로 어긋난 일정은 문서에 정리되기
-                    전이라 대화에만 남아 있고, 인계 때 가장 먼저 사라지는 것이
-                    그것이기 때문입니다. 없는 내용을 지어내지 않습니다.
+                    규칙이 뽑은 문단은 고쳐 쓰지 못하게 두었습니다. 덮어쓰면 그
+                    문장이 근거를 잃고, 옆에 붙은 근거 표시가 거짓이 되기
+                    때문입니다. 보탠 글은 누가 언제 적었는지와 함께 「인계자
+                    보충」으로 따로 표시하며, 인쇄본에도 그렇게 나옵니다.
                   </p>
+                ) : (
                   <p>
-                    그대로 제출하는 문서가 아니라{" "}
-                    <strong className="font-bold text-gray-90">
-                      인계자가 확인하고 보태야 하는 초안
-                    </strong>
-                    입니다. 항목마다 어느 기록에서 나왔는지 아래에 적었습니다.
+                    인계자가 보탠 글이 있으면 규칙이 뽑은 문단과 섞지 않고
+                    「인계자 보충」으로 따로 표시합니다. 누가 언제 적었는지가
+                    함께 남고, 인쇄본에도 그렇게 나옵니다.
                   </p>
-                  {/* 「칸을 뒀습니다」는 그 칸이 실제로 보이는 사람에게만 하는 말이다.
-                      인수자가 볼 때·실행이 끝난 뒤·데모 모드에서는 BlockNotes가
-                      입력칸을 그리지 않으므로, 없는 칸을 있다고 적으면 안 된다. */}
-                  {canWriteNotes ? (
-                    <p>
-                      규칙이 뽑은 문단은 고쳐 쓰지 못하게 두었습니다. 덮어쓰면
-                      그 문장이 근거를 잃고, 옆에 붙은 근거 표시가 거짓이 되기
-                      때문입니다. 보탠 글은 누가 언제 적었는지와 함께 「인계자
-                      보충」으로 따로 표시하며, 인쇄본에도 그렇게 나옵니다.
-                    </p>
-                  ) : (
-                    <p>
-                      인계자가 보탠 글이 있으면 규칙이 뽑은 문단과 섞지 않고
-                      「인계자 보충」으로 따로 표시합니다. 누가 언제 적었는지가
-                      함께 남고, 인쇄본에도 그렇게 나옵니다.
-                    </p>
-                  )}
-                </div>
-              </details>
-            </Notice>
+                )}
+              </div>
+            </section>
 
             {/* ── 인쇄 ────────────────────────────────────────────────────────
               "형식이 hwp냐"보다 "이걸 그대로 결재에 올릴 수 있느냐"가 먼저다.
@@ -308,9 +289,12 @@ export default async function HandoverPage({
                 }
               />
               <CardBody className="flex flex-col gap-6">
-                {/* 「1-다. 현안사항」을 읽기 전에, 그 칸을 채운 규칙이 대화에서
-                    무엇을 놓쳤는지 먼저 밝힌다. 세는 범위는 **대화뿐**이다 —
-                    다른 칸이 무엇을 흘리는지는 여기서 세지 않는다.
+                {/* 서식 항목을 읽기 전에, 그 칸을 채운 규칙이 무엇을 놓쳤는지
+                    먼저 밝힌다. 세는 범위는 **대화와 문서 항목 둘**이다 —
+                    한동안 대화뿐이었고 이 주석도 그렇게 적혀 있었지만, 문서
+                    항목을 같은 규칙으로 세게 되면서 판 제목도 「규칙이 무엇을
+                    걸렀나」로 넓어졌다(screening-panel.tsx 의 경위 주석).
+                    서식 위 캡션이 세는 수와 같은 수다.
                     이 판은 서식이 아니므로 종이에는 나가지 않는다. */}
                 <ScreeningPanel screening={draft.screening} />
 
@@ -338,16 +322,26 @@ export default async function HandoverPage({
                       <p
                         className={cn(
                           "mt-2 flex items-start gap-2 rounded-sm border px-4 py-3 text-body-sm break-keep text-gray-70",
+                          // 「사람이 채워야 하는 칸」은 주황 경고였다. 두 가지가
+                          // 틀어져 있었다. ① 이 화면은 이미 색 갈래 셋을 쓰고
+                          // 있었다(DESIGN.md §2 는 최대 둘). ② 비어 있는 칸은
+                          // 사고가 아니라 **설계**다 — 규칙이 채울 수 없는 칸을
+                          // 지어내지 않고 비워 둔 것이고, 그건 경고가 아니라
+                          // 서식이 원래 사람 손을 기다리는 자리라는 뜻이다.
+                          //
+                          // 그래서 먹색 파선이다. 종이의 손으로 적는 빈칸
+                          // (print-sheet.tsx 의 border border-black)과 같은
+                          // 어휘이고, 색 갈래를 한 개도 안 쓴다.
                           filledByHand
                             ? "border-rule-frame bg-gray-5"
-                            : "border-warning/30 bg-warning-bg",
+                            : "border-dashed border-rule-head",
                         )}
                       >
                         <PenLine
                           aria-hidden
                           className={cn(
                             "mt-1 size-4 shrink-0",
-                            filledByHand ? "text-gray-60" : "text-warning",
+                            filledByHand ? "text-gray-40" : "text-gray-90",
                           )}
                         />
                         <span>
