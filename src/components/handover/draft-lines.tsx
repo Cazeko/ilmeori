@@ -66,6 +66,15 @@ export function DraftLines({ lines }: { lines: DraftParagraph }) {
           {line.ref ? (
             <Link
               href={draftRefHref(line.ref)}
+              /* 출처 층이 무엇을 비출지를 **데이터가 정한다.**
+                 업무 제목 줄에도 `ref` 가 붙어 있지만 그건 출처가 아니라
+                 **이동 링크**다. 둘을 한 덩이로 세면 「출처 붙은 문장」이 두 배
+                 가까이 부풀려지고(handover-draft.ts 의 screeningTotal 주석),
+                 화면에서 한 덩이로 비추면 같은 거짓말을 눈으로 한다.
+                 그래서 갈래를 그대로 실어 두고 CSS 가 인용만 고른다
+                 (globals.css 의 `#handover-prov:checked ~ .sheet [data-src]`).
+                 값까지 싣는 것은 서랍이 무엇을 열지 알아야 하기 때문이다. */
+              data-src={line.ref.kind === "work" ? undefined : line.ref.kind}
               className="font-bold text-gray-90 transition-colors duration-150 hover:text-primary"
             >
               {line.text}

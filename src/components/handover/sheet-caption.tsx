@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Quote } from "lucide-react";
 import { screeningTotal, type HandoverDraft } from "@/lib/handover-draft";
 import { SCREENING_ANCHOR } from "@/components/handover/screening-panel";
+import { HANDOVER_SHEET_ID } from "@/components/handover/print-sheet";
 
 /**
  * 서식 위의 한 줄 — **이 문서가 무엇으로 만들어졌는지.**
@@ -35,6 +37,17 @@ import { SCREENING_ANCHOR } from "@/components/handover/screening-panel";
  *
  * 결재에 올라가는 서식에 화면 장치가 섞이면 안 된다. 같은 사실은 서식 맨
  * 아래 「출처」 문단이 종이용 어투로 이미 적고 있다(print-sheet.tsx).
+ *
+ * ── 토글이 왜 체크박스인가 ────────────────────────────────────────────────
+ *
+ * `useState` 를 쓰는 클라이언트 컴포넌트로는 **만들 수 없다.**
+ * `print-sheet.tsx` 는 `handover-draft.ts` 를 거쳐 `server-only` 를 물고
+ * 있어서, 그 서식을 감싸는 컴포넌트에 `"use client"` 를 붙이면 빌드가 깨진다.
+ * 팀이 「이 검토 화면에는 자바스크립트를 써도 된다」고 정한 뒤에도 이 자리는
+ * 그대로다 — 철학이 아니라 **기술 제약**이기 때문이다.
+ *
+ * 체크박스 하나 + `globals.css` 규칙 몇 줄이면 끝난다. 얻는 것: 하이드레이션
+ * 0 · 자바스크립트 꺼져도 동작 · 인쇄 덮어쓰기가 한 줄.
  */
 export function SheetCaption({
   screening,
@@ -49,22 +62,51 @@ export function SheetCaption({
   if (total.seen === 0) return null;
 
   return (
-    <div className="mb-5 border-b border-rule-hair pb-3 print:hidden">
-      <p className="text-body-sm leading-relaxed break-keep text-gray-70">
-        규칙이 대화·문서 항목 <Count n={total.seen} />을 들여다보고{" "}
-        <Count n={total.used} />을 이 서식에 실었습니다. 안 실린{" "}
-        <Count n={total.notUsed} />은{" "}
-        <Link
-          href={`#${SCREENING_ANCHOR}`}
-          className="font-bold text-primary"
-        >
-          아래 「규칙이 무엇을 걸렀나」
-        </Link>
-        에 있습니다.
-      </p>
-    </div>
+    <>
+      {/* 이 체크박스는 **서식과 형제여야 한다.** CSS 가
+          `#handover-prov:checked ~ .sheet [data-src]` 로 층을 켜기 때문이다.
+          래퍼 안으로 한 겹만 들어가도 그 선택자가 조용히 아무것도 안 맞힌다.
+
+          기본값은 꺼짐이다(팀 결정) — 정부 관계자 심사위원이 처음 봐야 하는
+          것은 깨끗한 법정 서식이라는 판단이다. 그 대신 위 캡션이 꺼진 상태에서도
+          늘 보이고, 단추 이름이 「비추기」가 아니라 **무엇이 일어나는지 말하는
+          동사**다. 둘 다 그 결정에 딸려 온 방어다. */}
+      <input
+        type="checkbox"
+        id={PROVENANCE_TOGGLE_ID}
+        className="sr-only"
+        aria-controls={HANDOVER_SHEET_ID}
+      />
+      {/* prov-row·prov-toggle 은 globals.css 가 :checked 상태를 그리는 데 쓴다.
+          Tailwind 의 `peer-checked:` 로는 안 된다 — 그 변형은 형제만 맞히는데
+          단추는 이 줄 **안**에 있고, 체크박스는 서식과 형제로 남아야 한다. */}
+      <div className="prov-row mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-rule-hair pb-3 print:hidden">
+        <p className="min-w-0 flex-1 text-body-sm leading-relaxed break-keep text-gray-70">
+          규칙이 대화·문서 항목 <Count n={total.seen} />을 들여다보고{" "}
+          <Count n={total.used} />을 이 서식에 실었습니다. 안 실린{" "}
+          <Count n={total.notUsed} />은{" "}
+          <Link href={`#${SCREENING_ANCHOR}`} className="font-bold text-primary">
+            아래 「규칙이 무엇을 걸렀나」
+          </Link>
+          에 있습니다.
+        </p>
+        <label htmlFor={PROVENANCE_TOGGLE_ID} className="prov-toggle">
+          <Quote aria-hidden className="size-4 shrink-0" />
+          문장마다 출처 보기
+        </label>
+      </div>
+    </>
   );
 }
+
+/**
+ * 체크박스의 id.
+ *
+ * `globals.css` 가 이 문자열을 **선택자로 그대로 적어 두고 있다**
+ * (`#handover-prov:checked ~ .sheet …`). 여기를 고치면 그 파일도 같이 고쳐야
+ * 하고, 안 고치면 화면은 멀쩡한데 토글만 아무 일도 안 한다.
+ */
+const PROVENANCE_TOGGLE_ID = "handover-prov";
 
 /**
  * 숫자 하나.

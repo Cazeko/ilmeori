@@ -602,6 +602,92 @@
     font-size: var(--text-body-xs);
     color: var(--color-gray-60);
   }
+
+  /* ── 출처 층 — 「문장마다 출처 보기」 ────────────────────────────────────
+
+     이 제품의 주장은 「인계서의 문장마다 어느 기록에서 나왔는지가 붙는다」인데,
+     화면에서 그 출처는 오랫동안 **본문과 같은 크기·같은 굵기·같은 색**이었다.
+     증명이 타이포그래피상 존재하지 않았다는 뜻이다.
+
+     체크박스 하나와 아래 규칙 몇 줄이 그 층의 전부다. 클라이언트 컴포넌트가
+     아니다 — print-sheet.tsx 는 handover-draft.ts 를 거쳐 `server-only` 를 물고
+     있어서 그 서식을 감싸는 컴포넌트에 `"use client"` 를 붙이면 **빌드가
+     깨진다.** 팀이 이 화면에 자바스크립트를 허용한 뒤에도 이 자리는 그대로다.
+
+     ── 무엇을 비추나 ─────────────────────────────────────────────────────
+     `data-src` 가 붙은 줄만. 업무 제목 줄에도 링크가 붙어 있지만 그건 출처가
+     아니라 **이동 링크**다(draft-lines.tsx). 둘을 한 덩이로 비추면, 캡션
+     숫자를 부풀리는 것과 똑같은 거짓말을 눈으로 하는 셈이 된다.
+
+     ── 왜 색이 아니라 선인가 ──────────────────────────────────────────────
+     이 화면은 이미 색 갈래를 다 쓰고 있고(DESIGN.md §2 는 무채색 + 최대 둘),
+     「강조색 왼쪽 세로선」은 이 저장소가 AI 슬롭 8번으로 금지한 모양이다.
+     무채색 선 하나면 예산을 한 갈래도 안 쓴다. 파랑은 링크에만 남는다 —
+     인용 꼬리표가 `<a>` 라서 hover 에서만 파랗게 뜬다.
+
+     ── 왜 1px 인가 ───────────────────────────────────────────────────────
+     2px 먹선은 **이미 뜻이 있다.** 바로 위 `.sheet .note` 의 왼쪽 2px 은
+     「사람이 보탠 글」이고, 그 뜻은 종이에도 그대로 인쇄된다. 같은 굵기에
+     다른 뜻을 주면 결재 문서에서 둘을 구별할 수 없다.
+     그래서 굵기로 가른다 — **2px = 사람이 적었다 · 1px = 기록에서 옮겼다.**
+     (rule-hair(1.47:1)가 아니라 rule-head 먹색을 쓴다. 프로젝터 3m 에서
+      1.47:1 짜리 실선은 없는 것과 같다) */
+  #handover-prov:checked ~ .sheet [data-src] {
+    /* 인라인 그대로면 선이 **글자 높이만큼만** 그어진다. inline-block 이면
+       줄 상자 전체를 지나가고, 긴 꼬리표가 두 줄로 접힐 때도 한 줄기로 남는다.
+       꺼짐 상태에는 이 선언이 없다 — 꺼진 서식은 예전과 한 픽셀도 다르지 않다. */
+    display: inline-block;
+    border-left: 1px solid var(--color-rule-head);
+    padding-left: 12px;
+  }
+
+  /* ── 토글 단추 ────────────────────────────────────────────────────────
+     체크박스는 화면 밖에 있고(sr-only) 사람이 보는 것은 이 `<label>` 이다.
+     그래서 Tailwind 유틸리티가 아니라 여기에 적는다 — 켜짐 상태를 같은 층
+     (@layer components)에서 덮어써야 순서로 이길 수 있고, 유틸리티로 바탕색을
+     주면 켜짐 규칙이 utilities 층에 눌려 **아무 일도 안 한다.** */
+  .prov-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    /* 손가락 표적 44px(2.5.5). 이 앱 단추의 md 치수와 같다. */
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--color-gray-50);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-gray-80);
+    font-size: var(--text-body-sm);
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 150ms,
+      border-color 150ms,
+      color 150ms;
+  }
+  .prov-toggle:hover {
+    background: var(--color-gray-5);
+  }
+
+  /* 켜져 있다는 것을 단추 자신이 말한다. 색이 아니라 **뒤집기**(먹 바탕 +
+     흰 글자)라 색 예산에 안 잡힌다 — 상태 배지가 이미 쓰는 수법이다.
+     체크박스가 화면 밖이므로 이 뒤집기가 상태의 유일한 시각 표시다. */
+  #handover-prov:checked ~ .prov-row .prov-toggle {
+    border-color: var(--color-gray-90);
+    background: var(--color-gray-90);
+    color: var(--color-gray-0);
+  }
+  #handover-prov:checked ~ .prov-row .prov-toggle:hover {
+    background: var(--color-gray-80);
+  }
+
+  /* 키보드로 왔을 때 테두리가 뜨는 것은 화면 밖 체크박스가 아니라 이 단추다.
+     전역 :focus-visible 규칙과 같은 값을 쓴다. */
+  #handover-prov:focus-visible ~ .prov-row .prov-toggle {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
 }
 
 @media print {
@@ -706,9 +792,31 @@
     text-align: left;
   }
 
-  /* 종이에서 파란 밑줄은 누를 수 없는 장식일 뿐이다. */
+  /* ── 종이는 출처 층을 모른다 ──────────────────────────────────────────
+     이 서식의 문단은 이제 `<DraftLines>` 가 그리고, 화면에서는 인용 꼬리표가
+     굵은 링크이며 토글을 켜면 왼쪽에 먹색 빗살이 선다. **종이에는 그중 아무것도
+     나가면 안 된다.**
+
+     이유가 두 가지다.
+       ① 인쇄된 앵커는 읽는 사람에게 아무것도 아니다. 파란 글자와 굵기는
+          결재에 올라가는 문서에서 그냥 오염이다.
+       ② 화면 상태(체크박스가 켜져 있느냐)가 종이로 새면, 이 저장소가 지켜 온
+          「화면·종이·파일이 같은 모델에서 나온다」가 **그 순간 거짓이 된다.**
+          같은 서식을 두 사람이 뽑았는데 한 장에만 선이 있으면 그건 다른 문서다.
+
+     그래서 여기서 되돌린다. 이 블록은 @layer 밖이라 Tailwind 유틸리티보다
+     뒤에 적용되고, 화면 쪽 규칙(@layer components)도 이긴다 — 즉 **화면에서
+     무엇을 하든 종이는 여기서 정해진다.** 위 .sheet .note 주석과 같은 근거다. */
   .sheet a {
     color: #000;
     text-decoration: none;
+    /* 굵기까지 되돌린다. 색만 되돌리면 업무 제목과 인용 꼬리표가 종이에서
+       굵게 찍혀, 링크를 없앤 예전 종이와 다른 문서가 된다. */
+    font-weight: 400;
+  }
+  .sheet [data-src] {
+    display: inline;
+    border-left: 0;
+    padding-left: 0;
   }
 }

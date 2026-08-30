@@ -494,6 +494,117 @@ ok(
   withNoteText.includes("인계자 보충」은 규칙이 뽑은 것이 아니라"),
 );
 
+// ---------------------------------------------------------------------------
+console.log("\n[9] 출처 층이 비추는 것 — 인용이지 이동 링크가 아니다");
+// ---------------------------------------------------------------------------
+
+// 서식의 줄에는 두 갈래의 링크가 있다.
+//
+//   업무 제목 줄  `· 2026년 … 용역`   → 그 업무로 **가는** 링크
+//   인용 꼬리표   `  [대화 — …]`      → 이 문장이 **어디서 왔는지**
+//
+// 둘을 한 덩이로 세면 「출처 붙은 문장」이 두 배 가까이 부풀려진다
+// (handover-draft.ts 의 screeningTotal 주석). 화면에서 한 덩이로 비추면 같은
+// 거짓말을 눈으로 하는 것이라, 이 구분은 데이터에서 CSS 까지 그대로 내려가야
+// 한다. `data-src` 가 그 통로다.
+const marked = [...html.matchAll(/<a\b[^>]*?data-src="([a-z]+)"/g)].map(
+  (m) => m[1],
+);
+const anchors = [...html.matchAll(/<a\b[^>]*>/g)].map((m) => m[0]);
+const refs = draft.blocks
+  .flatMap((b) => (b.needsHuman ? [] : b.paragraphs))
+  .flat()
+  .filter((l) => l.ref);
+const quoteRefs = refs.filter((l) => l.ref.kind !== "work");
+
+ok(
+  "인용 줄만 표시가 붙는다",
+  marked.length === quoteRefs.length && quoteRefs.length > 0,
+  `표시 ${marked.length}개 · 인용 ${quoteRefs.length}개`,
+);
+ok(
+  "업무 제목 줄에는 안 붙는다",
+  anchors.length === refs.length &&
+    anchors.length - marked.length === refs.length - quoteRefs.length,
+  `링크 ${anchors.length}개 · 그중 표시 ${marked.length}개 · 데이터의 ref ${refs.length}개`,
+);
+// 갈래 이름을 그대로 싣는다 — 서랍이 무엇을 열지 알아야 하고, 화면을 열어 본
+// 사람이 개발자 도구에서 확인할 수 있어야 한다.
+ok(
+  "표시에는 갈래가 그대로 실린다",
+  marked.every((k) => ["comment", "section", "doc"].includes(k)) &&
+    !marked.includes("work"),
+  [...new Set(marked)].join(", "),
+);
+
+// ---------------------------------------------------------------------------
+console.log("\n[10] 종이는 출처 층을 모른다 — 인쇄가 되돌리는 것을 센다");
+// ---------------------------------------------------------------------------
+
+/**
+ * 규칙 하나의 선언을 속성 이름 집합으로 읽는다.
+ *
+ * 화면 쪽 규칙에 속성을 하나 더하면서 인쇄 쪽 되돌림을 빠뜨리는 것이 이
+ * 구조에서 가장 쉬운 실수다. 그때 새는 것은 화면이 아니라 **결재에 올라가는
+ * 종이**이고, 아무도 Ctrl+P 를 눌러 보지 않으면 끝까지 모른다.
+ * 그래서 「같은 속성을 인쇄에서도 건드리는가」를 센다.
+ */
+function declaredProps(cssText, selector) {
+  const at = cssText.indexOf(selector);
+  if (at < 0) return null;
+  const open = cssText.indexOf("{", at);
+  const close = cssText.indexOf("}", open);
+  if (open < 0 || close < 0) return null;
+  return new Set(
+    cssText
+      .slice(open + 1, close)
+      .split(";")
+      .map((d) => d.split(":")[0].trim())
+      .filter(Boolean),
+  );
+}
+
+const onProps = declaredProps(css, "#handover-prov:checked ~ .sheet [data-src]");
+const printBlock = css.slice(css.indexOf("@media print"));
+const offProps = declaredProps(printBlock, ".sheet [data-src]");
+ok(
+  "화면 규칙과 인쇄 규칙을 둘 다 찾았다",
+  onProps !== null && offProps !== null,
+  `화면 ${onProps ? [...onProps].join(",") : "없음"} / 인쇄 ${offProps ? [...offProps].join(",") : "없음"}`,
+);
+const notReset = [...(onProps ?? [])].filter((p) => !offProps?.has(p));
+ok(
+  "켜짐이 바꾸는 속성을 인쇄가 하나도 빠짐없이 되돌린다",
+  (onProps?.size ?? 0) > 0 && notReset.length === 0,
+  notReset.join(", "),
+);
+// 링크는 색만 되돌리면 안 된다. 굵기를 두면 업무 제목과 인용 꼬리표가 종이에
+// 굵게 찍혀, 링크가 없던 예전 종이와 다른 문서가 된다.
+const printLink = declaredProps(printBlock, ".sheet a");
+ok(
+  "인쇄에서 링크는 색도 굵기도 본문으로 돌아간다",
+  printLink?.has("color") && printLink?.has("font-weight"),
+  [...(printLink ?? [])].join(", "),
+);
+// 아는 답을 먹여 본다. 위 세는 방식이 헛돌면 무엇을 빠뜨려도 통과한다.
+const CONTROL_CSS = `
+@layer components {
+  #handover-prov:checked ~ .sheet [data-src] { display: inline-block; border-left: 1px solid #000; background: pink; }
+}
+@media print {
+  .sheet [data-src] { display: inline; border-left: 0; }
+}`;
+const cOn = declaredProps(CONTROL_CSS, "#handover-prov:checked ~ .sheet [data-src]");
+const cOff = declaredProps(
+  CONTROL_CSS.slice(CONTROL_CSS.indexOf("@media print")),
+  ".sheet [data-src]",
+);
+ok(
+  "이 셈이 빠뜨린 속성을 실제로 알아본다",
+  [...cOn].filter((p) => !cOff.has(p)).join(",") === "background",
+  `[${[...cOn].filter((p) => !cOff.has(p)).join(",")}]`,
+);
+
 console.log(
   `\n${fails.length === 0 ? "전부 통과" : "실패"} — ${pass}건 통과, ${fails.length}건 실패`,
 );

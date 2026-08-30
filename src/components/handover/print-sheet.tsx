@@ -3,11 +3,8 @@ import type {
   HandoverNoteWithAuthor,
   Profile,
 } from "@/lib/types";
-import {
-  draftBlockText,
-  draftParagraphText,
-  type HandoverDraft,
-} from "@/lib/handover-draft";
+import { draftBlockText, type HandoverDraft } from "@/lib/handover-draft";
+import { DraftLines } from "@/components/handover/draft-lines";
 import { formatDate, formatFullDateTime, todayKST } from "@/lib/format";
 
 /**
@@ -38,6 +35,15 @@ import { formatDate, formatFullDateTime, todayKST } from "@/lib/format";
 function who(p: Pick<Profile, "name" | "position">) {
   return [p.name, p.position].filter(Boolean).join(" ");
 }
+
+/**
+ * 서식 자체의 id.
+ *
+ * 「문장마다 출처 보기」 체크박스가 `aria-controls` 로 이 값을 가리킨다.
+ * 두 파일이 같은 문자열을 손으로 적으면 한쪽만 고치는 날이 오고, 그때 조용히
+ * 끊기는 것은 화면이 아니라 **보조기술 사용자에게 가는 설명**이다.
+ */
+export const HANDOVER_SHEET_ID = "handover-sheet";
 
 export function HandoverPrintSheet({
   draft,
@@ -77,7 +83,10 @@ export function HandoverPrintSheet({
   );
 
   return (
-    <article className="sheet">
+    /* id 는 「문장마다 출처 보기」가 `aria-controls` 로 가리키는 자리다.
+       보조기술 사용자에게 그 체크박스가 **무엇을** 켜고 끄는지 알려 주는 것이
+       이 한 글자의 전부다(sheet-caption.tsx). */
+    <article id={HANDOVER_SHEET_ID} className="sheet">
       <h1 className="text-center font-bold tracking-[0.3em]">업무인계·인수서</h1>
 
       <table className="avoid-break mt-6">
@@ -151,12 +160,22 @@ export function HandoverPrintSheet({
                 ) : null}
               </>
             ) : (
-              /* 종이에는 링크가 없다. 인쇄된 앵커는 읽는 사람에게 아무것도
-                 아니고, 이 장은 결재로 올라간다. 그래서 종이는 문단을 글자로
-                 눕히는 함수 하나만 쓴다. */
+              /* ── 여기 「종이에는 링크가 없다」라고 적혀 있었다 ─────────────
+                 그 결정은 이 서식이 **인쇄 전용**이던 시절의 것이다. 지금
+                 이 서식은 화면에 그대로 서 있고(globals.css 의 .sheet),
+                 화면에서 근거를 누를 수 있는 자리가 여기뿐이다.
+
+                 그래서 되돌린다 — 다만 **말없이 되돌리지 않는다.** 조건 둘을
+                 코드로 박았다.
+                   ① 글자는 한 자도 안 바뀐다. `draftParagraphText` 와
+                      `<DraftLines>` 가 같은 `line.text` 를 쓰고, 그 동일성을
+                      tests/handover-sheet.test.mjs [2]·[5] 가 대조한다.
+                   ② 종이에서는 링크의 색·굵기가 본문으로 돌아가고 출처 층은
+                      강제로 꺼진다(globals.css 의 @media print).
+                      **결재에 올라가는 종이는 예전과 똑같이 나온다.** */
               block.paragraphs.map((p, i) => (
                 <p key={i} className="mt-1 whitespace-pre-line">
-                  {draftParagraphText(p)}
+                  <DraftLines lines={p} />
                 </p>
               ))
             )}
