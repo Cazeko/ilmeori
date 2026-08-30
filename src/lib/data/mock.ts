@@ -31,7 +31,7 @@ import {
 import { departments, profiles } from "@/lib/mock/org";
 import { getDemoState, type DemoState } from "@/lib/demo-state";
 import { searchTerm } from "@/lib/search-term";
-import { ACCESS_LOG_LIMIT, WORKS_LIMIT } from "./types";
+import { ACCESS_LOG_LIMIT, WORKS_LIMIT, byUrgency } from "./types";
 import type {
   ApprovalSummary,
   HandoverView,
@@ -267,19 +267,6 @@ export async function countOverdueWorks(
   return matching(viewer, { ...filter, overdueOnly: true }, state).length;
 }
 
-/**
- * 정렬 기준: 지연 → 마감 임박 → 마감 없음.
- * 목록의 맨 위는 "지금 손대야 하는 일"이어야 한다. 최근 수정순으로 두면
- * 방치된 업무가 영영 아래로 밀려 내려간다.
- */
-function byUrgency(a: WorkListItem, b: WorkListItem) {
-  if (a.derived === "overdue" && b.derived !== "overdue") return -1;
-  if (b.derived === "overdue" && a.derived !== "overdue") return 1;
-  if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
-  if (a.due_date) return -1;
-  if (b.due_date) return 1;
-  return b.updated_at.localeCompare(a.updated_at);
-}
 
 export async function getWork(
   viewer: Profile,
@@ -782,7 +769,13 @@ async function buildHandover(base: Handover): Promise<HandoverView> {
       status === "confirmed" || status === "completed"
         ? (base.confirmed_at ?? base.generated_at)
         : null,
-    completed_at: status === "completed" ? (base.completed_at ?? null) : null,
+    // 데모에서 실행했으면 그때 적어 둔 시각을 쓴다. 없으면 null 이고, 서식은
+    // 그때만 「오늘 (예정)」으로 찍는다(print-sheet.tsx) — 「끝났습니다」와
+    // 「예정」이 한 화면에 같이 서지 않게 하는 것이 이 한 줄의 전부다.
+    completed_at:
+      status === "completed"
+        ? (base.completed_at ?? state.completedAt ?? null)
+        : null,
   };
 
   return {

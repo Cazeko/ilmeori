@@ -30,6 +30,33 @@ import type {
 export const WORKS_LIMIT = 100;
 
 /**
+ * 정렬 기준: 지연 → 마감 임박 → 마감 없음(최근 변경순).
+ *
+ * 목록의 맨 위는 "지금 손대야 하는 일"이어야 한다. 최근 수정순으로 두면
+ * 방치된 업무가 영영 아래로 밀려 내려간다.
+ *
+ * ── 왜 계약 파일에 있나 ────────────────────────────────────────────────────
+ *
+ * 목업과 Supabase 구현이 **글자 하나 안 틀리고 같은 함수를 각자 갖고 있었다.**
+ * 그 상태로도 오래 굴러갔지만, 인계 화면의 인수자 목록이 세 번째 사용처가
+ * 되면서 「급함」의 뜻이 화면마다 갈릴 자리가 생겼다. 이 저장소가 그걸 이미
+ * 경계한 적이 있다 — 인수자만 다른 정렬을 쓰면 보드·목록·인계가 서로 다른
+ * 순서를 말하게 된다.
+ *
+ * 그래서 **새 정렬을 만들지 않고** 있는 것을 한 자리로 옮겼다. 여기는 두
+ * 구현이 공유하는 계약이고, 정렬은 그 계약의 일부다 — 어느 구현을 쓰든 화면은
+ * 같은 순서를 받는다.
+ */
+export function byUrgency(a: WorkListItem, b: WorkListItem) {
+  if (a.derived === "overdue" && b.derived !== "overdue") return -1;
+  if (b.derived === "overdue" && a.derived !== "overdue") return 1;
+  if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
+  if (a.due_date) return -1;
+  if (b.due_date) return 1;
+  return b.updated_at.localeCompare(a.updated_at);
+}
+
+/**
  * 열람기록 한 번에 받는 최대 행 수.
  *
  * 값 자체는 새로 만든 것이 아니다 — `listAccessLogs` 의 기본값으로 두 구현에

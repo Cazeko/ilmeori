@@ -30,7 +30,10 @@ import { PrintButton } from "@/components/handover/print-button";
 import { HandoverPrintSheet } from "@/components/handover/print-sheet";
 import { SheetCaption } from "@/components/handover/sheet-caption";
 import { BlockNotes } from "@/components/handover/block-notes";
-import { ScreeningPanel } from "@/components/handover/screening-panel";
+import {
+  SCREENING_ANCHOR,
+  ScreeningPanel,
+} from "@/components/handover/screening-panel";
 import { StatusBadge } from "@/components/status-badge";
 // 생성 시각을 화면에서 따로 찍던 자리가 사라졌다 — 서식 맨 아래 「출처」 문단이
 // 같은 값을 이미 적고 있고, 그 서식은 이제 인쇄 뒤가 아니라 화면에 서 있다.
@@ -42,7 +45,12 @@ import {
   listWorks,
   roleIn,
 } from "@/lib/data";
-import { buildHandoverDraft, draftBlockText } from "@/lib/handover-draft";
+import { byUrgency } from "@/lib/data/types";
+import {
+  buildHandoverDraft,
+  draftBlockText,
+  screeningTotal,
+} from "@/lib/handover-draft";
 import { requireViewer } from "@/lib/session";
 import { canMutate, isSupabaseConfigured } from "@/lib/env";
 import { handoverBlockAnchor, type HandoverNoteWithAuthor } from "@/lib/types";
@@ -99,6 +107,23 @@ export default async function HandoverPage({
   // 실행 후를 막는 것은 0011의 완료된 인계 잠금과 같은 규칙이고, 실제로 막는 것은
   // 정책(handover_note_insert)이다. 여기서는 눌리지 않을 칸을 그리지 않을 뿐이다.
   const canWriteNotes = isSender && !done && canMutate;
+
+  // 인수자가 실제로 넘겨받은 뒤. 이때만 곁칸이 「대상 목록」에서 「지금 급한
+  // 것」으로 바뀐다. 실행 전에는 아직 넘어간 것이 없어서(transferred: false)
+  // 목록이 비고, 「오늘 먼저 볼 것 0건」은 사실이 아니라 사고처럼 읽힌다.
+  const handedOver = items.filter((i) => i.transferred);
+  const receiverDone = !isSender && done && handedOver.length > 0;
+  const sideItems = receiverDone
+    ? [...handedOver].sort((a, b) => byUrgency(a.work, b.work))
+    : items;
+
+  // 인계자가 이 화면에서 실제로 해야 하는 일 두 가지. 곁칸이 그 수를 세고
+  // 자리를 가리킨다 — 「직접 적으셔야 합니다」라고만 적어 두고 그 칸이 어디
+  // 있는지 안 알려 주면, 화면이 시키는 일을 화면이 못 하게 막는 셈이 된다.
+  const toFill = draft.blocks.filter(
+    (b) => b.needsHuman && (notesByBlock.get(b.key)?.length ?? 0) === 0,
+  );
+  const screened = screeningTotal(draft.screening);
 
   return (
     <PageContainer className="print:p-0">
@@ -450,10 +475,35 @@ export default async function HandoverPage({
 
           {/* ── 옆: 대상과 진행 ─────────────────────────────────────────────── */}
           <div className="flex flex-col gap-4">
+            {/* ── 이 판은 보는 사람에 따라 다른 것을 묻는다 ──────────────────
+                넘기는 사람에게 필요한 것은 **무엇이 넘어가는가**이고,
+                넘겨받은 사람에게 필요한 것은 **무엇부터 봐야 하는가**다.
+
+                제품 전체가 떠나는 사람 쪽으로 지어져 있었다. 그런데 인터뷰가
+                말한 고통은 받는 쪽에 있다 — 전임자에게 20~30번 전화하는 사람은
+                인계자가 아니라 **인수자**다(Q10). 인수자에게는 같은 화면의
+                읽기 전용판만 있었고, 「내가 넘겨받은 4건, 이 2건이 급하다」는
+                화면이 없었다.
+
+                새 개념은 만들지 않는다. 정렬은 앱 전체가 쓰는 `byUrgency`
+                그대로이고(인수자만 다른 규칙을 쓰면 화면마다 「급함」의 뜻이
+                갈린다), 카드 모양도 이 목록이 이미 쓰던 것 그대로다. */}
             <Card>
-              <CardHeader title={`인계 대상 업무 ${items.length}건`} as="h2" />
+              <CardHeader
+                title={
+                  receiverDone
+                    ? `오늘 먼저 볼 것 ${sideItems.length}건`
+                    : `인계 대상 업무 ${items.length}건`
+                }
+                as="h2"
+                description={
+                  receiverDone
+                    ? "기한이 지난 것부터, 그다음은 마감이 가까운 순입니다."
+                    : undefined
+                }
+              />
               <ul className="divide-y divide-rule-hair">
-                {items.map(({ work, transferred }) => (
+                {sideItems.map(({ work, transferred }) => (
                   <li key={work.id} className="px-4 py-3">
                     <Link
                       href={`/works/${work.id}`}
@@ -470,11 +520,21 @@ export default async function HandoverPage({
                           위에 얹혀 있었지만, 면을 걷어낸 지금은 판(#fafafa) 위에
                           그대로 선다. 판 위에서 success 는 4.38:1 로 미달이고
                           done-text 는 5.75:1 이다. globals.css 가 「-text 는
-                          배지·칩의 글자용」이라고 적어 둔 것이 이 자리다. */}
-                      {transferred ? (
+                          배지·칩의 글자용」이라고 적어 둔 것이 이 자리다.
+                          인수자 화면에서는 이 배지를 안 단다 — 그 목록은
+                          넘어온 것만 모아 놓은 것이라 전부 완료이고, 줄마다
+                          같은 배지가 붙으면 아무것도 안 가리킨다. */}
+                      {transferred && !receiverDone ? (
                         <span className="inline-flex items-center gap-1 text-body-xs font-bold text-status-done-text">
                           <CheckCircle2 aria-hidden className="size-3" />
                           인계 완료
+                        </span>
+                      ) : null}
+                      {receiverDone ? (
+                        <span className="text-body-xs text-gray-60">
+                          {work.due_date
+                            ? `${formatDate(work.due_date)} (${formatDueLabel(work.due_date)})`
+                            : "마감 없음"}
                         </span>
                       ) : null}
                       {work.previous_year ? (
@@ -484,9 +544,14 @@ export default async function HandoverPage({
                         </span>
                       ) : null}
                     </span>
-                    <span className="mt-1 block text-body-xs text-gray-60">
-                      주담당 {work.owner.name} {work.owner.position}
-                    </span>
+                    {/* 인수자 화면에서는 주담당을 안 적는다 — 넘어온 뒤라
+                        줄마다 자기 이름이 되고, 그건 아무것도 안 알려 준다.
+                        (열람기록의 「사람」 칸을 같은 이유로 지웠다) */}
+                    {receiverDone ? null : (
+                      <span className="mt-1 block text-body-xs text-gray-60">
+                        주담당 {work.owner.name} {work.owner.position}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -496,7 +561,36 @@ export default async function HandoverPage({
             <Card>
               <CardHeader title="다음 단계" as="h2" />
               <CardBody>
-                {!isSender ? (
+                {/* 끝난 인계는 **양쪽에 같은 말**을 한다. 이 갈래가 없던 동안
+                    인수자에게는 실행이 끝난 뒤에도 「이 인계는 박준호 주무관이
+                    확인하고 실행합니다」가 그대로 남아 있었다 — 바로 위에서
+                    「인계가 끝났습니다」라고 말하는 화면이 옆칸에서는 아직 안
+                    끝났다고 말하고 있었다. */}
+                {done ? (
+                  <p className="flex items-start gap-2 text-body-sm break-keep text-gray-60">
+                    <CheckCircle2
+                      aria-hidden
+                      className="mt-1 size-4 shrink-0 text-success"
+                    />
+                    <span>
+                      인계가 완료되었습니다. 각 업무의 이력 탭에서 권한이 옮겨 간
+                      기록을 확인할 수 있습니다.
+                      {/* 인수자에게만 덧붙인다. 인터뷰가 말한 20~30통의 전화는
+                          「물어볼 곳이 없어서」가 아니라 「물어볼 자격이 남아
+                          있는지 몰라서」 생기기도 한다. 남아 있다고 화면이 먼저
+                          말한다 — 실제로 정책이 그렇게 두었다. */}
+                      {!isSender ? (
+                        <>
+                          {" "}
+                          {from.name} {from.position}
+                          {josa(from.position ?? from.name, "은", "는")} 열람
+                          권한을 유지하고 있어, 확인이 필요한 것은 물어볼 수
+                          있습니다.
+                        </>
+                      ) : null}
+                    </span>
+                  </p>
+                ) : !isSender ? (
                   <p className="text-body-sm break-keep text-gray-60">
                     이 인계는 {from.name} {from.position}
                     {josa(from.position ?? from.name, "이", "가")} 확인하고
@@ -505,50 +599,94 @@ export default async function HandoverPage({
                   </p>
                 ) : handover.status === "generated" ? (
                   <>
-                    {/* 「직접 적으셔야 합니다」라고만 적어 두고 적을 칸을 주지
-                        않으면, 화면이 시키는 일을 화면이 못 하게 막는 셈이 된다.
-                        그 칸이 어디 있는지까지 말한다. 이미 적었으면 남은 일로
-                        세지 않는다. */}
-                    {(notesByBlock.get("3-assets")?.length ?? 0) > 0 ? (
+                    {/* ── 지금 볼 것 두 구획 ────────────────────────────────
+                        예전에는 여기가 산문 세 갈래였고, 셋 다 「물품·예산
+                        항목」 하나만 손으로 적어 두고 있었다. 사람이 채워야 하는
+                        칸이 둘이 되는 날 조용히 반쪽만 말하게 되는 모양이라,
+                        **초안에서 세어** 자리까지 가리킨다.
+
+                        구획이 둘인 이유는 고칠 자리가 다르기 때문이다 —
+                        위는 **내가 적을 것**이고 아래는 **규칙이 못 걸른 것**이다.
+                        아이콘도 그 자리들이 이미 쓰는 것을 그대로 쓴다
+                        (PenLine = 직접 적는 칸 · Cog = 규칙). 탭은 안 쓴다 —
+                        이 저장소에서 탭은 업무 상세 최상위 구획 한 곳뿐이고,
+                        미포착 판이 이미 「탭 없이 줄로 쌓기」를 쓴다. */}
+                    <p className="mb-3 text-body-sm break-keep text-gray-60">
+                      초안의 각 항목이 실제와 맞는지 확인해 주세요.
+                    </p>
+                    <ul className="mb-4 flex flex-col gap-3">
+                      <li className="flex gap-2">
+                        <PenLine
+                          aria-hidden
+                          className="mt-1 size-4 shrink-0 text-gray-40"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-body-sm text-gray-70">
+                            직접 적을 칸{" "}
+                            <b className="font-bold tabular-nums text-gray-90">
+                              {toFill.length}건
+                            </b>
+                          </p>
+                          {toFill.length > 0 ? (
+                            <ul className="mt-1 flex flex-col gap-1">
+                              {toFill.map((b) => (
+                                <li key={b.key}>
+                                  {/* 전역에서 밑줄을 걷어낸 뒤(globals.css 의 `a`)
+                                      클래스 없는 링크는 주변 글자와 완전히 같아
+                                      보인다 — WCAG 1.4.1. 이 앱의 인라인 링크
+                                      규약은 「굵은 글자 + primary」다. */}
+                                  <Link
+                                    href={`#${handoverBlockAnchor(b.key)}`}
+                                    className="text-body-sm font-bold break-keep text-primary"
+                                  >
+                                    {b.heading}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="mt-1 text-body-xs break-keep text-gray-60">
+                              비어 있던 칸을 모두 적으셨습니다.
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                      {screened.notUsed > 0 ? (
+                        <li className="flex gap-2">
+                          <Cog
+                            aria-hidden
+                            className="mt-1 size-4 shrink-0 text-gray-40"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-body-sm text-gray-70">
+                              규칙이 안 실은 것{" "}
+                              <b className="font-bold tabular-nums text-gray-90">
+                                {screened.notUsed}건
+                              </b>
+                            </p>
+                            <p className="mt-1">
+                              <Link
+                                href={`#${SCREENING_ANCHOR}`}
+                                className="text-body-sm font-bold text-primary"
+                              >
+                                규칙이 무엇을 걸렀나
+                              </Link>
+                            </p>
+                          </div>
+                        </li>
+                      ) : null}
+                    </ul>
+                    {/* 데모 모드다. 적을 칸이 없는 곳으로 보내 놓고 아무 말도
+                        안 하면 안 된다. */}
+                    {!canWriteNotes && toFill.length > 0 ? (
                       <p className="mb-4 text-body-sm break-keep text-gray-60">
-                        초안의 각 항목이 실제와 맞는지 확인해 주세요. 물품·예산
-                        항목에는{" "}
-                        <strong className="font-bold text-gray-80">
-                          직접 적으신 내용이 들어가 있습니다.
-                        </strong>
-                      </p>
-                    ) : canWriteNotes ? (
-                      <p className="mb-4 text-body-sm break-keep text-gray-60">
-                        초안의 각 항목이 실제와 맞는지 확인해 주세요. 특히{" "}
-                        <strong className="font-bold text-gray-80">
-                          물품·예산 항목은 비어 있어
-                        </strong>{" "}
-                        직접 적으셔야 합니다.{" "}
-                        {/* 클래스가 없었다. 전역에서 밑줄을 걷어낸 뒤(globals.css 의 `a`)
-                            이 링크에는 색·굵기·판 어느 축도 남지 않아 **주변
-                            글자와 완전히 같아 보였다** — WCAG 1.4.1.
-                            Notice 안의 링크는 [&_a] 가 칠해 주지만 여기는
-                            평범한 <p> 안이다. 이 앱의 인라인 링크 규약은
-                            「굵은 글자 + primary」다(globals.css 의 세 모양). */}
-                        <Link
-                          href={`#${handoverBlockAnchor("3-assets")}`}
-                          className="font-bold text-primary"
-                        >
-                          그 항목으로 가기
-                        </Link>
-                      </p>
-                    ) : (
-                      // 데모 모드다. 적을 칸이 없는 곳으로 보내면 안 된다.
-                      <p className="mb-4 text-body-sm break-keep text-gray-60">
-                        초안의 각 항목이 실제와 맞는지 확인해 주세요. 물품·예산
-                        항목은 비어 있습니다.{" "}
                         <strong className="font-bold text-gray-80">
                           데모 모드에서는 읽기만 됩니다.
                         </strong>{" "}
                         데이터베이스에 연결하면 이 화면에서 그 칸에 직접 적을 수
                         있습니다.
                       </p>
-                    )}
+                    ) : null}
                     <form action={confirmHandover}>
                       <SubmitButton block pendingLabel="확인하는 중…">
                         내용을 확인했습니다
@@ -614,20 +752,7 @@ export default async function HandoverPage({
                       </div>
                     </details>
                   </>
-                ) : (
-                  <p
-                    className={cn(
-                      "flex items-start gap-2 text-body-sm break-keep text-gray-60",
-                    )}
-                  >
-                    <CheckCircle2
-                      aria-hidden
-                      className="mt-1 size-4 shrink-0 text-success"
-                    />
-                    인계가 완료되었습니다. 각 업무의 이력 탭에서 권한이 옮겨 간
-                    기록을 확인할 수 있습니다.
-                  </p>
-                )}
+                ) : null}
               </CardBody>
             </Card>
 

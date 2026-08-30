@@ -30,7 +30,7 @@ import {
   type Work,
   type WorkListItem,
 } from "@/lib/types";
-import { ACCESS_LOG_LIMIT, WORKS_LIMIT } from "./types";
+import { ACCESS_LOG_LIMIT, WORKS_LIMIT, byUrgency } from "./types";
 import type {
   ApprovalSummary,
   HandoverView,
@@ -186,18 +186,6 @@ function toListItem(raw: RawWork): WorkListItem {
   };
 }
 
-/**
- * 정렬 기준: 지연 → 마감 임박 → 마감 없음.
- * 목록의 맨 위는 "지금 손대야 하는 일"이어야 한다.
- */
-function byUrgency(a: WorkListItem, b: WorkListItem) {
-  if (a.derived === "overdue" && b.derived !== "overdue") return -1;
-  if (b.derived === "overdue" && a.derived !== "overdue") return 1;
-  if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
-  if (a.due_date) return -1;
-  if (b.due_date) return 1;
-  return b.updated_at.localeCompare(a.updated_at);
-}
 
 // ---------------------------------------------------------------------------
 // 업무

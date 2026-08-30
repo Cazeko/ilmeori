@@ -34,6 +34,18 @@ export type DemoState = {
   workStatus: Record<string, WorkStatus>;
   /** 인계 진행 단계 */
   handoverStatus?: HandoverStatus;
+  /**
+   * 인계를 **실제로 실행한 시각**.
+   *
+   * 없으면 서식의 「인계일」 칸이 `오늘 (예정)` 으로 찍힌다. 그런데 이 값이
+   * 필요한 순간은 인계가 **이미 끝난 뒤**라, 같은 화면이 위에서는 「인계가
+   * 끝났습니다」라고 하고 서식에서는 「(예정)」이라고 말하게 된다.
+   * 결재에 올라가는 장에 「예정」이 찍히면 그건 다른 문서다.
+   *
+   * 지어내지 않고 **실행할 때 적어 둔다.** ISO 문자열 하나라 쿠키에서
+   * 20바이트 남짓이다(상한 3,600바이트).
+   */
+  completedAt?: string;
   /** 인계 실행으로 주인이 바뀐 업무 id */
   transferred: string[];
   /** 데모 중 남긴 대화. 쿠키 크기 때문에 최근 것만 남긴다. */
@@ -102,7 +114,15 @@ function parse(raw: string | undefined): DemoState {
           .slice(-MAX_COMMENTS)
       : [];
 
-    return { workStatus, handoverStatus, transferred, comments };
+    // 쿠키는 사용자가 고칠 수 있다. 날짜로 쓸 값이므로 **실제로 날짜인지**
+    // 확인한다 — 아무 문자열이나 통과시키면 서식의 「인계일」에 그대로 찍힌다.
+    const completedAt =
+      typeof o.completedAt === "string" &&
+      !Number.isNaN(Date.parse(o.completedAt))
+        ? o.completedAt
+        : undefined;
+
+    return { workStatus, handoverStatus, completedAt, transferred, comments };
   } catch {
     return EMPTY_STATE;
   }

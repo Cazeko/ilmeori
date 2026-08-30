@@ -101,6 +101,9 @@ export async function executeHandover() {
   await setDemoState({
     ...state,
     handoverStatus: "completed",
+    // 실행한 시각을 적어 둔다. 안 적으면 서식의 「인계일」이 「오늘 (예정)」으로
+    // 남아, 바로 위에서 「인계가 끝났습니다」라고 말하는 화면과 어긋난다.
+    completedAt: new Date().toISOString(),
     transferred: view.items.map((i) => i.work.id),
   });
 
