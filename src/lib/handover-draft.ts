@@ -317,6 +317,41 @@ const workTitle = (w: { id: string; title: string }): DraftLine =>
   atWork(`· ${w.title}`, w.id);
 
 /**
+ * 문서 항목의 본문을 서식 줄로 옮긴다.
+ *
+ * 한 칸 들여쓰고, **이어지는 빈 줄은 하나로 접는다.**
+ *
+ * 서식 편집기의 문서는 빈 줄을 블록 하나(spacer)로 갖는다. 글 쓰는 사람이
+ * 문단 사이를 두세 번 띄우는 것은 편집기에서는 자연스럽지만, 그 공백이 그대로
+ * 인계서로 넘어오면 **결재에 올라가는 장 한가운데에 90px 짜리 구멍**이 뚫린다
+ * (실제로 「1-다」 가 그랬다).
+ *
+ * 지우는 것은 공백뿐이고 글자는 한 자도 안 버린다. 문단을 나누는 뜻은 빈 줄
+ * 하나로 온전히 남는다 — 두 줄과 세 줄은 서식에서 같은 뜻이다.
+ *
+ * ── ⚠ 줄 끝을 `\n` 으로만 자르면 안 된다 ─────────────────────────────────
+ *
+ * 실제 DB 의 문서 본문은 **CRLF(`\r\n`)** 로 저장돼 있다(윈도우에서 붙여
+ * 넣은 글이 그렇게 들어온다). `split("\n")` 만 하면 줄 끝마다 `\r` 이 남고,
+ * CSS 는 `\r` 도 줄바꿈으로 그린다(`white-space` 는 CR·LF·CRLF 를 전부 줄
+ * 나눔으로 본다). 그래서 **문단을 한 번 띄웠는데 화면에는 두 줄씩 벌어졌다** —
+ * 목록 항목 사이마다 빈 줄이 하나씩 끼고, 「1-다」 한가운데에는 110px 짜리
+ * 구멍이 뚫렸다. 「줄바꿈이 허술하다」의 진짜 원인이 이것이었다.
+ *
+ * 목업은 `\n` 만 쓰므로 이 결함은 **실데이터에서만** 드러났다. 시연은
+ * 목업으로 돌려 보고 배포는 DB 로 도는 자리에서 나기 쉬운 종류다.
+ */
+function bodyLines(body: string): DraftLine[] {
+  const out: DraftLine[] = [];
+  for (const line of body.split(/\r\n?|\n/)) {
+    const blank = line.trim() === "";
+    if (blank && out.at(-1)?.text.trim() === "") continue;
+    out.push(plain(`  ${line}`));
+  }
+  return out;
+}
+
+/**
  * 「업무 처리 절차」를 이루는 이력 갈래.
  *
  * 심사위원이 말한 절차는 **그 업무를 실제로 처리하는 순서**다. 그런데 인터뷰
@@ -917,7 +952,7 @@ export async function buildHandoverDraft(
             w.id,
             doc.progress,
           ),
-          ...doc.progress.body.split("\n").map((l) => plain(`  ${l}`)),
+          ...bodyLines(doc.progress.body),
         );
       }
 
@@ -956,7 +991,7 @@ export async function buildHandoverDraft(
     if (doc.issue) {
       lines.push(
         atPiece(`  [${doc.title} — ${doc.issue.heading}]`, w.id, doc.issue),
-        ...doc.issue.body.split("\n").map((l) => plain(`  ${l}`)),
+        ...bodyLines(doc.issue.body),
       );
     }
 

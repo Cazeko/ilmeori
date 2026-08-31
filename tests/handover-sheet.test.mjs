@@ -159,8 +159,22 @@ console.log("\n[2] 종이의 글자 = 문단 평탄화 — 한 칸도 다르지 
 // 사람이 적어야 하는 칸과 규칙이 채운 칸은 눕히는 방법이 다르다 —
 // 앞은 문단을 빈칸으로 이어 한 덩이로 싣고(draftBlockText) 손으로 적을 자리를
 // 안내하는 줄이 뒤따르고, 뒤는 문단마다 <p> 를 따로 세운다.
-const rendered = [...html.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/g)].map((m) =>
-  textOf(m[1]),
+//
+// ⚠ **`<p>` 만 봐서는 안 된다.** 서식의 여러 칸은 이제 업무 한 건을 한 **행**
+// 으로 그린다(print-sheet.tsx 의 WorkTable). 한 행의 두 칸은 문단을 자르기만
+// 하므로 줄바꿈으로 이으면 원래 문단과 글자가 같다 — 그 성질이 이 대조의
+// 전제이고, 여기서 그걸 실제로 되읽는다. 표의 행은 `data-row` 로 알아본다
+// (사람 표·서명란의 행과 구별해야 한다).
+const rendered = [
+  ...html.matchAll(
+    /<p\b[^>]*>([\s\S]*?)<\/p>|<tr\b[^>]*\bdata-row\b[^>]*>([\s\S]*?)<\/tr>/g,
+  ),
+].map(([, paragraph, row]) =>
+  paragraph !== undefined
+    ? textOf(paragraph)
+    : [...row.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)]
+        .map((c) => textOf(c[1]))
+        .join("\n"),
 );
 const expected = draft.blocks.flatMap((b) =>
   b.needsHuman
@@ -196,8 +210,11 @@ const dataTexts = draft.blocks
       : b.paragraphs.map(draftParagraphText),
   )
   .filter(Boolean);
+// 통짜 `text` 로 세면 안 된다 — 표에서는 칸 사이에 구분자가 없어서
+// `<td>A</td><td>B</td>` 가 「AB」로 붙는다. 되읽은 본문 단위를 쓴다.
+const bodyText = rendered.join("\n");
 const twice = dataTexts.filter(
-  (t, i) => dataTexts.indexOf(t) === i && text.split(t).length - 1 > 1,
+  (t, i) => dataTexts.indexOf(t) === i && bodyText.split(t).length - 1 > 1,
 );
 ok(
   "같은 문단이 종이에 두 번 실리지 않는다",
@@ -213,7 +230,7 @@ const indented = draft.blocks
   .filter((l) => l.text.startsWith("  "));
 ok(
   "인용의 들여쓰기가 종이에서도 남는다",
-  indented.length > 0 && indented.every((l) => text.includes(l.text)),
+  indented.length > 0 && indented.every((l) => bodyText.includes(l.text)),
   `${indented.length}줄`,
 );
 

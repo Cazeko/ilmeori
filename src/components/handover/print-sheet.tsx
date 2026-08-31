@@ -6,6 +6,7 @@ import type {
 import {
   draftBlockText,
   screeningTotal,
+  type DraftParagraph,
   type HandoverDraft,
 } from "@/lib/handover-draft";
 import { DraftLines } from "@/components/handover/draft-lines";
@@ -41,6 +42,97 @@ import { formatDate, formatFullDateTime, todayKST } from "@/lib/format";
 
 function who(p: Pick<Profile, "name" | "position">) {
   return [p.name, p.position].filter(Boolean).join(" ");
+}
+
+/**
+ * 문단을 **표로 그릴 것과 아닌 것**으로 나눈다.
+ *
+ * ── 왜 표인가 ──────────────────────────────────────────────────────────────
+ *
+ * 이 서식의 여러 칸은 **업무 한 건이 한 문단**이다(handover-draft.ts). 그런데
+ * 화면에서는 그 스물몇 줄이 전부 이어진 글줄이라, 업무 넷의 사실이 어디서
+ * 끊기는지 눈으로 찾을 수 없었다 — *"눈으로 읽기에 가시성이 떨어진다"*.
+ *
+ * 별지 제12호서식은 **표를 금지하지 않는다.** 실제로 손으로 채우는 인계서는
+ * 대개 「업무 / 내용」 두 칸짜리 표로 적고, 이 서식의 사람 표·서명란도 이미
+ * 표다. 바꾸는 것은 **칸 안의 배치**뿐이고 칸의 이름과 순서는 법이 정한
+ * 그대로다.
+ *
+ * ── 글자는 한 자도 안 옮긴다 ──────────────────────────────────────────────
+ *
+ * 한 행의 두 칸은 문단을 **자르기만** 한다 — 첫 줄(업무 제목)과 나머지.
+ * 그래서 두 칸을 줄바꿈으로 이으면 `draftParagraphText()` 와 정확히 같다.
+ * 열을 하나 더 만들어 인용을 옮기는 안은 접었다: 인용문과 그 인용의 주인을
+ * 다른 칸에 두면 **누가 한 말인지 줄 순서로 맞춰야** 하고, 그건 이 제품이
+ * 지키기로 한 「사람의 말은 누가 언제 했는지와 함께」를 어긴다.
+ *
+ * ── 어떤 문단이 행이 되나 ─────────────────────────────────────────────────
+ *
+ * 첫 줄이 **업무를 가리키는** 문단만. 그리고 두 줄 이상인 문단이 하나라도
+ * 있어야 한다 — 「1-라. 주요 미결사항」처럼 문단이 전부 한 줄이면 표로 만들어
+ * 봐야 오른쪽 칸이 비고, 빈 칸이 늘어선 표는 목록보다 읽기 어렵다.
+ * 조건을 데이터에서 읽으므로 칸이 늘거나 규칙이 바뀌어도 따라온다.
+ */
+type Chunk =
+  | { kind: "table"; rows: DraftParagraph[] }
+  | { kind: "plain"; paragraph: DraftParagraph };
+
+const isWorkRow = (p: DraftParagraph) => p[0]?.ref?.kind === "work";
+
+function chunkParagraphs(paragraphs: DraftParagraph[]): Chunk[] {
+  const out: Chunk[] = [];
+  for (const p of paragraphs) {
+    const last = out.at(-1);
+    if (isWorkRow(p)) {
+      if (last?.kind === "table") last.rows.push(p);
+      else out.push({ kind: "table", rows: [p] });
+    } else {
+      out.push({ kind: "plain", paragraph: p });
+    }
+  }
+  // 한 줄짜리 문단만 모인 표는 표가 아니다 — 오른쪽 칸이 전부 빈다.
+  return out.map((c) =>
+    c.kind === "table" && !c.rows.some((r) => r.length > 1)
+      ? c.rows.map((r) => ({ kind: "plain" as const, paragraph: r }))
+      : c,
+  ).flat();
+}
+
+/**
+ * 업무 한 건이 한 행.
+ *
+ * 왼쪽 칸은 업무 제목 줄 그대로(`· ` 까지), 오른쪽 칸은 나머지 줄 전부.
+ * `data-row` 는 시험이 행 하나를 문단 하나로 되읽는 표시다
+ * (tests/handover-sheet.test.mjs [2]) — 서식의 사람 표·서명란과 구별해야 한다.
+ */
+function WorkTable({ rows }: { rows: DraftParagraph[] }) {
+  return (
+    <table className="mt-2">
+      <caption className="sr-only">업무별 인계 사항</caption>
+      <thead>
+        <tr>
+          <th scope="col" className="w-2/7 text-center font-bold">
+            업무
+          </th>
+          <th scope="col" className="text-center font-bold">
+            내용
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((p, i) => (
+          <tr key={i} data-row="">
+            <td className="whitespace-pre-wrap">
+              <DraftLines lines={p.slice(0, 1)} />
+            </td>
+            <td className="whitespace-pre-wrap">
+              <DraftLines lines={p.slice(1)} />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }
 
 /**
@@ -181,20 +273,20 @@ export function HandoverPrintSheet({
                    ② 종이에서는 링크의 색·굵기가 본문으로 돌아가고 출처 층은
                       강제로 꺼진다(globals.css 의 @media print).
                       **결재에 올라가는 종이는 예전과 똑같이 나온다.** */
-              block.paragraphs.map((p, i) => (
-                /* `whitespace-pre-line` 이 아니라 `pre-wrap` 이다.
-                   ── pre-line 은 **줄 앞 공백을 지운다** ────────────────────
-                   초안은 줄마다 들여쓰기를 갖고 있다 — 업무 제목은 맨 앞,
-                   그 업무의 사실들은 두 칸, 문서 항목 안의 목록은 네 칸.
-                   `handover-draft.ts` 가 그렇게 지어 두었고 저장본·시험도
-                   그 글자를 그대로 본다. 그런데 화면에서는 pre-line 이 그
-                   공백을 전부 눕혀서 **스물몇 줄이 한 줄로 왼쪽에 붙어
-                   있었다.** 계층이 데이터에는 있는데 화면에만 없었다.
-                   글자는 한 자도 안 바뀐다 — 눕히던 것을 안 눕힐 뿐이다. */
-                <p key={i} className="mt-1 whitespace-pre-wrap">
-                  <DraftLines lines={p} />
-                </p>
-              ))
+              chunkParagraphs(block.paragraphs).map((c, i) =>
+                c.kind === "table" ? (
+                  <WorkTable key={i} rows={c.rows} />
+                ) : (
+                  /* `whitespace-pre-line` 이 아니라 `pre-wrap` 이다.
+                     pre-line 은 **줄 앞 공백을 지운다.** 초안은 줄마다
+                     들여쓰기를 갖고 있는데(사실은 두 칸, 목록은 네 칸)
+                     화면에서 그게 전부 눕혀져 스물몇 줄이 한 자리에 붙어
+                     있었다. 계층이 데이터에는 있고 화면에만 없었다. */
+                  <p key={i} className="mt-1 whitespace-pre-wrap">
+                    <DraftLines lines={c.paragraph} />
+                  </p>
+                ),
+              )
             )}
 
             {notes.map((n) => (
