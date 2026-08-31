@@ -1,0 +1,333 @@
+import Link from "next/link";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Cog,
+  Download,
+  PenLine,
+  RotateCcw,
+} from "lucide-react";
+import { confirmHandover, executeHandover } from "@/lib/actions/handover";
+import { ButtonLink, DownloadLink } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { ProgressSteps } from "@/components/handover/progress-steps";
+import { SCREENING_ANCHOR } from "@/components/handover/screening-panel";
+import { josa } from "@/lib/format";
+import { handoverBlockAnchor } from "@/lib/types";
+import type { DraftBlock } from "@/lib/handover-draft";
+import type { HandoverStatus, Profile, WorkListItem } from "@/lib/types";
+
+/**
+ * 오른쪽 여백에 붙박이로 서는 기둥 — **지금 어느 단계이고 무엇을 누르는가.**
+ *
+ * ── 왜 붙박이인가 ──────────────────────────────────────────────────────────
+ *
+ * 이 화면은 서식 한 벌(약 4,500px)과 작업대가 이어 붙은 긴 화면이다. 단계표는
+ * 맨 위에 한 번 있었고, 실행 단추는 반대쪽 끝 「다음 단계」 카드 안에 있었다.
+ * 그래서 근거를 확인하러 아래로 내려간 사람은 **지금 몇 단계인지도, 다음에
+ * 무엇을 누르는지도 볼 수 없었다.** 확인이 끝나면 다시 위로 올라가야 했다.
+ *
+ * 둘을 한 기둥에 담아 오른쪽 여백에 붙박는다. 스크롤 어디에서든 「지금 단계」와
+ * 「그 단계에서 누를 것」이 같은 자리에 함께 있다.
+ *
+ * ── 왜 fixed 가 아니라 sticky 인가 ─────────────────────────────────────────
+ *
+ * `position: fixed` 로 화면 오른쪽에 띄우면 격자 밖으로 나가서, 창이 좁아질 때
+ * 본문 위에 겹친다. `sticky` 는 자기 칸 안에서만 움직이므로 **겹칠 수가 없다.**
+ * 좁은 화면(xl 미만)에서는 붙박이가 풀리고 평범한 판으로 위에 선다 — 그 폭에서
+ * 오른쪽 여백이라는 것이 아예 없기 때문이다.
+ *
+ * ── 「다음 단계」 카드는 없어졌다 ──────────────────────────────────────────
+ *
+ * 이 기둥이 그 카드가 하던 말을 그대로 한다. 같은 말을 하는 판이 둘이면 사람은
+ * 둘이 다른 일을 한다고 읽는다 — 이 저장소가 인쇄 단추에서 이미 한 번 겪었다.
+ *
+ * 종이에는 안 나간다. 서식이 아니라 화면 장치다.
+ */
+export function HandoverRail({
+  status,
+  isSender,
+  done,
+  from,
+  to,
+  items,
+  transferredCount,
+  toFill,
+  notUsed,
+  canWriteNotes,
+  canStartNew,
+}: {
+  status: HandoverStatus;
+  isSender: boolean;
+  done: boolean;
+  from: Profile;
+  to: Profile;
+  items: Array<{ work: WorkListItem }>;
+  /** 실제로 주담당이 바뀐 수. 대상 수와 다를 수 있다(execute_handover). */
+  transferredCount: number;
+  /** 근거가 없어 비워 둔 칸 중 아직 안 적은 것 */
+  toFill: DraftBlock[];
+  /** 규칙이 안 실은 대화·문서 항목 수 */
+  notUsed: number;
+  canWriteNotes: boolean;
+  /** 새 인계를 시작할 수 있는가(데모 모드에서는 못 한다) */
+  canStartNew: boolean;
+}) {
+  return (
+    <section
+      aria-label="인계 진행"
+      className="rounded-sm border border-rule-frame bg-surface print:hidden"
+    >
+      <h2 className="border-b border-rule-hair px-4 py-3 text-body-sm font-bold text-gray-90">
+        인계 진행
+      </h2>
+      <div className="px-4 py-4">
+        <ProgressSteps current={status} />
+      </div>
+
+      {/* 단계와 단추 사이는 선으로 끊는다. 위는 「어디까지 왔나」이고
+          아래는 「지금 무엇을 하나」라 하는 일이 다르다. */}
+      <div className="border-t border-rule-hair px-4 py-4">
+        <Action
+          status={status}
+          isSender={isSender}
+          done={done}
+          from={from}
+          to={to}
+          items={items}
+          transferredCount={transferredCount}
+          toFill={toFill}
+          notUsed={notUsed}
+          canWriteNotes={canWriteNotes}
+          canStartNew={canStartNew}
+        />
+      </div>
+    </section>
+  );
+}
+
+function Action({
+  status,
+  isSender,
+  done,
+  from,
+  to,
+  items,
+  transferredCount,
+  toFill,
+  notUsed,
+  canWriteNotes,
+  canStartNew,
+}: Parameters<typeof HandoverRail>[0]) {
+  // ── 끝난 인계는 **양쪽에 같은 말**을 한다 ─────────────────────────────────
+  //
+  // 이 갈래가 없던 동안 인수자에게는 실행이 끝난 뒤에도 「이 인계는 박준호
+  // 주무관이 확인하고 실행합니다」가 그대로 남아 있었다 — 화면이 한쪽에서는
+  // 끝났다고 하고 옆칸에서는 아직 안 끝났다고 말하고 있었다.
+  if (done) {
+    return (
+      <div className="flex flex-col gap-4">
+        {/* ⚠ 「업무 N건의 주담당이 …로 바뀌었습니다」를 여기 적었다가 지웠다.
+            화면 맨 위의 완료 알림이 **글자 그대로 같은 문장**을 이미 적고 있고,
+            이 기둥은 붙박이라 그 알림 옆에 나란히 서 있다. 같은 말이 한 화면에
+            두 번 있으면 둘 중 하나는 다른 말인 줄 알고 읽게 된다.
+            여기서는 **그래서 지금 무엇을 할 수 있는가**만 말한다. */}
+        <div>
+          <p className="flex items-start gap-2 text-body-sm break-keep text-gray-70">
+            <CheckCircle2
+              aria-hidden
+              className="mt-1 size-4 shrink-0 text-success"
+            />
+            <span>
+              {isSender
+                ? "각 업무의 이력 탭에 권한이 옮겨 간 기록이 남았습니다."
+                : `넘겨받은 ${transferredCount}건은 아래 「오늘 먼저 볼 것」에 급한 순으로 놓았습니다.`}
+            </span>
+          </p>
+        </div>
+        {/* 끝난 뒤 이 화면에서 할 수 있는 일 둘 — 문서를 챙기는 것과
+            다음 인계를 여는 것. 왼쪽의 내보내기 판은 이때 안 뜬다(page.tsx). */}
+        <div className="flex flex-col gap-2">
+          <DownloadLink href="/handover/export/hwpx" variant="secondary" size="sm" block>
+            <Download aria-hidden className="size-4" />
+            한/글 파일(.hwpx)
+          </DownloadLink>
+          {canStartNew ? (
+            <>
+              <ButtonLink href="/handover/new" variant="secondary" size="sm" block>
+                새 인계 시작
+                <ArrowRight aria-hidden className="size-4" />
+              </ButtonLink>
+              <p className="text-body-xs leading-relaxed break-keep text-gray-60">
+                다른 업무를 더 넘겨야 한다면 여기서 새로 시작할 수 있습니다.
+              </p>
+            </>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  // 넘겨받는 쪽에는 누를 것이 없다. 없는 단추를 흐리게 그려 두지 않고,
+  // 누가 무엇을 하는 차례인지 한 줄로 적는다.
+  if (!isSender) {
+    return (
+      <p className="text-body-sm leading-relaxed break-keep text-gray-60">
+        이 인계는 {from.name} {from.position}
+        {josa(from.position ?? from.name, "이", "가")} 확인하고 실행합니다.
+        넘겨받는 사람은 진행 상황과 초안을 볼 수 있습니다.
+      </p>
+    );
+  }
+
+  if (status === "generated") {
+    return (
+      <>
+        {/* ── 지금 볼 것 두 구획 ────────────────────────────────────────────
+            예전에는 여기가 산문 세 갈래였고, 셋 다 「물품·예산 항목」 하나만
+            손으로 적어 두고 있었다. 사람이 채워야 하는 칸이 둘이 되는 날
+            조용히 반쪽만 말하게 되는 모양이라, **초안에서 세어** 자리까지
+            가리킨다.
+
+            구획이 둘인 이유는 고칠 자리가 다르기 때문이다 — 위는 **내가 적을
+            것**이고 아래는 **규칙이 못 걸른 것**이다. 아이콘도 그 자리들이
+            이미 쓰는 것을 그대로 쓴다(PenLine = 직접 적는 칸 · Cog = 규칙). */}
+        <p className="mb-3 text-body-sm break-keep text-gray-60">
+          초안의 각 항목이 실제와 맞는지 확인해 주세요.
+        </p>
+        <ul className="mb-4 flex flex-col gap-3">
+          <li className="flex gap-2">
+            <PenLine aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
+            <div className="min-w-0">
+              <p className="text-body-sm text-gray-70">
+                직접 적을 칸{" "}
+                <b className="font-bold tabular-nums text-gray-90">
+                  {toFill.length}건
+                </b>
+              </p>
+              {toFill.length > 0 ? (
+                <ul className="mt-1 flex flex-col gap-1">
+                  {toFill.map((b) => (
+                    <li key={b.key}>
+                      {/* 전역에서 밑줄을 걷어낸 뒤(globals.css 의 `a`) 클래스
+                          없는 링크는 주변 글자와 완전히 같아 보인다 — WCAG
+                          1.4.1. 이 앱의 인라인 링크 규약은 「굵은 글자 +
+                          primary」다. */}
+                      <Link
+                        href={`#${handoverBlockAnchor(b.key)}`}
+                        className="text-body-sm font-bold break-keep text-primary"
+                      >
+                        {b.heading}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-1 text-body-xs break-keep text-gray-60">
+                  비어 있던 칸을 모두 적으셨습니다.
+                </p>
+              )}
+            </div>
+          </li>
+          {notUsed > 0 ? (
+            <li className="flex gap-2">
+              <Cog aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
+              <div className="min-w-0">
+                <p className="text-body-sm text-gray-70">
+                  규칙이 안 실은 것{" "}
+                  <b className="font-bold tabular-nums text-gray-90">
+                    {notUsed}건
+                  </b>
+                </p>
+                <p className="mt-1">
+                  <Link
+                    href={`#${SCREENING_ANCHOR}`}
+                    className="text-body-sm font-bold text-primary"
+                  >
+                    규칙이 무엇을 걸렀나
+                  </Link>
+                </p>
+              </div>
+            </li>
+          ) : null}
+        </ul>
+        {/* 데모 모드다. 적을 칸이 없는 곳으로 보내 놓고 아무 말도 안 하면 안 된다. */}
+        {!canWriteNotes && toFill.length > 0 ? (
+          <p className="mb-4 text-body-sm break-keep text-gray-60">
+            <strong className="font-bold text-gray-80">
+              데모 모드에서는 읽기만 됩니다.
+            </strong>{" "}
+            데이터베이스에 연결하면 이 화면에서 그 칸에 직접 적을 수 있습니다.
+          </p>
+        ) : null}
+        <form action={confirmHandover}>
+          <SubmitButton block pendingLabel="확인하는 중…">
+            내용을 확인했습니다
+            <ArrowRight aria-hidden className="size-4" />
+          </SubmitButton>
+        </form>
+      </>
+    );
+  }
+
+  if (status === "confirmed") {
+    return (
+      <>
+        <p className="mb-4 text-body-sm leading-relaxed break-keep text-gray-60">
+          실행하면 업무 {items.length}건의 주담당이 {to.name} {to.position}
+          {josa(to.position ?? to.name, "으로", "로")} 바뀝니다.{" "}
+          <strong className="font-bold text-danger">되돌릴 수 없습니다.</strong>{" "}
+          인계서에 보탠 내용도 그때부터 더하거나 지울 수 없습니다.
+        </p>
+        {/* 확인 절차를 <details> 로 둔다.
+            예전에는 <dialog>+showModal() 로 물었는데, 그 컴포넌트는 "use client"
+            이고 여는 일이 onClick 에 걸려 있어 **스크립트가 없으면 이 단추가
+            아무 일도 하지 않았다.** 이 제품에서 가장 되돌릴 수 없는 동작이
+            무JS 에서 실행 불가였다는 뜻이다. 화면의 「인계를 잘못 시작했다면」이
+            이미 같은 이유로 <details> 를 쓰고 있었다 — 규약이 한 화면 안에서
+            갈려 있었다. 펼치는 손짓 한 번이 확인 절차를 대신한다. */}
+        <details className="rounded-sm border border-danger/30 bg-danger-bg">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center px-4 text-body-sm font-bold text-danger">
+            인계 실행
+          </summary>
+          <div className="border-t border-danger/30 px-4 py-4">
+            <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
+              아래 업무의 주담당이 {to.name} {to.position}
+              {josa(to.position ?? to.name, "으로", "로")} 바뀌고, {from.name}{" "}
+              {from.position}
+              {josa(from.position ?? from.name, "은", "는")} 열람 권한만
+              남습니다. 실행한 기록은 각 업무의 이력에 남으며 지울 수 없습니다.
+            </p>
+            <ul className="mb-3 flex flex-col gap-2 rounded-sm border border-rule-frame bg-surface px-4 py-3">
+              {items.map(({ work }) => (
+                <li
+                  key={work.id}
+                  className="text-body-sm break-keep text-gray-80"
+                >
+                  · {work.title}
+                </li>
+              ))}
+            </ul>
+            <form action={executeHandover}>
+              {/* 이 앱에서 가장 무거운 단추다 — 주담당이 실제로 바뀌고 열람
+                  권한이 옮겨 간다. 되돌릴 수 없는 동작에는 무슨 일이 벌어지는
+                  중인지 글로 준다(ui/submit-button.tsx). */}
+              <SubmitButton variant="danger" block pendingLabel="실행하는 중…">
+                실행합니다
+              </SubmitButton>
+            </form>
+          </div>
+        </details>
+      </>
+    );
+  }
+
+  // draft — 대상만 골라 둔 상태. 화면이 여기까지 오는 길은 아직 없지만,
+  // 상태값이 넷이므로 넷째 갈래를 비워 두지 않는다.
+  return (
+    <p className="flex items-start gap-2 text-body-sm break-keep text-gray-60">
+      <RotateCcw aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
+      <span>넘길 업무를 고르는 중입니다.</span>
+    </p>
+  );
+}

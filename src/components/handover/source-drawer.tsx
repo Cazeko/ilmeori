@@ -221,6 +221,21 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
               "fixed z-40 flex flex-col gap-3 overflow-y-auto bg-surface p-5 print:hidden",
               // 넓은 화면: 오른쪽에 붙는 서랍. 머리 줄 아래에서 시작한다.
               "top-header right-0 bottom-0 w-96 max-w-full border-l border-rule-frame",
+              // xl 부터는 오른쪽 여백에 **붙박이 기둥**이 서 있다(handover-rail).
+              // `right-0` 그대로 두면 1280px 에서 서랍(384px)이 기둥(320px)을
+              // 통째로 덮는다 — 근거를 눌렀을 뿐인데 단계표와 「내용을
+              // 확인했습니다」가 사라진다.
+              //
+              // 물리는 폭이 화면 폭에 따라 달라진다. 판은 최대 1440px 에서
+              // **가운데 정렬**이므로(page-container.tsx), 넓은 모니터에서는
+              // 판 오른쪽에 여백이 더 생기고 기둥도 그만큼 왼쪽에 선다.
+              // 고정 px 로 물렸다가 1920px 에서 다시 덮은 자리다.
+              //
+              //   352 = 기둥 320 + 판 좌우 여백 32
+              //   앞의 항 = 판이 최대 폭에 닿은 뒤 남는 여백의 절반
+              //
+              // 1280·1440·1920 에서 실제로 재어 맞췄다(.scratch-review/verify2.mjs).
+              "xl:right-[calc(max(0px,(100vw-var(--spacing-sidebar)-1440px)/2)+352px)]",
               // 좁은 화면: 아래에서 올라오는 시트. 서식 좌우 여백은 그대로 둔다.
               //
               // 문턱이 `sm`(640px)이었는데, 서랍은 폭이 384px 로 고정이라
