@@ -653,6 +653,14 @@
     display: inline-block;
     border-left: 1px solid var(--color-rule-head);
     padding-left: 12px;
+    /* ── 선만으로는 안 보였다 ────────────────────────────────────────────
+       계획은 「문서 전체에 40개 넘는 빗살」을 상정했는데 실제로는 일곱 개다
+       (상한이 막는다). 1px 선 일곱 개는 **눌러도 아무 일이 없는 것처럼**
+       보인다 — 실제로 그 지적을 받았다.
+       면을 하나 깐다. 색이 아니라 무채색이라 색 예산에 안 잡히고
+       (DESIGN.md §16.1), 종이에서는 이 면도 함께 걷힌다(@media print). */
+    background: var(--color-gray-5);
+    padding-right: 6px;
   }
 
   /* 서랍이 열려 있는 동안, 그 글이 문서의 **어느 줄**에서 왔는지 표시한다.
@@ -660,7 +668,8 @@
      토글과 무관하다 — 누른 줄을 가리키는 것은 층이 꺼져 있어도 맞는 일이다.
      색이 아니라 옅은 면이라 색 예산에 안 잡힌다. */
   .sheet a[data-src][data-open] {
-    background: var(--color-gray-5);
+    background: var(--color-gray-10);
+    outline: 1px solid var(--color-rule-head);
   }
 
   /* ── 토글 단추 ────────────────────────────────────────────────────────
@@ -848,7 +857,9 @@
     display: inline;
     border-left: 0;
     padding-left: 0;
+    padding-right: 0;
     /* 서랍이 열린 채로 Ctrl+P 를 눌러도 종이는 깨끗해야 한다. */
     background: transparent;
+    outline: 0;
   }
 }

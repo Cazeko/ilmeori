@@ -182,7 +182,16 @@ export function HandoverPrintSheet({
                       강제로 꺼진다(globals.css 의 @media print).
                       **결재에 올라가는 종이는 예전과 똑같이 나온다.** */
               block.paragraphs.map((p, i) => (
-                <p key={i} className="mt-1 whitespace-pre-line">
+                /* `whitespace-pre-line` 이 아니라 `pre-wrap` 이다.
+                   ── pre-line 은 **줄 앞 공백을 지운다** ────────────────────
+                   초안은 줄마다 들여쓰기를 갖고 있다 — 업무 제목은 맨 앞,
+                   그 업무의 사실들은 두 칸, 문서 항목 안의 목록은 네 칸.
+                   `handover-draft.ts` 가 그렇게 지어 두었고 저장본·시험도
+                   그 글자를 그대로 본다. 그런데 화면에서는 pre-line 이 그
+                   공백을 전부 눕혀서 **스물몇 줄이 한 줄로 왼쪽에 붙어
+                   있었다.** 계층이 데이터에는 있는데 화면에만 없었다.
+                   글자는 한 자도 안 바뀐다 — 눕히던 것을 안 눕힐 뿐이다. */
+                <p key={i} className="mt-1 whitespace-pre-wrap">
                   <DraftLines lines={p} />
                 </p>
               ))
