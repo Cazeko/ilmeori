@@ -842,7 +842,34 @@ function tableXml(
 
   const colCnt = colWidths.length;
   const rowCnt = table.rows.length;
-  const height = ROW_HEIGHT * rowCnt;
+
+  /**
+   * 칸 안의 줄 — **줄바꿈은 줄바꿈으로 간다.**
+   *
+   * `esc()` 는 칸에 들어온 `\n` 을 공백으로 눕힌다. 한 줄짜리 칸에서는 그것이
+   * 옳다(제어문자가 XML 을 깨뜨린다). 그런데 인계서의 「내용」 칸에는 스무
+   * 줄짜리 문단이 통째로 들어오고, 그걸 눕히면 **화면에서 계층이던 것이
+   * 파일에서는 한 줄로 뭉개진다** — 문서 항목 목록도, 대화 인용도, 인용 사이의
+   * 빈 줄도 전부 한 덩어리가 된다. 화면·종이가 `whitespace-pre-wrap` 으로
+   * 지키는 것이 그것이고(print-sheet.tsx), 파일만 다르게 나갈 이유가 없다.
+   *
+   * ⚠ **한 줄짜리 칸의 바이트는 한 개도 안 바뀐다.** 줄이 하나면 예전과 똑같이
+   * 문단 하나를 낸다. 이미 내보낸 결재 문서를 해시로 되짚는 약속이 여기 걸려
+   * 있다(위 cellParaId 주석과 같은 이유).
+   *
+   * `runs` 를 준 칸은 건드리지 않는다. 토막마다 서식이 다른 칸에서 줄을 쪼개면
+   * 어느 토막이 어느 줄에 걸치는지를 여기서 다시 판정해야 하고, 그건 부르는
+   * 쪽이 이미 아는 것을 이쪽에서 짐작하는 일이다.
+   */
+  const cellLines = (cell: HwpxCell): string[] =>
+    cell.runs && cell.runs.length > 0 ? [] : cell.text.split(/\r\n?|\n/);
+
+  // 줄이 여럿인 칸이 있으면 그 줄만큼 키를 준다. 안 키우면 한/글이 칸을 늘려
+  // 그리는 동안 표의 선언 높이와 실제 높이가 어긋나 아래가 밀린다.
+  const rowLines = table.rows.map((row) =>
+    Math.max(1, ...row.cells.map((c) => cellLines(c).length || 1)),
+  );
+  const height = rowLines.reduce((n, lines) => n + ROW_HEIGHT * lines, 0);
 
   /**
    * 줄마다 **colCnt 만큼의 칸을 반드시 채운다.**
@@ -867,14 +894,25 @@ function tableXml(
         const inner = width - CELL_MARGIN.left - CELL_MARGIN.right;
         const base = baseChar(1000, cell.bold === true);
         const pp = cellParaId(cell.align);
-        const runs =
-          cell.runs && cell.runs.length > 0 ? cell.runs : [{ text: cell.text }];
-        const body = paraX(
-          pp,
-          runsToXml(runs, base, chars),
-          base.height,
-          Math.max(1, inner),
-        );
+        const lines = cellLines(cell);
+        const body =
+          cell.runs && cell.runs.length > 0
+            ? paraX(
+                pp,
+                runsToXml(cell.runs, base, chars),
+                base.height,
+                Math.max(1, inner),
+              )
+            : lines
+                .map((line) =>
+                  paraX(
+                    pp,
+                    runsToXml([{ text: line }], base, chars),
+                    base.height,
+                    Math.max(1, inner),
+                  ),
+                )
+                .join("");
         const at = colAddr;
         colAddr += span;
         return (
@@ -884,7 +922,7 @@ function tableXml(
           `</hp:subList>` +
           `<hp:cellAddr colAddr="${at}" rowAddr="${rowAddr}"/>` +
           `<hp:cellSpan colSpan="${span}" rowSpan="1"/>` +
-          `<hp:cellSz width="${width}" height="${ROW_HEIGHT}"/>` +
+          `<hp:cellSz width="${width}" height="${ROW_HEIGHT * rowLines[rowAddr]}"/>` +
           `<hp:cellMargin left="${CELL_MARGIN.left}" right="${CELL_MARGIN.right}" top="${CELL_MARGIN.top}" bottom="${CELL_MARGIN.bottom}"/>` +
           `</hp:tc>`
         );

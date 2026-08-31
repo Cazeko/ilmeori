@@ -28,8 +28,13 @@ import { readFileSync } from "node:fs";
 process.env.NEXT_PUBLIC_SUPABASE_URL = "";
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "";
 
-const { buildHandoverDraft, draftParagraphText, readDoc, screeningTotal } =
-  await import("@/lib/handover-draft.ts");
+const {
+  buildHandoverDraft,
+  draftParagraphText,
+  readDoc,
+  screeningTotal,
+  sheetSourceText,
+} = await import("@/lib/handover-draft.ts");
 const { workDocHref, workHref, workTalkHref } = await import("@/lib/types.ts");
 const { docChunks, fromSections } = await import("@/lib/editor/model.ts");
 const mock = await import("@/lib/data/mock.ts");
@@ -701,6 +706,69 @@ ok(
     total.seen !== refLines &&
     total.used !== refLines,
   `캡션 ${total.seen}/${total.used} · 줄을 세면 ${refLines}`,
+);
+
+// ---------------------------------------------------------------------------
+console.log("\n[출처 문단] 세 갈래를 글자 그대로 못박는다");
+// ---------------------------------------------------------------------------
+
+// 이 문단이 「놓친 건 셀 수 있고 지어낸 건 셀 수 없다」를 실제로 말하는 자리다.
+// 화면·종이·한/글 파일 셋이 이 함수 하나를 쓰므로, 여기가 조용히 바뀌면 셋이
+// 한꺼번에 다른 말을 한다. 그런데 지금까지 이 문장을 글자로 붙잡는 시험이
+// 하나도 없었다 — 수를 바꿔치기해도 온 시험이 초록이었다.
+//
+// 그래서 **글자를 그대로 적어 둔다.** 문구를 다듬는 것은 얼마든지 좋지만,
+// 다듬을 때 이 줄이 함께 빨간불이 되어 사람이 한 번 읽고 넘기게 한다.
+const EVIDENCE = {
+  works: 4,
+  documents: 2,
+  comments: 7,
+  activities: 49,
+  attachments: 4,
+};
+const srcLead =
+  "이 초안은 「일머리」에 쌓인 기록(업무 4건 · 문서 2건 · 대화 7건 · 이력 49건 · 첨부 4건)에서 서식 순서대로 뽑아 정리한 것입니다.";
+const srcTail = "사람이 확인하고 보태야 하는 초안이며, 그대로 제출하는 문서가 아닙니다.";
+
+const none = { comments: { seen: 0, used: 0, missed: [], omitted: 0 },
+                sections: { seen: 0, used: 0, missed: [], omitted: 0 } };
+ok(
+  "들여다본 것이 0건이면 없는 판을 가리키지 않는다",
+  sheetSourceText({ evidence: EVIDENCE, screening: none, hasNotes: false }) ===
+    `${srcLead} 이 인계에는 규칙이 들여다볼 대화나 문서 항목이 없었습니다. ${srcTail}`,
+  sheetSourceText({ evidence: EVIDENCE, screening: none, hasNotes: false }),
+);
+
+const some = {
+  comments: { seen: 7, used: 4, missed: [{}, {}], omitted: 1 },
+  sections: { seen: 9, used: 3, missed: [{}, {}, {}, {}, {}, {}], omitted: 0 },
+};
+ok(
+  "안 실린 것이 있으면 **본문이** 없다고 말한다 — 제목은 실려 있다",
+  sheetSourceText({ evidence: EVIDENCE, screening: some, hasNotes: false }) ===
+    `${srcLead} 규칙은 일머리에 남은 대화·문서 항목 16건을 들여다보고 그중 7건의 본문을 실었으며, 안 실린 9건의 본문은 이 문서에 없습니다. 무엇을 기준으로 골랐고 무엇이 안 실렸는지는 화면에서 항목별로 확인할 수 있습니다. ${srcTail}`,
+  sheetSourceText({ evidence: EVIDENCE, screening: some, hasNotes: false }),
+);
+
+const all = {
+  comments: { seen: 3, used: 3, missed: [], omitted: 0 },
+  sections: { seen: 2, used: 2, missed: [], omitted: 0 },
+};
+ok(
+  "전부 실었으면 안 실린 것을 세지 않는다",
+  sheetSourceText({ evidence: EVIDENCE, screening: all, hasNotes: false }) ===
+    `${srcLead} 규칙은 일머리에 남은 대화·문서 항목 5건을 들여다보고 그 전부의 본문을 실었습니다. 무엇을 기준으로 골랐는지는 화면에서 확인할 수 있습니다. ${srcTail}`,
+  sheetSourceText({ evidence: EVIDENCE, screening: all, hasNotes: false }),
+);
+
+ok(
+  "보탠 글이 있을 때만 그것을 설명하는 문장이 붙는다",
+  sheetSourceText({ evidence: EVIDENCE, screening: all, hasNotes: true }).endsWith(
+    "왼쪽에 선이 그어진 「인계자 보충」은 규칙이 뽑은 것이 아니라 인계자가 직접 적어 넣은 것이며, 적은 사람과 날짜를 함께 적었습니다.",
+  ) &&
+    !sheetSourceText({ evidence: EVIDENCE, screening: all, hasNotes: false }).includes(
+      "인계자 보충",
+    ),
 );
 
 console.log(

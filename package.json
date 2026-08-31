@@ -26,7 +26,7 @@
     "test:browser": "node tests/browser.test.mjs",
     "test:realtime": "node tests/realtime.test.mjs",
     "db:realtime": "node supabase/realtime.probe.mjs",
-    "check": "npm run typecheck && npm run test:safe-next && npm run test:feedback-url && npm run test:hwpx && npm run test:docx && npm run test:cues && npm run test:contrast && npm run test:design && npm run test:overdue && npm run test:crdt && npm run test:engine && npm run test:save && npm run test:data-contract && npm run test:handover-draft && npm run test:sheet && npm run test:proof && npm run db:verify && npm run db:test && npm run db:seed:test",
+    "check": "npm run typecheck && npm run test:safe-next && npm run test:feedback-url && npm run test:hwpx && npm run test:docx && npm run test:cues && npm run test:contrast && npm run test:design && npm run test:overdue && npm run test:crdt && npm run test:engine && npm run test:save && npm run test:data-contract && npm run test:handover-draft && npm run test:sheet && npm run test:handover-hwpx && npm run test:proof && npm run db:verify && npm run db:test && npm run db:seed:test",
     "db:seed": "node supabase/gen-seed.mjs",
     "db:seed:test": "node supabase/seed.test.mjs",
     "test:crdt": "node --import ./tests/alias-hook-register.mjs tests/editor-crdt.test.mjs",
@@ -37,6 +37,7 @@
     "test:overdue": "node --import ./tests/alias-hook-register.mjs tests/overdue-rule.test.mjs",
     "test:handover-draft": "node --import ./tests/alias-hook-register.mjs tests/handover-draft.test.mjs",
     "test:sheet": "node --import ./tests/alias-hook-register.mjs tests/handover-sheet.test.mjs",
+    "test:handover-hwpx": "node --import ./tests/alias-hook-register.mjs tests/handover-hwpx.test.mjs",
     "test:proof": "node --import ./tests/alias-hook-register.mjs tests/handover-proof.test.mjs"
   },
   "dependencies": {

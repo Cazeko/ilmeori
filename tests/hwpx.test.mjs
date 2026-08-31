@@ -396,6 +396,72 @@ ok(
 );
 
 // ---------------------------------------------------------------------------
+console.log("\n[9] 칸 안의 줄바꿈 — 줄은 줄로 간다, 한 줄짜리 칸은 안 바뀐다");
+// ---------------------------------------------------------------------------
+
+// 인계서의 「내용」 칸에는 스무 줄짜리 문단이 통째로 들어온다. 그것을 esc() 가
+// 공백으로 눕히면 **화면에서 계층이던 것이 파일에서 한 줄로 뭉개진다.**
+// 그래서 칸 안의 `\n` 은 문단을 나눈다(pack.ts 의 cellLines).
+const multi = buildHwpx({
+  title: "줄바꿈",
+  createdAt: AT,
+  paragraphs: [
+    {
+      kind: "table",
+      table: {
+        widths: [1, 2],
+        rows: [{ cells: [{ text: "업무" }, { text: "첫 줄\n  둘째 줄\n셋째 줄" }] }],
+      },
+    },
+  ],
+});
+const multiXml = execFileSync(
+  "python3",
+  [
+    "-c",
+    [
+      "import sys, zipfile",
+      "print(zipfile.ZipFile(sys.argv[1]).read('Contents/section0.xml').decode('utf-8'))",
+    ].join("\n"),
+    (() => {
+      const f = join(dir, "multi.hwpx");
+      writeFileSync(f, multi);
+      return f;
+    })(),
+  ],
+  { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 },
+);
+ok(
+  "칸 안의 줄이 문단 셋으로 나뉜다",
+  (multiXml.match(/<hp:t>첫 줄<\/hp:t>/g) ?? []).length === 1 &&
+    multiXml.includes("<hp:t>  둘째 줄</hp:t>") &&
+    multiXml.includes("<hp:t>셋째 줄</hp:t>"),
+);
+ok(
+  "한 줄로 눕혀지지 않았다",
+  !multiXml.includes("첫 줄   둘째 줄 셋째 줄"),
+);
+ok(
+  "줄 수만큼 칸 높이를 준다",
+  multiXml.includes('height="4200"'),
+  (multiXml.match(/<hp:cellSz [^>]*height="(\d+)"/) ?? []).join(" "),
+);
+
+// ⚠ **한 줄짜리 칸의 바이트는 한 개도 안 바뀐다.** 이미 내보낸 결재 문서를
+// 해시로 되짚는 약속이 여기 걸려 있다(pack.ts 의 cellParaId 주석). 위 [1]~[8]
+// 이 쓰는 `doc` 은 칸이 전부 한 줄이므로, 그 문서의 바이트가 이 시험의 증인이다.
+//
+// 값을 손으로 박아 둔다 — 계산해서 비교하면 같은 코드로 같은 답을 낼 뿐이다.
+// 6092 는 칸 안 줄바꿈을 넣기 **전** 판(git HEAD)으로 같은 문서를 만들어 잰
+// 값이다. 서식이 정말 바뀌어야 하는 날이 오면 이 줄이 먼저 빨간불이 되고,
+// 그때 「예전 문서의 해시가 달라진다」를 사람이 한 번 보고 넘긴다.
+ok(
+  "한 줄짜리 칸만 든 문서의 바이트가 예전 그대로다",
+  bytes.byteLength === 6092,
+  `${bytes.byteLength}바이트 (예전 6092)`,
+);
+
+// ---------------------------------------------------------------------------
 rmSync(dir, { recursive: true, force: true });
 
 console.log(`\n${fails.length === 0 ? "전부 통과" : "실패"} — ${pass}건 통과, ${fails.length}건 실패`);

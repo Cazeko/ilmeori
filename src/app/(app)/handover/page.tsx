@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
+  Download,
   FileSignature,
   Inbox,
   PenLine,
@@ -19,7 +20,7 @@ import { cn } from "@/lib/cn";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { CARD_SURFACE, Card, CardBody, CardHeader } from "@/components/ui/card";
-import { ButtonLink } from "@/components/ui/button";
+import { ButtonLink, DownloadLink } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ActionFeedback } from "@/components/ui/feedback";
@@ -293,22 +294,41 @@ export default async function HandoverPage({
               </div>
             </section>
 
-            {/* ── 인쇄 ────────────────────────────────────────────────────────
+            {/* ── 내보내기 ────────────────────────────────────────────────────
               "형식이 hwp냐"보다 "이걸 그대로 결재에 올릴 수 있느냐"가 먼저다.
-              브라우저 인쇄로 A4 한 벌이 나오면 그 질문에 종이로 답할 수 있다.
-              (버튼은 스크립트가 있을 때만 나타난다. 안내 문장은 늘 남는다) */}
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-sm border border-rule-frame bg-surface px-4 py-3">
-              <p className="min-w-0 flex-1 text-body-sm break-keep text-gray-60">
+              그 질문에 이제 **두 가지로** 답한다.
+
+                · 한/글 파일  — 온나라에 그대로 올리는 형식
+                · 인쇄(A4)    — 그 자리에 한/글이 없어도 종이는 나온다
+
+              한/글이 먼저다. 인쇄만 있던 동안 인수자가 이 문서를 다음 걸음으로
+              가져가는 길은 **손으로 다시 치는 것**뿐이었고, 그 순간 문장마다
+              붙여 둔 근거도 놓친 것을 센 수도 전부 사라진다. 이 제품이 파는
+              것이 정확히 그 둘이다.
+
+              내려받기는 링크다 — 스크립트가 없어도 눌린다. 인쇄 버튼만
+              스크립트가 있을 때 나타나고, 그래서 안내 문장은 늘 남는다. */}
+            <div className="mb-4 rounded-sm border border-rule-frame bg-surface px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <DownloadLink href="/handover/export/hwpx" size="sm">
+                  <Download aria-hidden className="size-4" />
+                  한/글 파일(.hwpx)
+                </DownloadLink>
+                <PrintButton />
+              </div>
+              <p className="mt-3 text-body-sm leading-relaxed break-keep text-gray-60">
                 {/* 「Ctrl+P」를 빼면 안 된다. 스크립트가 없는 브라우저에서는
                     옆의 인쇄 버튼이 아예 안 그려지고, 이 문장이 인쇄하는 법을
                     알려 주는 유일한 자리가 된다(tests/browser.test.mjs [2]). */}
-                <kbd className="font-sans font-bold">Ctrl+P</kbd>로{" "}
+                한/글 파일에는 위 서식이 그대로 담깁니다.{" "}
+                <kbd className="font-sans font-bold">Ctrl+P</kbd>로도{" "}
                 <strong className="font-bold text-gray-80">
                   별지 제12호서식 모양의 A4
                 </strong>
-                가 나옵니다. 근거 꼬리표는 종이 맨 아래에 한 번만 모아 적습니다.
+                가 나옵니다. 근거 꼬리표는 화면의 장치라 파일에도 종이에도 담기지
+                않고, 대신 맨 아래 「출처」 한 문단이 무엇을 몇 건 실었는지
+                밝힙니다.
               </p>
-              <PrintButton />
             </div>
 
             {/* 위 서식이 「문서」가 된 뒤로 이 판이 하는 일이 분명해졌다 —

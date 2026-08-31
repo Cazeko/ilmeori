@@ -4,8 +4,9 @@ import type {
   Profile,
 } from "@/lib/types";
 import {
+  chunkParagraphs,
   draftBlockText,
-  screeningTotal,
+  sheetSourceText,
   type DraftParagraph,
   type HandoverDraft,
 } from "@/lib/handover-draft";
@@ -44,59 +45,9 @@ function who(p: Pick<Profile, "name" | "position">) {
   return [p.name, p.position].filter(Boolean).join(" ");
 }
 
-/**
- * 문단을 **표로 그릴 것과 아닌 것**으로 나눈다.
- *
- * ── 왜 표인가 ──────────────────────────────────────────────────────────────
- *
- * 이 서식의 여러 칸은 **업무 한 건이 한 문단**이다(handover-draft.ts). 그런데
- * 화면에서는 그 스물몇 줄이 전부 이어진 글줄이라, 업무 넷의 사실이 어디서
- * 끊기는지 눈으로 찾을 수 없었다 — *"눈으로 읽기에 가시성이 떨어진다"*.
- *
- * 별지 제12호서식은 **표를 금지하지 않는다.** 실제로 손으로 채우는 인계서는
- * 대개 「업무 / 내용」 두 칸짜리 표로 적고, 이 서식의 사람 표·서명란도 이미
- * 표다. 바꾸는 것은 **칸 안의 배치**뿐이고 칸의 이름과 순서는 법이 정한
- * 그대로다.
- *
- * ── 글자는 한 자도 안 옮긴다 ──────────────────────────────────────────────
- *
- * 한 행의 두 칸은 문단을 **자르기만** 한다 — 첫 줄(업무 제목)과 나머지.
- * 그래서 두 칸을 줄바꿈으로 이으면 `draftParagraphText()` 와 정확히 같다.
- * 열을 하나 더 만들어 인용을 옮기는 안은 접었다: 인용문과 그 인용의 주인을
- * 다른 칸에 두면 **누가 한 말인지 줄 순서로 맞춰야** 하고, 그건 이 제품이
- * 지키기로 한 「사람의 말은 누가 언제 했는지와 함께」를 어긴다.
- *
- * ── 어떤 문단이 행이 되나 ─────────────────────────────────────────────────
- *
- * 첫 줄이 **업무를 가리키는** 문단만. 그리고 두 줄 이상인 문단이 하나라도
- * 있어야 한다 — 「1-라. 주요 미결사항」처럼 문단이 전부 한 줄이면 표로 만들어
- * 봐야 오른쪽 칸이 비고, 빈 칸이 늘어선 표는 목록보다 읽기 어렵다.
- * 조건을 데이터에서 읽으므로 칸이 늘거나 규칙이 바뀌어도 따라온다.
- */
-type Chunk =
-  | { kind: "table"; rows: DraftParagraph[] }
-  | { kind: "plain"; paragraph: DraftParagraph };
-
-const isWorkRow = (p: DraftParagraph) => p[0]?.ref?.kind === "work";
-
-function chunkParagraphs(paragraphs: DraftParagraph[]): Chunk[] {
-  const out: Chunk[] = [];
-  for (const p of paragraphs) {
-    const last = out.at(-1);
-    if (isWorkRow(p)) {
-      if (last?.kind === "table") last.rows.push(p);
-      else out.push({ kind: "table", rows: [p] });
-    } else {
-      out.push({ kind: "plain", paragraph: p });
-    }
-  }
-  // 한 줄짜리 문단만 모인 표는 표가 아니다 — 오른쪽 칸이 전부 빈다.
-  return out.map((c) =>
-    c.kind === "table" && !c.rows.some((r) => r.length > 1)
-      ? c.rows.map((r) => ({ kind: "plain" as const, paragraph: r }))
-      : c,
-  ).flat();
-}
+/* 문단을 표와 글줄로 나누는 `chunkParagraphs` 는 여기 있었다. 한/글 내보내기가
+   같은 짜임으로 서식을 지어야 해서 `handover-draft.ts` 로 올렸다 — 짜임이 두
+   곳에 있으면 화면은 표인데 파일은 글줄인 인계서가 나온다. */
 
 /**
  * 업무 한 건이 한 행.
@@ -180,7 +131,11 @@ export function HandoverPrintSheet({
   const hasNotes = draft.blocks.some(
     (b) => (notesByBlock.get(b.key)?.length ?? 0) > 0,
   );
-  const screened = screeningTotal(draft.screening);
+  const sourceText = sheetSourceText({
+    evidence: draft.evidence,
+    screening: draft.screening,
+    hasNotes,
+  });
 
   return (
     /* id 는 「문장마다 출처 보기」가 `aria-controls` 로 가리키는 자리다.
@@ -331,42 +286,14 @@ export function HandoverPrintSheet({
       {/* ── 출처 ──────────────────────────────────────────────────────────
           종이 한 장만 손에 든 사람도 이 문서가 어떻게 만들어졌는지 알아야 한다.
           화면에서는 항목마다 근거를 붙이지만, 종이에서는 서식을 어지럽히므로
-          맨 아래에 한 번 모아 적는다. */}
+          맨 아래에 한 번 모아 적는다.
+
+          문장은 `sheetSourceText()` 하나에서 나온다. 이 문단이 여기 JSX 안에서
+          조립되던 동안 한/글 내보내기는 같은 말을 따로 적어야 했고, 그러면
+          **종이와 파일이 서로 다른 수를 말하는 날**이 온다. 이 제품이 파는
+          유일한 정직성이 그 수다. */}
       <footer className="avoid-break mt-6 border-t border-black pt-2">
-        <p>
-          이 초안은 「일머리」에 쌓인 기록(업무 {draft.evidence.works}건 · 문서{" "}
-          {draft.evidence.documents}건 · 대화 {draft.evidence.comments}건 · 이력{" "}
-          {draft.evidence.activities}건 · 첨부 {draft.evidence.attachments}건)
-          에서 서식 순서대로 뽑아 정리한 것입니다.{" "}
-          {/* ── 놓친 것을 종이에서도 센다 ────────────────────────────────────
-              「서식 순서대로 뽑아 정리한 것」만 적어 두면 **다 실었다는 쪽으로**
-              읽힌다. 화면에는 미포착 판이 있어서 그 오해가 안 생기는데, 결재로
-              올라가는 것은 종이다. 이 제품이 파는 유일한 정직성(「놓친 건 셀 수
-              있고 지어낸 건 셀 수 없다」)이 종이에서만 사라지고 있었다.
-              한 문장이면 된다 — 목록은 화면의 일이고, 종이는 수만 밝힌다. */}
-          {/* 갈래가 셋이다. 처음에는 「안 실린 것이 있나」 하나로만 갈랐는데,
-              **들여다본 것이 0건인 인계**가 그 else 로 떨어져 「0건을 들여다보고
-              그 전부를 실었습니다 … 화면에서 확인할 수 있습니다」가 찍혔다.
-              그 인계에서는 화면의 미포착 판이 아예 안 그려지므로(seen 0 이면
-              null), 종이가 **없는 판을 가리키고** 있었다. */}
-          {screened.seen === 0
-            ? "이 인계에는 규칙이 들여다볼 대화나 문서 항목이 없었습니다."
-            : screened.notUsed > 0
-              ? // 「안 실린 N건은 이 종이에 없습니다」로 적었다가 고쳤다.
-                // **없는 것은 본문이지 제목이 아니다** — 본문이 안 실린 문서
-                // 항목도 「2. 관련 문서 현황」에는 제목이 줄줄이 찍혀 있다.
-                // 종이를 든 사람이 그 제목을 보고 「저기 있잖아요」 하면,
-                // 이 문단이 방금 한 말이 그 자리에서 거짓이 된다.
-                `규칙은 일머리에 남은 대화·문서 항목 ${screened.seen}건을 들여다보고 그중 ${screened.used}건의 본문을 실었으며, 안 실린 ${screened.notUsed}건의 본문은 이 종이에 없습니다. 무엇을 기준으로 골랐고 무엇이 안 실렸는지는 화면에서 항목별로 확인할 수 있습니다.`
-              : `규칙은 일머리에 남은 대화·문서 항목 ${screened.seen}건을 들여다보고 그 전부의 본문을 실었습니다. 무엇을 기준으로 골랐는지는 화면에서 확인할 수 있습니다.`}{" "}
-          사람이 확인하고 보태야 하는 초안이며, 그대로 제출하는 문서가
-          아닙니다.
-          {/* 보탠 글이 있을 때만 적는다. 없는데 적어 두면 종이만 든 사람이
-              어딘가에 사람이 쓴 문장이 있다고 여기고 찾게 된다. */}
-          {hasNotes
-            ? " 왼쪽에 선이 그어진 「인계자 보충」은 규칙이 뽑은 것이 아니라 인계자가 직접 적어 넣은 것이며, 적은 사람과 날짜를 함께 적었습니다."
-            : ""}
-        </p>
+        <p>{sourceText}</p>
         {/* 두 시각은 다르다. generated_at 은 인계를 시작한 때이고, 이 종이의 내용은
             **인쇄하는 순간의 기록으로 다시 조립한 것**이다. 그 사이에 대화 한 줄이
             더 붙으면 인쇄본에는 그 대화가 들어가는데 시각은 옛것이 찍힌다.

@@ -85,10 +85,10 @@ function withExtension(p) {
  * 주석 안의 import 글자까지 세는 쪽으로 틀리므로 **넓게 세는 쪽**이고,
  * 넓게 세다 틀리면 없는 것을 있다고 말한다 — 안전한 방향이다.
  */
-function importGraph(entry) {
+function importGraph(...entries) {
   const files = new Set();
   const externals = new Map();
-  const stack = [entry];
+  const stack = [...entries];
   while (stack.length > 0) {
     const file = stack.pop();
     if (files.has(file)) continue;
@@ -112,7 +112,24 @@ function importGraph(entry) {
   return { files: [...files].sort(), externals };
 }
 
-const graph = importGraph(path.join(SRC, "lib/handover-draft.ts"));
+/**
+ * 뿌리가 셋이다 — 초안을 **짓는** 자리, **파일로 옮기는** 자리, 그리고 그 파일을
+ * 사람에게 **내려주는** 자리.
+ *
+ * 오랫동안 뿌리는 `handover-draft.ts` 하나였다. 그때는 인계서가 나가는 길이
+ * 화면과 인쇄뿐이었고 둘 다 그 파일에서 나왔기 때문이다. 지금은 한/글 파일이
+ * 하나 더 있고, **결재로 올라가는 물건은 그쪽**이다. 그 길만 검사 밖에 있으면
+ * 「어떤 모델도 부르지 않는다」는 주장이 정작 제출물에 대해서는 안 세워진다.
+ *
+ * 라우트까지 넣는다. `handover-export.ts` 만 넣으면 **파일을 내려주는 함수
+ * 자체**가 그래프 밖에 남고, 거기 `fetch()` 한 줄을 더해도 이 시험은 초록으로
+ * 남는다 — 그 한 줄이 정확히 「결재로 올라가는 물건」을 만지는 자리다.
+ */
+const graph = importGraph(
+  path.join(SRC, "lib/handover-draft.ts"),
+  path.join(SRC, "lib/handover-export.ts"),
+  path.join(SRC, "app/(app)/handover/export/hwpx/route.ts"),
+);
 const rel = (f) => path.relative(ROOT, f);
 
 /**
@@ -131,6 +148,15 @@ const ALLOWED = new Set([
   "react", // 타입과 cache()
   "server-only", // 이 파일이 브라우저로 새는 것을 막는 표시
   "zod", // 폼 값 검증. 순수 함수
+  // 아래 셋은 내보내기 경로를 그래프에 넣으면서 늘었다. 허용 목록이 하는 일이
+  // 정확히 이것이다 — 늘 때마다 사람이 한 번 보고 이유를 적는다.
+  //
+  // 한/글 파일의 ZIP 압축(DEFLATE). 노드에 딸린 것이고 통신을 모른다.
+  "node:zlib",
+  // 라우트 핸들러의 요청·응답 타입과 리다이렉트. 프레임워크 안에서 끝난다.
+  "next/server",
+  // requireViewer 가 로그인 화면으로 보낼 때 쓴다. 서버 안에서 끝난다.
+  "next/navigation",
 ]);
 
 console.log(`\n  초안이 닿는 우리 파일 ${graph.files.length}개`);
@@ -154,6 +180,12 @@ ok(
   graph.files.some((f) => f.endsWith("lib/handover-draft.ts")) &&
     graph.files.some((f) => f.endsWith("lib/handover-cues.ts")),
 );
+ok(
+  "결재로 올라가는 파일을 짓고 내려주는 자리도 그래프 안에 있다",
+  graph.files.some((f) => f.endsWith("lib/handover-export.ts")) &&
+    graph.files.some((f) => f.endsWith("lib/hwpx/pack.ts")) &&
+    graph.files.some((f) => f.endsWith("handover/export/hwpx/route.ts")),
+);
 
 // ---------------------------------------------------------------------------
 console.log("\n[2] 그 코드 안에 바깥을 부르는 자리가 없다");
@@ -176,13 +208,26 @@ const OUTBOUND = [
   ["박힌 주소", /https?:\/\/[a-zA-Z]/],
 ];
 
+/**
+ * XML 이름공간은 **주소가 아니라 이름이다.**
+ *
+ * 한/글 파일을 짓는 코드(hwpx/pack.ts)는 `xmlns:hp="http://www.hancom.co.kr/…"`
+ * 를 문자열로 들고 있다. 규격이 정한 식별자라 한 글자도 바꿀 수 없고, 아무도
+ * 그 주소로 나가지 않는다 — 브라우저도 한/글도 그것을 가지러 가지 않는다.
+ *
+ * 그래서 `xmlns…="…"` 안의 값만 지우고 나머지 줄을 그대로 검사한다. 줄을
+ * 통째로 빼지 않는 것이 중요하다 — 같은 줄에 `fetch(` 가 붙는 날 그것은
+ * 여전히 걸려야 한다.
+ */
+const stripXmlns = (line) => line.replace(/xmlns(:[\w-]+)?="[^"]*"/g, "");
+
 const offenders = [];
 for (const file of graph.files) {
   const lines = readFileSync(file, "utf8").split("\n");
   lines.forEach((line, i) => {
     // 주석 줄은 뺀다. 이 저장소는 주석에 법령·문서 주소를 적어 두는 곳이라
     // 그것까지 세면 검사가 늘 빨간불이고, 늘 빨간불인 검사는 곧 꺼진다.
-    const code = line.replace(/^\s*(\/\/|\*|\/\*).*$/, "");
+    const code = stripXmlns(line.replace(/^\s*(\/\/|\*|\/\*).*$/, ""));
     for (const [name, re] of OUTBOUND) {
       if (re.test(code)) offenders.push(`${rel(file)}:${i + 1} ${name}`);
     }
@@ -192,6 +237,24 @@ ok(
   "초안이 닿는 우리 파일에 바깥을 부르는 자리가 없다",
   offenders.length === 0,
   offenders.slice(0, 5).join(" / "),
+);
+// 이름공간을 빼는 손질이 검사를 멀게 만들지 않았는지 — 아는 답을 먹여 본다.
+// 이런 대조가 없으면 「빼기」는 조용히 넓어지고, 넓어진 줄 아무도 모른다.
+ok(
+  "이름공간을 빼도 같은 줄의 진짜 호출은 그대로 걸린다",
+  OUTBOUND.some(([, re]) =>
+    re.test(
+      stripXmlns(
+        `const x = \`<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head">\`; fetch("http://evil.example");`,
+      ),
+    ),
+  ),
+);
+ok(
+  "이름공간만 있는 줄은 안 걸린다",
+  !OUTBOUND.some(([, re]) =>
+    re.test(stripXmlns(`\`<hs:sec xmlns:hs="http://www.hancom.co.kr/x">\``)),
+  ),
 );
 
 // ---------------------------------------------------------------------------
