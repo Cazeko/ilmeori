@@ -1,10 +1,14 @@
 import Link from "next/link";
-import { ChevronRight, Cog } from "lucide-react";
+import { ChevronRight, Cog, PenLine } from "lucide-react";
 import { draftRefHref } from "@/components/handover/draft-lines";
+import { ButtonLink } from "@/components/ui/button";
 import {
+  missedTargetBlock,
   screeningTotal,
+  QUOTES_PER_WORK,
   type HandoverDraft,
   type MissedRecord,
+  type Screened,
 } from "@/lib/handover-draft";
 import {
   ISSUE_CUES,
@@ -12,9 +16,11 @@ import {
   SECTION_CUE_WORDS,
 } from "@/lib/handover-cues";
 import { formatDate, formatFullDateTime } from "@/lib/format";
+import type { HandoverBlockKey } from "@/lib/types";
 
 /**
- * 「규칙이 무엇을 걸렀나」 — 규칙이 **서식에 안 실은 것**을 세어서 원문으로 내놓는다.
+ * 「규칙이 무엇을 걸렀나」 — 규칙이 **서식에 안 실은 것**을 세어서 원문으로 내놓고,
+ * 인계자가 그중 필요한 것을 **보충 칸으로 옮기게** 한다.
  *
  * ── 왜 이 판이 있나 ────────────────────────────────────────────────────────
  *
@@ -29,45 +35,54 @@ import { formatDate, formatFullDateTime } from "@/lib/format";
  *   규칙은 놓칩니다. AI는 지어냅니다.
  *   놓친 건 셀 수 있고, 지어낸 건 셀 수 없습니다.
  *
- * ── 제목을 다시 넓혔다 ─────────────────────────────────────────────────────
+ * ── 세는 법 ────────────────────────────────────────────────────────────────
  *
- * 처음 이 판은 「대화에서 무엇을 걸렀나」였다. 대화만 셀 수 있었기 때문이다 —
- * 「1-나」는 업무마다 문서 항목 하나만 싣고 나머지 본문은 어디에도 안 나오는데
- * 그걸 세는 자리가 없었다. 못 세는 것을 세었다고 말하지 않으려고 범위를 좁혀
- * 적었다. 이제 문서 항목도 같은 규칙으로 세므로 제목을 원래 자리로 넓힌다.
+ * 갈래마다 `seen === used + missed.length + omitted` 다(handover-draft.ts 의
+ * Screened). 기록 하나하나가 정확히 한 칸에 들어가고, 시험이 그걸 본다.
+ * 안 실린 이유는 둘이다 — 「규칙 밖」은 규칙이 못 찾은 것이고, 「상한에 잘림」은
+ * 규칙이 찾았는데 우리가 정한 수에 잘린 것이다. 고쳐야 할 자리가 서로 다르므로
+ * 한 이름으로 부르지 않는다.
  *
- * ── 안 실린 이유가 둘이다 ──────────────────────────────────────────────────
+ * ── 안 실린 것은 어떻게 되나 ───────────────────────────────────────────────
  *
- * 「규칙 밖」은 규칙이 못 찾은 것이고, 「상한」은 규칙이 찾았는데 우리가 정한
- * 수에 잘린 것이다. 고쳐야 할 자리가 서로 다르므로 한 이름으로 부르지 않는다.
- * 예전에는 뒤의 것이 어느 목록에도 없이 사라졌다.
+ * **서식에 저절로 들어가지 않는다.** 서식은 법이 정한 칸이고, 규칙이 못 고른
+ * 것을 규칙이 넣으면 근거 꼬리표가 거짓이 된다. 대신 인계자가 줄마다 놓인
+ * 「보충으로 넣기」를 누르면 그 기록의 **원문이 그 칸의 보충 입력란에 채워진다**
+ * (`/handover?fill=…&block=…`, block-notes.tsx 의 prefill). 읽고 고쳐 저장하면
+ * 「인계자 보충」으로 표시된다 — 규칙이 뽑은 문단과 섞이지 않는다.
+ * 한동안 이 다리가 없어서, 목록을 읽은 사람이 아래 칸까지 가서 **다시 타이핑**
+ * 해야 했다. 원문을 그대로 옮기라고 해 놓고 옮겨 적게 하는 것은 모순이었다.
  *
  * ── 서식이 아니다 ──────────────────────────────────────────────────────────
  *
- * 이 판은 `draft.blocks` 를 건드리지 않는다. 별지 제12호서식은 법이 정한 칸이고,
- * 미포착은 그 칸을 믿어도 되는지 보는 장치다. 그래서 종이(print-sheet)와
- * 저장본(document_draft)에는 한 글자도 나가지 않는다.
+ * 이 판은 `draft.blocks` 를 건드리지 않는다. 종이(print-sheet)와 저장본
+ * (document_draft)에는 한 글자도 나가지 않는다.
  *
  * ── 모양 ───────────────────────────────────────────────────────────────────
  *
- * 판 안에 판을 겹치지 않는다. 이 판은 이미 카드(「항목별 근거와 보충」) 안에
- * 있고, DESIGN.md §17.3 이 그 자리에서 채움과 네 변을 걷고 **왼쪽 선 하나만**
- * 남기라고 적어 두었다. 숫자도 문서 등급을 넘지 않는다 — §5.1, 통계 타일은
- * 아무리 커도 여백 등급이다. 아래 서식 항목 제목(17px)보다 커지면 확인 장치가
- * 확인 대상보다 무거워진다. 자바스크립트 없이 접힌다(`<details>`).
- */
-/**
- * 서식 위 캡션이 이 판으로 보내는 자리.
- *
- * 두 곳이 같은 문자열을 손으로 적으면 한쪽만 고치는 날이 온다 —
- * `handoverBlockAnchor()` 를 상수로 둔 것과 같은 이유다(types.ts:353).
+ * 판 안에 판을 겹치지 않는다(DESIGN.md §17.3 — 왼쪽 선 하나). 갈래마다
+ * 가로 막대 하나로 「실은 것 / 규칙 밖 / 상한」의 비율을 먼저 보이고, 그 아래
+ * 숫자를 적는다. 막대는 무채색 농도만 다르다 — 이 화면의 색 예산은 근거
+ * 꼬리표(accent)와 지연(빨강)이 이미 쓰고 있다. 원문은 앞의 몇 건만 펼쳐 두고
+ * 나머지는 접는다(`<details>`, 자바스크립트 없이 열린다).
  */
 export const SCREENING_ANCHOR = "screening";
 
+/** 접지 않고 바로 보이는 원문 수. 나머지는 「나머지 N건 보기」 뒤에 둔다. */
+const SHOWN_OPEN = 3;
+
+type Row = MissedRecord & { source: string };
+
 export function ScreeningPanel({
   screening,
+  /** 인계자 본인 · 실행 전 · DB가 붙어 있을 때. 참이면 줄마다 「보충으로 넣기」를 놓는다. */
+  canWrite = false,
+  /** 칸 이름 — 「보충으로 넣기」가 어디로 데려가는지 적을 때 쓴다. */
+  headings = {},
 }: {
   screening: HandoverDraft["screening"];
+  canWrite?: boolean;
+  headings?: Partial<Record<HandoverBlockKey, string>>;
 }) {
   const sources = [
     { name: "대화", screened: screening.comments },
@@ -75,17 +90,17 @@ export function ScreeningPanel({
   ];
 
   // 볼 것이 아예 없으면 셀 것도 없다. 0 만 늘어놓으면 규칙이 실패한 것처럼 읽힌다.
-  //
-  // 판단을 `screeningTotal` 하나로 모은다. 위 캡션도 같은 것을 물어야 하는데
-  // (sheet-caption.tsx), 두 곳이 갈래 목록을 각자 들고 있으면 갈라지는 날이
-  // 온다. 그때 캡션은 그려지고 이 판은 사라져서, **캡션의 링크가 문서에
-  // 없는 앵커를 가리킨다** — 눌러도 아무 일이 안 일어나고 오류도 안 난다.
-  if (screeningTotal(screening).seen === 0) return null;
+  // 판단을 `screeningTotal` 하나로 모은다 — 위 캡션(sheet-caption.tsx)도 같은
+  // 것을 묻고, 두 곳이 갈래 목록을 각자 들고 있으면 갈라지는 날이 온다.
+  const total = screeningTotal(screening);
+  if (total.seen === 0) return null;
 
-  const missed = sources.flatMap((s) =>
+  const missed: Row[] = sources.flatMap((s) =>
     s.screened.missed.map((m) => ({ ...m, source: s.name })),
   );
   const omitted = sources.reduce((n, s) => n + s.screened.omitted, 0);
+  const shown = missed.slice(0, SHOWN_OPEN);
+  const rest = missed.slice(SHOWN_OPEN);
 
   return (
     <section
@@ -94,105 +109,130 @@ export function ScreeningPanel({
       id={SCREENING_ANCHOR}
       className="scroll-mt-20 border-l border-l-rule-hair py-2 pl-3"
     >
-      <h3 className="flex items-center gap-2 text-body-sm font-bold text-gray-90">
-        <Cog aria-hidden className="size-4 shrink-0 text-gray-40" />
-        규칙이 무엇을 걸렀나
-      </h3>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h3 className="flex items-center gap-2 text-body-sm font-bold text-gray-90">
+          <Cog aria-hidden className="size-4 shrink-0 text-gray-40" />
+          규칙이 무엇을 걸렀나
+        </h3>
+        {/* 캡션이 세는 수와 같은 수다. 여기서는 합계만 한 줄로 되풀이한다 —
+            아래 막대는 갈래별이고, 합계가 없으면 둘을 머릿속에서 더해야 한다. */}
+        <p className="text-body-xs text-gray-60">
+          들여다본 {total.seen}건 중 서식에 실은 것{" "}
+          <b className="font-bold tabular-nums text-gray-90">{total.used}</b>건 ·
+          안 실린 것{" "}
+          <b className="font-bold tabular-nums text-gray-90">{total.notUsed}</b>
+          건
+        </p>
+      </div>
 
-      {/* 갈래마다 한 줄. 셋을 더하면 반드시 본 수가 된다(Screened 주석) —
-          「안 실린 것」은 아래 목록 길이가 아니라 seen - used 다. 목록에는
-          상한에 걸려 못 실은 것이 빠져 있고, 그 수를 목록 끝이 따로 밝힌다. */}
-      <dl className="mt-2 flex flex-col gap-1">
+      <ul className="mt-3 flex flex-col gap-3">
         {sources.map((s) => (
-          <div key={s.name} className="flex flex-wrap items-baseline gap-x-3">
-            <dt className="w-16 shrink-0 text-body-xs text-gray-60">{s.name}</dt>
-            <dd className="flex flex-wrap items-baseline gap-x-3 text-body-xs text-gray-60">
-              {[
-                { label: "들여다본 것", value: s.screened.seen },
-                { label: "서식에 실은 것", value: s.screened.used },
-                { label: "안 실린 것", value: s.screened.seen - s.screened.used },
-              ].map((n) => (
-                <span key={n.label} className="inline-flex items-baseline gap-1">
-                  {n.label}
-                  <b className="text-body-sm leading-none font-bold tabular-nums text-gray-90">
-                    {n.value}
-                  </b>
-                  건
-                </span>
-              ))}
-            </dd>
-          </div>
+          <Tally key={s.name} name={s.name} screened={s.screened} />
         ))}
-      </dl>
+      </ul>
 
-      {/* 「걸린 N건 중 M건만 실었다」는 여기 적지 않는다 — 같은 사실이 바로 아래
-          「1-다」의 근거 꼬리표에 이미 있고, 같은 화면에서 두 번 말하면 둘 중
-          하나가 틀렸을 때 어느 쪽이 맞는지 알 수 없게 된다. */}
-      <p className="mt-2 text-body-sm leading-relaxed break-keep text-gray-70">
+      <p className="mt-3 text-body-sm leading-relaxed break-keep text-gray-70">
+        <strong className="font-bold text-gray-90">
+          안 실린 {total.notUsed}건은 서식에 저절로 들어가지 않습니다.
+        </strong>{" "}
         규칙은 대화에서{" "}
         <strong className="font-bold text-gray-90">{ISSUE_CUE_NAMES}</strong>{" "}
         {ISSUE_CUES.length}갈래의 표현을, 문서 항목에서는 제목의{" "}
         <strong className="font-bold text-gray-90">{SECTION_CUE_WORDS}</strong>
-        를 찾습니다. 뜻을 판정하지 않고 표현을 찾으므로{" "}
-        <strong className="font-bold text-gray-90">
-          반드시 놓치는 것이 있습니다.
-        </strong>{" "}
-        안 실린 것은 바로 위에서 갈래별로 세고, 원문도 아래에 그대로 둡니다.
-        서식에 넣을 것은 인계자가 고릅니다.
+        를 찾습니다. 뜻을 판정하지 않고 표현을 찾으므로 반드시 놓치는 것이
+        있습니다.
+      </p>
+
+      {/* 이유 둘의 뜻. 「규칙 밖」은 규칙을 고칠 일이고 「상한」은 수를 고칠
+          일이라, 같은 목록에 있어도 다른 이야기다. */}
+      <dl className="mt-2 grid gap-x-3 gap-y-1 text-body-xs text-gray-60 sm:grid-cols-[auto_1fr]">
+        <dt className="font-bold text-gray-80">규칙 밖</dt>
+        <dd>규칙이 찾는 표현이 없었습니다. 규칙을 고칠 자리입니다.</dd>
+        <dt className="font-bold text-gray-80">상한에 잘림</dt>
+        <dd>
+          규칙에는 걸렸지만 업무당 대화 {QUOTES_PER_WORK}건 · 칸당 문서 항목
+          1건이라는 상한에 잘렸습니다. 수를 고칠 자리입니다.
+        </dd>
+      </dl>
+
+      <p className="mt-2 text-body-sm leading-relaxed break-keep text-gray-70">
+        {canWrite ? (
+          <>
+            필요한 것은 줄마다 놓인{" "}
+            <strong className="font-bold text-gray-90">「보충으로 넣기」</strong>
+            로 옮깁니다. 원문이 그대로 그 항목의 보충 칸에 채워지고, 읽고 고친
+            뒤 저장합니다. 규칙이 뽑은 문단과 섞이지 않고{" "}
+            <strong className="font-bold text-gray-90">인계자 보충</strong>으로
+            표시됩니다.
+          </>
+        ) : (
+          <>
+            필요한 것은 인계자가 「보충으로 넣기」로 서식의 보충 칸에 옮기고,
+            옮긴 글은{" "}
+            <strong className="font-bold text-gray-90">인계자 보충</strong>으로
+            표시됩니다.
+          </>
+        )}
       </p>
 
       {/* ── 이 판이 셀 수 없는 것 ────────────────────────────────────────────
           인터뷰가 같은 것을 세 번 말했다. 후임자는 전임자에게 20~30회
           전화하고(Q10), 사전 조율한 내용은 기록에 안 남고(Q27), 곤란한 것은
-          *"필요할 시, 구두 전달"* 한다(Q16). **가장 값진 맥락은 체계적으로
-          글이 아니라 말로 간다.**
-
-          위 숫자는 「규칙이 놓친 것」을 세지만, 애초에 여기 없는 말은 놓칠
-          수조차 없다. 세는 코드를 안 만들고 문장 하나로만 인정한다 —
-          못 세는 것을 세었다고 말하지 않는 것이 이 판의 규율이고, 세는 척하는
-          숫자를 하나 더 만드는 것이 정확히 그 규율을 어기는 일이다. */}
-      {/* 등급을 한 칸 낮춘다. 앞 문단과 클래스가 한 글자도 안 다르면 이 문장은
-          「덧붙인 말」이 아니라 **앞 문단의 네 번째 줄**로 읽힌다 — 실제로
-          그렇게 보였다. 이 판의 주석이 스스로 경계하는 것과 같은 자리다
-          (「확인 장치가 확인 대상보다 무거워진다」). */}
-      <p className="mt-3 text-body-xs leading-relaxed break-keep text-gray-60">
+          *"필요할 시, 구두 전달"* 한다(Q16). 위 숫자는 「규칙이 놓친 것」을
+          세지만, 애초에 여기 없는 말은 놓칠 수조차 없다. 세는 코드를 안 만들고
+          문장 하나로만 인정한다 — 세는 척하는 숫자를 하나 더 만드는 것이
+          정확히 이 판의 규율을 어기는 일이다. */}
+      <p className="mt-2 text-body-xs leading-relaxed break-keep text-gray-60">
         규칙이 세는 것은 일머리에 남은 기록뿐입니다. 결재 전 통화나 방문으로
         오간 말은 애초에 여기 없어 이 수에도 안 잡힙니다.
       </p>
 
       {missed.length > 0 ? (
-        <details className="mt-2">
-          {/* 펼침 표시가 없었다. `list-none` 으로 브라우저 기본 삼각형을 지워
-              놓고 대신 놓은 것이 없어서, **증명 목록으로 들어가는 유일한 문**이
-              그냥 회색 글줄로 보였다. 이 저장소가 이미 쓰는 꺾쇠를 놓는다. */}
-          <summary className="group flex min-h-11 cursor-pointer list-none items-center gap-1 py-2 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
-            <ChevronRight
-              aria-hidden
-              className="size-4 shrink-0 transition-transform duration-150 group-open:rotate-90"
-            />
-            {/* 「안 실린 것 N건」이라고 부르면 안 된다 — 위 표와 캡션이 세는
-                「안 실린 것」은 상한에 잘린 것까지 더한 수이고, 여기 목록에
-                있는 것은 원문이 남은 것뿐이다. 같은 이름으로 두 수가 서면
-                둘 중 하나가 틀렸을 때 어느 쪽이 맞는지 알 수 없게 된다. */}
-            안 실린 것의 원문 {missed.length}건 보기
-          </summary>
-          {/* 요약하지 않는다. 규칙이 왜 안 실었는지 설명하는 것보다, 글을
-              그대로 두고 사람이 두 초 만에 넘기게 하는 편이 정직하다.
-              다만 **긴 글은 잘린다**(220자). 잘렸다는 사실을 숨기면 이 판이
-              스스로 어기는 규칙이 되므로, 잘린 글은 그렇다고 적고 원문으로
-              가는 길을 함께 준다. */}
-          <ul className="flex flex-col gap-2">
-            {missed.map((m) => (
-              <MissedRow key={`${m.source}-${m.key}`} record={m} />
+        <>
+          {/* 「안 실린 것 N건」이라고 부르면 안 된다 — 위 막대와 캡션이 세는
+              「안 실린 것」은 목록 상한에 잘린 것까지 더한 수이고, 여기 있는
+              것은 원문이 남은 것뿐이다. */}
+          <h4 className="mt-4 text-body-xs font-bold text-gray-60">
+            안 실린 것의 원문 {missed.length}건
+          </h4>
+          <ul className="mt-2 flex flex-col gap-3">
+            {shown.map((m) => (
+              <MissedRow
+                key={`${m.source}-${m.key}`}
+                record={m}
+                canWrite={canWrite}
+                headings={headings}
+              />
             ))}
           </ul>
+          {rest.length > 0 ? (
+            <details className="mt-1">
+              <summary className="group flex min-h-11 cursor-pointer list-none items-center gap-1 py-2 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
+                <ChevronRight
+                  aria-hidden
+                  className="size-4 shrink-0 transition-transform duration-150 group-open:rotate-90"
+                />
+                나머지 {rest.length}건 보기
+              </summary>
+              <ul className="flex flex-col gap-3">
+                {rest.map((m) => (
+                  <MissedRow
+                    key={`${m.source}-${m.key}`}
+                    record={m}
+                    canWrite={canWrite}
+                    headings={headings}
+                  />
+                ))}
+              </ul>
+            </details>
+          ) : null}
           {omitted > 0 ? (
-            <p className="mt-2 pl-3 text-body-sm text-gray-60">
+            <p className="mt-2 text-body-sm text-gray-60">
               그 밖에 {omitted}건이 더 있습니다. 업무마다 일부만 보여 주고
               나머지는 업무 화면에 그대로 있습니다.
             </p>
           ) : null}
-        </details>
+        </>
       ) : (
         <p className="mt-2 text-body-sm text-gray-60">
           이번에는 안 실린 것이 없습니다. 규칙이 모든 기록을 골랐다는 뜻이지,
@@ -203,20 +243,87 @@ export function ScreeningPanel({
   );
 }
 
-function MissedRow({ record: m }: { record: MissedRecord & { source: string } }) {
+/**
+ * 갈래 하나의 막대 — 본 것 전체를 100으로 두고 「실음 / 규칙 밖 / 상한 / 목록에도
+ * 못 실음」이 차지하는 폭. 네 수를 더하면 반드시 본 수가 된다.
+ */
+function Tally({ name, screened }: { name: string; screened: Screened }) {
+  const rule = screened.missed.filter((m) => m.why === "규칙 밖").length;
+  const cap = screened.missed.filter((m) => m.why === "상한에 잘림").length;
+  const parts = [
+    { label: "서식에 실음", n: screened.used, swatch: "bg-gray-90" },
+    { label: "규칙 밖", n: rule, swatch: "bg-gray-40" },
+    { label: "상한에 잘림", n: cap, swatch: "bg-gray-30" },
+    { label: "목록에도 못 실음", n: screened.omitted, swatch: "bg-gray-20" },
+  ];
+  const seen = Math.max(screened.seen, 1);
+  return (
+    <li>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-body-xs text-gray-60">
+        <span className="font-bold text-gray-90">{name}</span>
+        <span>
+          들여다본 것{" "}
+          <b className="font-bold tabular-nums text-gray-90">{screened.seen}</b>
+          건
+        </span>
+      </div>
+      {/* 막대는 눈으로 보는 것이다. 숫자는 아래 dl 이 읽어 준다. */}
+      <div aria-hidden className="mt-1 flex h-2 w-full gap-px bg-gray-10">
+        {parts.map((p) =>
+          p.n > 0 ? (
+            <div
+              key={p.label}
+              className={p.swatch}
+              style={{ width: `${(p.n / seen) * 100}%` }}
+            />
+          ) : null,
+        )}
+      </div>
+      <dl className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-body-xs text-gray-60">
+        {parts
+          .filter((p) => p.n > 0 || p.label === "서식에 실음")
+          .map((p) => (
+            <div key={p.label} className="inline-flex items-baseline gap-1">
+              <span aria-hidden className={`inline-block size-2 ${p.swatch}`} />
+              <dt>{p.label}</dt>
+              <dd className="font-bold tabular-nums text-gray-90">{p.n}건</dd>
+            </div>
+          ))}
+      </dl>
+    </li>
+  );
+}
+
+function MissedRow({
+  record: m,
+  canWrite,
+  headings,
+}: {
+  record: Row;
+  canWrite: boolean;
+  headings: Partial<Record<HandoverBlockKey, string>>;
+}) {
   const href = draftRefHref(m.ref);
+  const target = missedTargetBlock(m);
+  // 주소로 보낸다. 자바스크립트 없이도 동작하고, 저장하기 전까지는 아무것도
+  // 남지 않는다. `#note-…` 는 그 칸의 입력란 id 다(block-notes.tsx).
+  const fillHref = `/handover?fill=${encodeURIComponent(m.key)}&block=${target}#note-${target}`;
   return (
     <li className="border-l border-l-rule-hair pl-3">
-      <p className="flex flex-wrap items-center gap-x-2 text-body-xs text-gray-60">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body-xs text-gray-60">
+        {/* 왜 안 실렸는지를 줄 맨 앞에 세운다. 두 초 만에 넘기는 목록에서
+            먼저 읽혀야 하는 것은 원문이 아니라 「고칠 자리가 어디냐」다. */}
+        <span className="inline-flex items-center border border-rule-hair px-chip-x py-chip-y font-bold text-gray-90">
+          {m.why}
+        </span>
+        <span>{m.source}</span>
         <Link
           href={href}
           className="font-bold text-gray-90 transition-colors duration-150 hover:text-primary"
         >
           {m.workTitle}
         </Link>
-        <span>
-          {m.source} · {m.label}
-        </span>
+        <span>{m.label}</span>
         {m.at ? (
           <time
             dateTime={m.at}
@@ -226,10 +333,9 @@ function MissedRow({ record: m }: { record: MissedRecord & { source: string } })
             {formatDate(m.at)}
           </time>
         ) : null}
-        {/* 왜 안 실렸는지를 줄마다 적는다. 「규칙 밖」은 규칙을 고칠 일이고
-            「상한」은 수를 고칠 일이라, 같은 목록에 있어도 다른 이야기다. */}
-        <span className="text-gray-60">{m.why}</span>
       </p>
+      {/* 요약하지 않는다. 다만 긴 글은 잘린다(220자). 잘렸다는 사실을 숨기면
+          이 판이 스스로 어기는 규칙이 되므로 원문으로 가는 길을 함께 준다. */}
       <p className="mt-1 text-body-sm leading-relaxed break-keep text-gray-80">
         “{m.body}”
         {m.truncated ? (
@@ -244,6 +350,17 @@ function MissedRow({ record: m }: { record: MissedRecord & { source: string } })
           </>
         ) : null}
       </p>
+      {canWrite ? (
+        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <ButtonLink href={fillHref} variant="secondary" size="sm">
+            <PenLine aria-hidden className="size-4" />
+            보충으로 넣기
+          </ButtonLink>
+          <span className="text-body-xs break-keep text-gray-60">
+            「{headings[target] ?? target}」의 보충 칸에 원문이 채워집니다
+          </span>
+        </p>
+      ) : null}
     </li>
   );
 }

@@ -43,10 +43,15 @@ import {
   buildHandoverDraft,
   draftBlockText,
   screeningTotal,
+  missedNotePrefill,
 } from "@/lib/handover-draft";
 import { canMutate, isSupabaseConfigured } from "@/lib/env";
 import { MAX_DEMO_MESSAGES } from "@/lib/demo-state";
-import { handoverBlockAnchor, type HandoverNoteWithAuthor } from "@/lib/types";
+import {
+  handoverBlockAnchor,
+  type HandoverBlockKey,
+  type HandoverNoteWithAuthor,
+} from "@/lib/types";
 import type { Profile } from "@/lib/types";
 
 
@@ -79,11 +84,20 @@ export async function HandoverScreen({
   msg,
   /** 최신 인계가 아니라 지난 인계서를 보고 있는가. 참이면 쓰는 칸을 안 그린다. */
   archived = false,
+  /**
+   * 「보충으로 넣기」가 보낸 자리 — 어느 안 실린 기록(key)을 어느 칸(block)에.
+   *
+   * 주소(`?fill=…&block=…`)로 온다. 그래야 자바스크립트 없이도 동작하고,
+   * 저장하기 전까지는 아무것도 남지 않는다. 기록은 이 화면이 방금 만든
+   * 초안(draft.screening) 안에서 찾는다 — 주소의 글자를 그대로 칸에 넣지 않는다.
+   */
+  fill = null,
 }: {
   view: HandoverView;
   viewer: Profile;
   msg: string | string[] | undefined;
   archived?: boolean;
+  fill?: { key: string; block: HandoverBlockKey } | null;
 }) {
   const { handover, from, to, items } = view;
   const draft = await buildHandoverDraft(view);
@@ -119,6 +133,21 @@ export async function HandoverScreen({
   // 다른 인계에 가서 붙는다** — 액션이 주소가 아니라 getHandoverFor 로 대상을
   // 다시 찾기 때문이다(이 파일 머리말).
   const canWriteNotes = isSender && !done && canMutate && !archived;
+
+  // 「보충으로 넣기」로 왔으면, 그 기록의 원문을 그 칸의 입력란에 채워 둔다.
+  // 쓸 수 없는 사람(인수자·실행 뒤·데모)에게는 채울 칸 자체가 없다.
+  const fillRecord =
+    fill && canWriteNotes
+      ? [
+          ...draft.screening.comments.missed,
+          ...draft.screening.sections.missed,
+        ].find((m) => m.key === fill.key) ?? null
+      : null;
+  const prefillBlock: HandoverBlockKey | null = fillRecord ? fill!.block : null;
+  const prefillText = fillRecord ? missedNotePrefill(fillRecord) : undefined;
+  const blockHeadings = Object.fromEntries(
+    draft.blocks.map((b) => [b.key, b.heading]),
+  ) as Partial<Record<HandoverBlockKey, string>>;
 
   // 지난 인계서에서 내려받는 파일은 **그 인계서**여야 한다. `/handover/export/hwpx`
   // 는 getHandoverFor 를 쓰므로 최신 것을 준다 — 화면과 파일이 다른 문서가 된다.
@@ -677,7 +706,11 @@ export async function HandoverScreen({
                       걸렀나」로 넓어졌다(screening-panel.tsx 의 경위 주석).
                       서식 위 캡션이 세는 수와 같은 수다.
                       이 판은 서식이 아니므로 종이에는 나가지 않는다. */}
-                  <ScreeningPanel screening={draft.screening} />
+                  <ScreeningPanel
+                    screening={draft.screening}
+                    canWrite={canWriteNotes}
+                    headings={blockHeadings}
+                  />
 
                   {draft.blocks.map((block) => {
                     const blockNotes = notesByBlock.get(block.key) ?? [];
@@ -795,6 +828,9 @@ export async function HandoverScreen({
                         notes={blockNotes}
                         canWrite={canWriteNotes}
                         needsHuman={block.needsHuman}
+                        prefill={
+                          block.key === prefillBlock ? prefillText : undefined
+                        }
                       />
                     </section>
                     );

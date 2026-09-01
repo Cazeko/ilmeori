@@ -33,6 +33,8 @@ const {
   draftParagraphText,
   readDoc,
   screeningTotal,
+  missedTargetBlock,
+  missedNotePrefill,
   sheetSourceText,
 } = await import("@/lib/handover-draft.ts");
 const { workDocHref, workHref, workTalkHref } = await import("@/lib/types.ts");
@@ -770,6 +772,52 @@ ok(
       "인계자 보충",
     ),
 );
+
+// ── 안 실린 기록 → 보충 칸 (missedTargetBlock · missedNotePrefill) ──────────
+//
+// 「규칙이 무엇을 걸렀나」의 「보충으로 넣기」가 기대는 것 셋 — 원문 전체가
+// 남아 있는가, 아는 칸으로 보내는가, 채워 넣는 글이 보충 상한을 안 넘는가.
+{
+  const { HANDOVER_NOTE_MAX, isHandoverBlockKey } = await import("@/lib/types.ts");
+  const all = [...sc.comments.missed, ...sc.sections.missed];
+  ok(
+    "안 실린 기록마다 원문 전체(full)가 있다",
+    all.length > 0 && all.every((m) => typeof m.full === "string" && m.full.trim().length > 0),
+  );
+  ok(
+    "화면에 보이는 본문(220자)은 원문의 앞부분이다",
+    all.every((m) =>
+      m.full.replace(/\s*\n+\s*/g, " ").trim().startsWith(m.body.replace(/…$/, "")),
+    ),
+    all.filter((m) => !m.full.replace(/\s*\n+\s*/g, " ").trim().startsWith(m.body.replace(/…$/, ""))).map((m) => m.key).join(", "),
+  );
+  ok(
+    "보충 칸 배정은 아는 칸 이름이다",
+    all.every((m) => isHandoverBlockKey(missedTargetBlock(m))),
+  );
+  ok(
+    "대화는 「1-다」로 간다 — 서식에서 대화를 가져가던 칸",
+    sc.comments.missed.every((m) => missedTargetBlock(m) === "1-issues"),
+  );
+  ok(
+    "채워 넣는 글이 보충 상한을 넘지 않는다",
+    all.every((m) => missedNotePrefill(m).length <= HANDOVER_NOTE_MAX),
+  );
+  ok(
+    "채워 넣는 글에 출처(업무 제목)와 원문이 함께 있다",
+    all.every((m) => {
+      const s = missedNotePrefill(m);
+      return s.includes(m.workTitle) && s.includes(m.full.trim().slice(0, 20));
+    }),
+  );
+  const long = { ...all[0], full: "가".repeat(3000) };
+  const cut = missedNotePrefill(long);
+  ok(
+    "긴 원문은 자르되 잘랐다고 적는다",
+    cut.length <= HANDOVER_NOTE_MAX && cut.includes("잘렸습니다"),
+    `${cut.length}자`,
+  );
+}
 
 console.log(
   `\n${fails.length === 0 ? "전부 통과" : "실패"} — ${pass}건 통과, ${fails.length}건 실패`,

@@ -25,6 +25,7 @@ import {
   type HandoverBlockKey,
   type Profile,
   type WorkListItem,
+  HANDOVER_NOTE_MAX,
 } from "@/lib/types";
 
 /**
@@ -166,6 +167,14 @@ export type MissedRecord = {
   /** 줄바꿈을 눕히고 220자에서 자른 글. 잘렸으면 아래가 참이다. */
   body: string;
   truncated: boolean;
+  /**
+   * 원문 전체 — 줄바꿈까지 그대로.
+   *
+   * 화면은 `body`(220자)를 보여 주지만, 「보충으로 넣기」가 보충 칸에 채우는
+   * 것은 이것이다. 잘린 글을 보충으로 옮기면 잘린 채로 인쇄되고, 그 사실은
+   * 아무도 모른다 — 서식 쪽 인용이 한 번 겪은 실패다(1-다 주석).
+   */
+  full: string;
   ref: DraftRef;
   why: MissedWhy;
 };
@@ -269,6 +278,46 @@ export function screeningTotal(
     used: kinds.reduce((n, s) => n + s.used, 0),
     notUsed: kinds.reduce((n, s) => n + s.missed.length + s.omitted, 0),
   };
+}
+
+/**
+ * 안 실린 기록이 「보충으로 넣기」로 갈 칸.
+ *
+ * 대화는 서식에서 「1-다. 현안사항 및 문제점」이 가져가던 것이므로 그 칸으로,
+ * 문서 항목은 제목 규칙(sectionCueFor)이 가리키는 칸으로, 아무 데도 안 걸리면
+ * 「4. 그 밖의 참고사항」으로 보낸다. 인계자는 링크가 데려간 칸에서 읽고 고쳐
+ * 저장한다 — 다른 칸이 맞으면 거기서 새로 적으면 된다.
+ */
+export function missedTargetBlock(m: MissedRecord): HandoverBlockKey {
+  if (m.ref.kind === "comment") return "1-issues";
+  const cue = sectionCueFor(m.label);
+  if (cue === "1-나") return "1-progress";
+  if (cue === "1-다") return "1-issues";
+  return "4-notes";
+}
+
+/**
+ * 「보충으로 넣기」가 보충 칸에 채워 두는 글.
+ *
+ * 원문을 그대로 옮기고 어디서 왔는지를 첫 줄에 적는다. 인계자가 읽고 고쳐서
+ * 저장하는 것이 전제라 요약하지 않는다. 보충 한 줄의 상한(HANDOVER_NOTE_MAX)을
+ * 넘기면 저장이 막히므로 넘치는 원문은 자르되 **잘랐다고 적는다** — 잘린
+ * 사실을 숨기면 이 판이 스스로 어기는 규칙이 된다.
+ */
+export function missedNotePrefill(m: MissedRecord): string {
+  const head =
+    m.ref.kind === "comment"
+      ? `[대화 — ${m.label}${m.at ? `, ${formatDate(m.at)}` : ""} · 「${m.workTitle}」]`
+      : `[문서 — 「${m.workTitle}」 · ${m.label}]`;
+  const cut = " …(뒤가 잘렸습니다 — 업무 화면에서 원문을 확인하세요)";
+  const body = m.full.trim();
+  // 줄바꿈 하나와 따옴표 둘을 뺀 자리
+  const room = HANDOVER_NOTE_MAX - head.length - 3;
+  const text =
+    body.length <= room
+      ? body
+      : `${body.slice(0, Math.max(0, room - cut.length))}${cut}`;
+  return `${head}\n“${text}”`;
 }
 
 // ---------------------------------------------------------------------------
@@ -526,7 +575,7 @@ const PROCESS_MAX = 6;
 const QUOTE_MAX = 220;
 
 /** 한 업무에서 인계서로 옮길 대화 수 상한. 서식이 목록으로 변하면 아무도 안 읽는다. */
-const QUOTES_PER_WORK = 3;
+export const QUOTES_PER_WORK = 3;
 
 /**
  * 한 업무에서 「미포착」에 보여 줄 대화 수 상한.
@@ -1132,6 +1181,7 @@ export async function buildHandoverDraft(
         at: null,
         body: q.text,
         truncated: q.truncated,
+        full: piece.body,
         ref: pieceRef(w.id, piece),
         why,
       });
@@ -1155,6 +1205,7 @@ export async function buildHandoverDraft(
         at: c.created_at,
         body: q.text,
         truncated: q.truncated,
+        full: c.body,
         ref: { kind: "comment", workId: w.id, commentId: c.id },
         why,
       });

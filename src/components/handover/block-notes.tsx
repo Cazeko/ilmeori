@@ -37,6 +37,13 @@ export function BlockNotes({
   canWrite,
   /** 채울 근거가 없어 원래 비어 있는 항목(물품·예산). 입력칸을 펼친 채로 둔다. */
   needsHuman = false,
+  /**
+   * 「규칙이 무엇을 걸렀나」의 「보충으로 넣기」가 채워 보낸 글.
+   *
+   * 안 실린 기록의 원문이다. 있으면 칸을 펼친 채로 두고 그 글을 넣어 둔다 —
+   * 인계자는 읽고 고쳐서 저장한다. 저장하기 전까지는 아무것도 남지 않는다.
+   */
+  prefill,
 }: {
   handoverId: string;
   blockKey: HandoverBlockKey;
@@ -44,6 +51,7 @@ export function BlockNotes({
   notes: HandoverNoteWithAuthor[];
   canWrite: boolean;
   needsHuman?: boolean;
+  prefill?: string;
 }) {
   // 읽기만 하는 사람(인수자)에게 보충이 없는 항목은 아무것도 그리지 않는다.
   // 빈 상자가 일곱 개 늘어서면 서식이 아니라 입력 폼처럼 보인다.
@@ -129,7 +137,7 @@ export function BlockNotes({
         // 사람이 적어야 하는 자리이고, 나머지 여섯 개까지 펼쳐 두면
         // 결재 문서가 아니라 설문지처럼 보인다.
         <details
-          open={needsHuman && notes.length === 0}
+          open={(needsHuman && notes.length === 0) || Boolean(prefill)}
           className={notes.length > 0 ? "mt-3" : undefined}
         >
           {/* 「이 항목에」는 그 항목 안에 있으니 자명한 말이다. 일곱 번
@@ -148,6 +156,12 @@ export function BlockNotes({
           >
             <input type="hidden" name="handoverId" value={handoverId} />
             <input type="hidden" name="blockKey" value={blockKey} />
+            {prefill ? (
+              <p className="mb-2 text-body-sm font-bold break-keep text-gray-90">
+                안 실린 기록의 원문을 채워 두었습니다. 읽고 필요 없는 부분은
+                지운 뒤 저장하세요.
+              </p>
+            ) : null}
             <Field
               id={inputId}
               // 항목명은 바로 위 h3 에 이미 있다. 라벨에 통째로 되풀이하면
@@ -168,7 +182,8 @@ export function BlockNotes({
                   {...p}
                   name="body"
                   maxLength={HANDOVER_NOTE_MAX}
-                  className="min-h-24"
+                  defaultValue={prefill}
+                  className={prefill ? "min-h-40" : "min-h-24"}
                   placeholder={
                     needsHuman
                       ? "예) 물품관리대장상 인계 대상 물품 3건(노트북 1, 계측기 2). 2027년도 예산 요구서는 예산재정과와 8월 12일 협의 예정."
