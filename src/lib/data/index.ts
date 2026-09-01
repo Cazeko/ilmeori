@@ -4,6 +4,7 @@ import { isSupabaseConfigured } from "@/lib/env";
 import * as mock from "./mock";
 import * as db from "./db";
 import type {
+  HandoverMessageWithAuthor,
   HandoverNoteWithAuthor,
   MemberRole,
   Profile,
@@ -150,6 +151,24 @@ export const getHandoverNotes = (
   handoverId: string,
 ): Promise<HandoverNoteWithAuthor[]> =>
   isSupabaseConfigured ? db.getHandoverNotes(handoverId) : Promise.resolve([]);
+
+/**
+ * 인계 건에 딸린 문답.
+ *
+ * **보충과 달리 데모 모드에서도 동작한다.** 보충은 한 줄이 1000자까지라 쿠키
+ * (4KB)에 한 번만 적어도 넘치고, 넘친 쿠키는 브라우저가 조용히 통째로 버린다.
+ * 문답은 짧은 말이라 몇 줄은 담기고, 무엇보다 **시연에서 눌러 보는 물건**이다 —
+ * 심사장에서 「여기서 물어볼 수 있습니다」라고 말해 놓고 적을 칸이 없으면
+ * 그 자리에서 주장이 죽는다.
+ *
+ * 담기는 수에는 상한이 있고(demo-state.ts), 화면이 그 사실을 적는다.
+ */
+export const getHandoverMessages = (
+  handoverId: string,
+): Promise<HandoverMessageWithAuthor[]> =>
+  isSupabaseConfigured
+    ? db.getHandoverMessages(handoverId)
+    : mock.getHandoverMessages(handoverId);
 
 /**
  * 실을 열면 읽음으로 표시한다. 목업에는 찍을 곳이 없다 — 데모 모드는 쪽지를

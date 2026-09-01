@@ -54,6 +54,7 @@ import {
   type DocSectionWithEditor,
   type Document,
   type Handover,
+  type HandoverMessageWithAuthor,
   type MemberWithProfile,
   type Note,
   type NoteThread,
@@ -794,6 +795,31 @@ async function buildHandover(base: Handover): Promise<HandoverView> {
         };
       }),
   };
+}
+
+/**
+ * 데모의 인계 문답.
+ *
+ * 쿠키에 담긴 줄을 그대로 돌려준다. `handover_id` 는 쿠키에 없다 — 데모에
+ * 인계 건이 하나뿐이라 담지 않았고(demo-state.ts), 그래서 **여기서 그 한
+ * 건인지 확인한다.** 확인 없이 돌려주면 다른 id 로 물었을 때 남의 문답을
+ * 돌려주는 모양이 되고, 목업이 정책보다 느슨해지는 자리는 만들지 않는다.
+ */
+export async function getHandoverMessages(
+  handoverId: string,
+): Promise<HandoverMessageWithAuthor[]> {
+  const known = handovers.find((h) => h.id === handoverId);
+  if (!known) return [];
+
+  const state = await getDemoState();
+  return state.handoverMessages.map((m) => ({
+    id: m.id,
+    handover_id: handoverId,
+    author_id: m.author_id,
+    body: m.body,
+    created_at: m.created_at,
+    author: requireProfile(m.author_id),
+  }));
 }
 
 // ---------------------------------------------------------------------------

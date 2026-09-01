@@ -280,7 +280,15 @@ export type NotificationKind =
   | "mention"
   | "note"
   | "work_touched"
-  | "approval_decided";
+  | "approval_decided"
+  /**
+   * 인계 문답에 상대가 글을 남겼다.
+   *
+   * 있는 갈래를 빌려 쓰지 않았다. `note` 로 적으면 알림이 「쪽지가 왔다」고
+   * 말하면서 쪽지함이 아닌 곳으로 보내고, `work_touched` 는 업무 하나를
+   * 가리키는 갈래인데 인계에는 가리킬 업무가 여럿이다(0022).
+   */
+  | "handover_message";
 
 export interface AppNotification {
   id: number;
@@ -422,6 +430,21 @@ export function workTalkHref(workId: string, commentId?: string): string {
 export const HANDOVER_NOTE_MAX = 1000;
 
 /**
+ * 인계 문답 한 줄의 길이 상한. DB의 handover_message_body_check 와 **같은 값**이다.
+ *
+ * 보충과 같은 1000자다. 문답이 그보다 길어질 말이면 그 업무의 대화에 적고
+ * 여기서는 그 업무를 가리키는 편이 맞다 — 이 자리는 **인계서를 읽다 막힌 것**을
+ * 묻는 곳이지 업무 자체를 논의하는 곳이 아니다.
+ */
+export const HANDOVER_MESSAGE_MAX = 1000;
+
+/** 한 인계 건에 쌓을 수 있는 문답 수. DB의 trg_handover_message_limit 과 같다. */
+export const HANDOVER_MESSAGE_LIMIT = 200;
+
+/** 문답을 적고 나면 이 자리로 돌아온다. 맨 위로 튕기면 무엇이 달라졌는지 못 본다. */
+export const HANDOVER_TALK_ANCHOR = "handover-talk";
+
+/**
  * 인계자가 서식 항목에 직접 보탠 글.
  *
  * 규칙이 뽑은 문단(DraftBlock.paragraphs)과 **섞지 않는다.** 섞으면 어느 문장이
@@ -537,6 +560,25 @@ export interface ApprovalWithSteps extends Approval {
 }
 
 export interface HandoverNoteWithAuthor extends HandoverNote {
+  author: Profile;
+}
+
+/**
+ * 인계 건에 딸린 문답 한 줄.
+ *
+ * 서식에 실리는 「보충」(HandoverNote)과 **타입에서부터 갈라 둔다.** 둘이 한
+ * 타입이면 언젠가 한 화면에서 섞여 그려지고, 그때 별지 제12호서식에 두 사람의
+ * 잡담이 실린다(0022 의 「서식에는 안 실린다」).
+ */
+export interface HandoverMessage {
+  id: string;
+  handover_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+}
+
+export interface HandoverMessageWithAuthor extends HandoverMessage {
   author: Profile;
 }
 

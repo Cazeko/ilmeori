@@ -50,16 +50,42 @@ export type DemoState = {
   transferred: string[];
   /** 데모 중 남긴 대화. 쿠키 크기 때문에 최근 것만 남긴다. */
   comments: DemoComment[];
+  /**
+   * 데모 중 인계 문답에 남긴 글.
+   *
+   * 인계서에 보태는 「보충」은 데모에서 아예 안 받는다(data/index.ts) — 한 줄이
+   * 1000자까지라 쿠키에 한 번만 적어도 넘친다. 문답은 짧은 말이고, 무엇보다
+   * **시연에서 실제로 눌러 보는 물건**이라 여기서만은 받는다.
+   */
+  handoverMessages: DemoHandoverMessage[];
+};
+
+/**
+ * 데모 문답 한 줄.
+ *
+ * `handover_id` 를 안 담는다. 데모에는 인계 건이 하나뿐이고(mock/works.ts),
+ * 쿠키는 3,600바이트가 상한이라 uuid 36자를 줄마다 싣는 것이 아깝다.
+ * 대신 읽는 쪽에서 그 한 건인지 확인한다(mock.getHandoverMessages).
+ */
+export type DemoHandoverMessage = {
+  id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
 };
 
 export const EMPTY_STATE: DemoState = {
   workStatus: {},
   transferred: [],
   comments: [],
+  handoverMessages: [],
 };
 
 const MAX_COMMENTS = 3;
 const MAX_BODY = 240;
+/** 데모에서 남는 문답 수. 화면이 이 수를 그대로 적는다(handover-talk.tsx). */
+export const MAX_DEMO_MESSAGES = 6;
+const MAX_MESSAGE_BODY = 200;
 
 const STATUSES: WorkStatus[] = ["todo", "doing", "review", "done"];
 const HANDOVER_STATUSES: HandoverStatus[] = [
@@ -122,7 +148,28 @@ function parse(raw: string | undefined): DemoState {
         ? o.completedAt
         : undefined;
 
-    return { workStatus, handoverStatus, completedAt, transferred, comments };
+    const handoverMessages = Array.isArray(o.handoverMessages)
+      ? o.handoverMessages
+          .filter(
+            (m): m is DemoHandoverMessage =>
+              typeof m === "object" &&
+              m !== null &&
+              typeof (m as DemoHandoverMessage).id === "string" &&
+              typeof (m as DemoHandoverMessage).author_id === "string" &&
+              typeof (m as DemoHandoverMessage).body === "string" &&
+              typeof (m as DemoHandoverMessage).created_at === "string",
+          )
+          .slice(-MAX_DEMO_MESSAGES)
+      : [];
+
+    return {
+      workStatus,
+      handoverStatus,
+      completedAt,
+      transferred,
+      comments,
+      handoverMessages,
+    };
   } catch {
     return EMPTY_STATE;
   }
@@ -151,11 +198,26 @@ export async function setDemoState(next: DemoState) {
     comments: next.comments
       .slice(-MAX_COMMENTS)
       .map((c) => ({ ...c, body: c.body.slice(0, MAX_BODY) })),
+    handoverMessages: (next.handoverMessages ?? [])
+      .slice(-MAX_DEMO_MESSAGES)
+      .map((m) => ({ ...m, body: m.body.slice(0, MAX_MESSAGE_BODY) })),
   };
 
+  // 넘치면 **둘 중 가장 오래된 것**부터 덜어낸다.
+  //
+  // 한쪽만 덜어내면 다른 쪽이 쿠키를 다 먹었을 때 방금 적은 글이 조용히
+  // 사라진다 — 대화 세 줄이 문답 여섯 줄을 밀어내거나 그 반대다. 갈래가
+  // 아니라 시각으로 자르면 어느 쪽에서 적었든 「오래된 것이 먼저 간다」로
+  // 한 가지 규칙이 되고, 그건 사람이 예상할 수 있는 유일한 규칙이다.
   let value = encode(trimmed);
-  while (value.length > MAX_COOKIE_BYTES && trimmed.comments.length > 0) {
-    trimmed.comments.shift();
+  while (
+    value.length > MAX_COOKIE_BYTES &&
+    (trimmed.comments.length > 0 || trimmed.handoverMessages.length > 0)
+  ) {
+    const c = trimmed.comments[0];
+    const m = trimmed.handoverMessages[0];
+    if (c && (!m || c.created_at <= m.created_at)) trimmed.comments.shift();
+    else trimmed.handoverMessages.shift();
     value = encode(trimmed);
   }
 

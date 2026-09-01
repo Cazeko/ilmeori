@@ -15,7 +15,10 @@ import { createClient } from "@/lib/supabase/server";
 import {
   handoverBlockAnchor,
   isHandoverBlockKey,
+  HANDOVER_MESSAGE_LIMIT,
+  HANDOVER_MESSAGE_MAX,
   HANDOVER_NOTE_MAX,
+  HANDOVER_TALK_ANCHOR,
   type Handover,
   type HandoverBlockKey,
 } from "@/lib/types";
@@ -389,6 +392,107 @@ export async function deleteHandoverNote(formData: FormData) {
   revalidatePath("/handover");
   finish(blockPath(rawKey), "handover.note.deleted");
 }
+
+// ---------------------------------------------------------------------------
+// 인계자와 인수자가 주고받는 문답
+// ---------------------------------------------------------------------------
+
+/**
+ * 인계 문답 한 줄 남기기.
+ *
+ * ── 보충(addHandoverNote)과 갈리는 세 가지 ────────────────────────────────
+ *
+ *   ① **양쪽이 쓴다.** 보충은 인계자만 쓴다 — 인수자가 남의 인계서에 문장을
+ *      넣을 수 있으면 서명란의 뜻이 사라지기 때문이다. 문답은 반대다.
+ *      묻는 사람이 인수자다.
+ *   ② **끝난 뒤에도 쓴다.** 0011 의 잠금이 지키는 것은 서식에 실리는 내용이고,
+ *      문답은 서식에 안 실린다. 오히려 인계가 끝난 다음이 물어볼 일이 가장
+ *      많은 때다 — 그때 닫으면 이 기능이 있을 이유가 없다.
+ *   ③ **데모 모드에서도 쓴다.** 보충은 한 줄이 1000자까지라 쿠키에 못 담지만
+ *      (data/index.ts), 문답은 짧은 말이고 시연에서 실제로 눌러 보는 물건이다.
+ *      담기는 수에 상한이 있고 화면이 그 사실을 적는다.
+ *
+ * 정책(handover_message_insert)이 ①②를 이미 요구한다. 여기서 한 번 더 보는
+ * 이유는 사용자에게 읽을 수 있는 말을 해 주기 위해서다 — 정책에 걸린 삽입은
+ * 오류가 아니라 0행으로 조용히 끝난다.
+ */
+export async function postHandoverMessage(formData: FormData) {
+  const viewer = await requireViewer();
+  const view = await getHandoverFor(viewer);
+  if (!view) finish("/handover", "invalid");
+
+  const rawId = formData.get("handoverId");
+  // 화면에 떠 있던 인계와 지금 진행 중인 인계가 다르면 그 사이 취소되고 새로
+  // 시작됐다는 뜻이다. 엉뚱한 인계의 문답에 글이 들어가는 것보다 다시 하라고
+  // 말하는 편이 낫다(addHandoverNote 와 같은 판단).
+  if (rawId !== view.handover.id) finish("/handover", "stale");
+
+  // 당사자 둘 다 쓸 수 있다. `getHandoverFor` 가 당사자에게만 한 건을 돌려주므로
+  // 여기까지 온 사람은 이미 둘 중 하나다 — 그래도 적어 둔다. 이 함수만 읽고도
+  // 「누가 쓸 수 있는가」가 보여야 한다.
+  const isParty =
+    view.from.id === viewer.id || view.to.id === viewer.id;
+  if (!isParty) finish("/handover", "denied");
+
+  const rawBody = formData.get("body");
+  if (typeof rawBody !== "string") finish("/handover", "invalid");
+  const body = rawBody.trim();
+  if (!body) finish("/handover", "invalid");
+  // 잘라서 넣지 않는다. 입력칸이 maxLength 로 막고 있으므로 여기까지 긴 글이 온
+  // 것은 폼을 거치지 않은 요청이고, 그때 조용히 자르면 **끝이 잘린 문장이 상대의
+  // 화면에 그대로 뜬다.** 자른 사실을 아무도 모른다는 것이 문제다.
+  if (body.length > HANDOVER_MESSAGE_MAX) {
+    finish(TALK_PATH, "handover.talk.long");
+  }
+
+  const back = `${TALK_PATH}`;
+
+  if (!isSupabaseConfigured) {
+    // 데모 모드 — 쿠키에 쌓는다. 오래된 것부터 밀려난다(demo-state.ts).
+    const state = await getDemoState();
+    await setDemoState({
+      ...state,
+      handoverMessages: [
+        ...state.handoverMessages,
+        {
+          id: crypto.randomUUID(),
+          author_id: viewer.id,
+          body,
+          created_at: new Date().toISOString(),
+        },
+      ],
+    });
+    revalidatePath("/handover");
+    finish(back, "handover.talk.posted");
+  }
+
+  const supabase = await createClient();
+
+  // 한 인계 건에 쌓을 수 있는 수. 실제로 막는 것은 DB 트리거이고, 여기서 한 번
+  // 더 세는 이유는 트리거가 던지는 예외를 화면에 그대로 옮길 수 없어서다.
+  const { count, error: countError } = await supabase
+    .from("handover_message")
+    .select("id", { count: "exact", head: true })
+    .eq("handover_id", view.handover.id);
+  if (countError) finish(back, classifyError(countError));
+  if ((count ?? 0) >= HANDOVER_MESSAGE_LIMIT) {
+    finish(back, "handover.talk.too_many");
+  }
+
+  const { error } = await supabase.from("handover_message").insert({
+    handover_id: view.handover.id,
+    // author_id 를 폼에서 받지 않는다. 남의 이름으로 글을 넣는 경로를 없앤다.
+    author_id: viewer.id,
+    body,
+  });
+  if (error) finish(back, classifyError(error));
+
+  revalidatePath("/handover");
+  finish(back, "handover.talk.posted");
+}
+
+/** 문답을 적고 나면 그 자리로 돌아온다. 맨 위로 튕기면 방금 적은 것을 못 본다. */
+const TALK_PATH = `/handover#${HANDOVER_TALK_ANCHOR}`;
 
 /**
  * 인계 취소 — 실행 전에만.

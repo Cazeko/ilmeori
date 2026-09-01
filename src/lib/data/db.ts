@@ -19,6 +19,7 @@ import {
   type DocSectionWithEditor,
   type Document,
   type Handover,
+  type HandoverMessageWithAuthor,
   type HandoverNoteWithAuthor,
   type MemberWithProfile,
   type NoteThread,
@@ -1315,6 +1316,46 @@ export async function getHandoverNotes(
   }
 
   return (data ?? []) as unknown as HandoverNoteWithAuthor[];
+}
+
+/**
+ * 인계 건에 딸린 문답.
+ *
+ * `getHandoverNotes` 와 나란히 두되 **합치지 않는다.** 하나는 서식에 실리는
+ * 글이고 하나는 실리지 않는 글이라, 한 함수가 둘을 돌려주면 그 경계를 부르는
+ * 쪽마다 다시 지켜야 한다(0022 의 「서식에는 안 실린다」).
+ *
+ * 정책(handover_message_select)이 당사자에게만 돌려주므로 여기서 다시 거르지 않는다.
+ */
+export async function getHandoverMessages(
+  handoverId: string,
+): Promise<HandoverMessageWithAuthor[]> {
+  if (!UUID.test(handoverId)) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("handover_message")
+    .select(`*, author:author_id ( ${PROFILE_SELECT} )`)
+    .eq("handover_id", handoverId)
+    // 주고받은 순서대로. 대화는 위에서 아래로 읽힌다.
+    .order("created_at");
+
+  // 표가 아직 없는 동안만 봐준다 — getHandoverNotes 와 같은 이유, 같은 판정이다.
+  // 배포와 마이그레이션은 같이 움직이지 않는다(코드는 Vercel 이, 0022 는 사람이
+  // SQL Editor 에서). 그 사이에 /handover 를 열면 문답 한 칸 때문에 **제품의
+  // 결론인 인계 화면이 통째로 오류 화면**이 된다.
+  if (error) {
+    const missingTable =
+      (error.code === "42P01" || error.code === "PGRST205") &&
+      error.message.includes("handover_message");
+    if (!missingTable) throw error;
+    console.error(
+      "[handover_message] 표가 없습니다. supabase/migrations/0022_handover_message.sql 을 실행해야 인계 문답이 동작합니다.",
+    );
+    return [];
+  }
+
+  return (data ?? []) as unknown as HandoverMessageWithAuthor[];
 }
 
 export async function getHandover(

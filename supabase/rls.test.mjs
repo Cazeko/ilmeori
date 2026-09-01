@@ -812,6 +812,97 @@ const NOTE_INSERT = `insert into handover_note (handover_id, block_key, body, au
 }
 
 // ---------------------------------------------------------------------------
+console.log("\n[9-3] 인계 문답 — 양쪽이 쓰고, 끝난 뒤에도 쓰고, 아무도 못 지운다");
+// ---------------------------------------------------------------------------
+// 0014 의 보충과 **갈리는 자리**만 본다. 보충은 인계자만 쓰고 실행 전까지만
+// 열리지만, 문답은 양쪽이 쓰고 실행 뒤가 오히려 물어볼 일이 가장 많은 때다.
+// 그 둘이 뒤집히면 이 표가 있을 이유가 없어진다.
+const MSG_INSERT = `insert into handover_message (handover_id, author_id, body)
+                    values ($1, $2, $3) returning id`;
+{
+  const [hm] = await admin(
+    `insert into handover (from_profile_id, to_profile_id, status)
+     values ($1, $2, 'generated') returning id`,
+    [kim, choi],
+  );
+
+  {
+    const r = await as(choi, MSG_INSERT, [hm.id, choi, "1-나 항목의 반영본 기한이 언제까지인가요?"]);
+    check("인수자가 물을 수 있다 (0014 의 보충과 갈리는 첫 자리)",
+      r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+  }
+  {
+    const r = await as(kim, MSG_INSERT, [hm.id, kim, "8월 8일까지입니다. 대행업체에 이미 통보했습니다."]);
+    check("인계자가 답할 수 있다", r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+  }
+  check(
+    "남의 이름으로 쓸 수 없다",
+    await denied(kim, MSG_INSERT, [hm.id, choi, "인수자가 적은 것처럼"]),
+  );
+  check(
+    "제3자는 남의 인계 문답에 쓸 수 없다",
+    await denied(lee, MSG_INSERT, [hm.id, lee, "끼어들기"]),
+  );
+  check(
+    "제3자는 남의 인계 문답을 읽을 수 없다",
+    await denied(lee, `select id from handover_message where handover_id = $1`, [hm.id]),
+  );
+  {
+    const r = await as(choi, `select id from handover_message where handover_id = $1`, [hm.id]);
+    check("당사자 둘은 같은 것을 본다 (한쪽만 가진 사본이 없다)",
+      r.ok && r.rows.length === 2, r.ok ? `${r.rows?.length}행` : r.error);
+  }
+
+  // 빈 글. denied() 로 보지 않는다 — 오타로 질의가 죽어도 통과하기 때문이다.
+  {
+    const r = await as(kim, MSG_INSERT, [hm.id, kim, "   "]);
+    check(
+      "눈에 보이는 글자가 없으면 안 들어간다",
+      !r.ok && /handover_message_body_check|23514/i.test(r.error ?? ""),
+      r.ok ? "들어갔다" : r.error,
+    );
+  }
+
+  // ── 실행이 끝난 뒤 ────────────────────────────────────────────────────────
+  await admin(`update handover set status = 'completed', completed_at = now() where id = $1`, [hm.id]);
+  {
+    const r = await as(choi, MSG_INSERT, [hm.id, choi, "넘겨받고 보니 대행업체 연락처가 안 보입니다."]);
+    check(
+      "끝난 뒤에도 물을 수 있다 (이 표가 있을 이유가 바로 이때다)",
+      r.ok && r.rows.length === 1,
+      r.ok ? "" : r.error,
+    );
+  }
+  // 보충은 이때 잠긴다. 문답과 갈리는 것을 같은 자리에서 함께 확인한다.
+  check(
+    "같은 시점에 서식 보충은 잠긴다 (둘의 규칙이 다르다는 것이 이 표의 전제다)",
+    await denied(kim, NOTE_INSERT, [hm.id, "4-notes", "끝난 뒤 보충", kim]),
+  );
+
+  // ── 아무도 못 고치고 못 지운다 ────────────────────────────────────────────
+  {
+    const r = await as(kim, `update handover_message set body = '슬쩍 바꾼다' where handover_id = $1`, [hm.id]);
+    check(
+      "고칠 수 없다 — 권한 자체가 없다",
+      !r.ok && /permission denied/i.test(r.error ?? ""),
+      r.ok ? "고쳐졌다" : r.error,
+    );
+  }
+  {
+    const r = await as(kim, `delete from handover_message where handover_id = $1 returning id`, [hm.id]);
+    check(
+      "자기가 쓴 것도 못 지운다 (반쪽만 남은 문답은 안 읽느니만 못하다)",
+      !r.ok && /permission denied/i.test(r.error ?? ""),
+      r.ok ? `${r.rows?.length}행 지워졌다` : r.error,
+    );
+  }
+  {
+    const r = await as(kim, `select count(*)::int as n from handover_message where handover_id = $1`, [hm.id]);
+    check("그래서 세 줄이 그대로 남아 있다", r.ok && r.rows[0].n === 3, r.ok ? `${r.rows[0].n}행` : r.error);
+  }
+}
+
+// ---------------------------------------------------------------------------
 console.log("\n[10] 열람 로그 — 누가 봤는지 남는다");
 // ---------------------------------------------------------------------------
 {
