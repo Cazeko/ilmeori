@@ -186,12 +186,17 @@ console.log("\n되돌리기 왕복");
     after[t] = (await db.query(`select count(*)::int as n from ${t}`)).rows[0].n;
   }
   // 사람·부서는 남고 나머지는 비어야 한다.
-  const kept = after.department === EXPECTED.department && after.profile === EXPECTED.profile;
+  //
+  // profile_contact 는 **사람 쪽**이다. 되돌리기는 시연 사이에 업무 자료만
+  // 비우는 질의이고, 등록해 둔 연락처까지 지우면 사람이 반쯤 지워진다 —
+  // 프로필 화면이 다음 시연에서 빈 칸으로 시작한다.
+  const PEOPLE_TABLES = ["department", "profile", "profile_contact"];
+  const kept = PEOPLE_TABLES.every((t) => after[t] === EXPECTED[t]);
   const cleared = Object.entries(after)
-    .filter(([t]) => t !== "department" && t !== "profile")
+    .filter(([t]) => !PEOPLE_TABLES.includes(t))
     .every(([, n]) => n === 0);
   if (!kept || !cleared) failed = true;
-  console.log(`  ${kept ? "✓" : "✗"} 사람·부서는 남는다`);
+  console.log(`  ${kept ? "✓" : "✗"} 사람·부서·연락처는 남는다`);
   console.log(`  ${cleared ? "✓" : "✗"} 업무 관련 자료는 비워진다`);
 
   await db.exec(dataOnly);

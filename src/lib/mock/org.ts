@@ -9,7 +9,7 @@
  *   실제 공문서는 시제품에 단 한 건도 넣지 않는다.
  */
 
-import type { Department, Profile } from "@/lib/types";
+import type { Department, Profile, ProfileContact } from "@/lib/types";
 
 export const deptId = (n: number) =>
   `d0000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -221,14 +221,27 @@ type Seed = {
   dept: string;
   position: string;
   demo?: boolean;
+  /**
+   * 개인 휴대전화를 등록했는가, 그리고 공개했는가.
+   *
+   *   "public"  등록하고 전 직원 공개 — 남의 프로필에 번호가 뜬다
+   *   "private" 등록했지만 비공개     — 본인 화면에만 뜬다
+   *   없음      등록 안 함
+   *
+   * 세 상태를 다 깔아 두는 이유는 시연 때문이다. 「본인이 공개한 경우에만
+   * 보인다」는 말은 **공개한 사람과 안 한 사람을 나란히 열어 봐야** 확인된다.
+   */
+  mobile?: "public" | "private";
 };
 
 const PEOPLE: Seed[] = [
   // 데모 계정 4인 — 로그인 화면에서 한 번에 들어갈 수 있는 사람들
-  { n: 1, name: "김서연", dept: "전국체전추진단", position: "주무관", demo: true },
-  { n: 2, name: "박준호", dept: "자원순환과", position: "주무관", demo: true },
+  // 넷의 휴대전화 상태를 일부러 갈라 두었다. 김서연으로 들어가면 자기 번호가
+  // 보이고(공개), 박준호의 번호는 안 보인다(비공개) — 같은 화면에서 규칙이 드러난다.
+  { n: 1, name: "김서연", dept: "전국체전추진단", position: "주무관", demo: true, mobile: "public" },
+  { n: 2, name: "박준호", dept: "자원순환과", position: "주무관", demo: true, mobile: "private" },
   { n: 3, name: "이하람", dept: "자원순환과", position: "주무관", demo: true },
-  { n: 4, name: "최민재", dept: "대중교통과", position: "팀장", demo: true },
+  { n: 4, name: "최민재", dept: "대중교통과", position: "팀장", demo: true, mobile: "public" },
 
   // 함께 일하는 사람들
   { n: 5, name: "정유진", dept: "체육진흥과", position: "주무관" },
@@ -247,11 +260,34 @@ const PEOPLE: Seed[] = [
   // 결재선을 만드는 사람들 — 결재는 위로 올라가는 일이라 위가 비어 있으면
   // 「빠바바밥」이 성립하지 않는다. 기안자만 있는 조직도에서는 결재선 자동 생성이
   // 언제나 빈 결과를 준다.
-  { n: 17, name: "정다은", dept: "자원순환과", position: "팀장" },
-  { n: 18, name: "한상우", dept: "자원순환과", position: "과장" },
-  { n: 19, name: "문지호", dept: "전국체전추진단", position: "단장" },
+  // 이 넷은 부서 이동 신청의 승인자로도 선다(0023 의 app.transfer_approver 가
+  // 「그 부서의 최고 서열자」를 고르므로, 과장·팀장·단장이 있는 부서라야
+  // 이동 신청이 갈 곳이 있다). 승인자는 연락이 닿아야 하는 자리라 번호를 연다.
+  { n: 17, name: "정다은", dept: "자원순환과", position: "팀장", mobile: "public" },
+  { n: 18, name: "한상우", dept: "자원순환과", position: "과장", mobile: "public" },
+  { n: 19, name: "문지호", dept: "전국체전추진단", position: "단장", mobile: "public" },
   { n: 20, name: "박도윤", dept: "의회법무과", position: "주무관" },
 ];
+
+/**
+ * 가상 전화번호를 짓는 규칙.
+ *
+ * **실제로 걸리는 번호가 시제품에 들어가면 안 된다.** 화성시 대표번호 대역
+ * (031-5189-xxxx)을 흉내 내면 자릿수만 맞아도 실제 부서로 오해되고, 심사장에서
+ * 한 번 눌러 보는 것으로 문제가 된다. 그래서 **할당되지 않는 국번**만 쓴다.
+ *
+ *   내선  031-000-2xxx   `000` 국번은 존재하지 않는다
+ *   휴대  010-0000-xxxx  가운데 `0000` 은 이동통신에 배정되지 않는다
+ *
+ * 옆줄의 「시연용 가상 데이터」 쪽지가 부서명만 실제라고 적어 두었는데,
+ * 번호도 그 약속 안에 있어야 한다.
+ */
+function extOf(n: number) {
+  return `031-000-${String(2000 + n).padStart(4, "0")}`;
+}
+function mobileOf(n: number) {
+  return `010-0000-${String(3000 + n).padStart(4, "0")}`;
+}
 
 // 직급 문자열 → 결재 서열. 0016 의 profile.rank 와 같은 값이다.
 // 표기가 흔들리는 것은 문자열 쪽이므로, 모르는 직급은 가장 아래로 둔다.
@@ -279,6 +315,32 @@ export const profiles: Profile[] = PEOPLE.map((p) => ({
   is_active: true,
   is_demo: true,
 }));
+
+/**
+ * 내선번호. 사람 id → 번호.
+ *
+ * `profiles` 안에 넣지 않는다. 그 값은 앱 전체가 들고 다니는 Profile 이고,
+ * 전화번호가 필요한 화면은 프로필 하나뿐이다(types.ts 의 ProfileView 주석).
+ * 전원이 갖는다 — 자리에 걸려 오는 번호라 등록 여부를 고르는 것이 아니다.
+ */
+export const extensions: Record<string, string> = Object.fromEntries(
+  PEOPLE.map((p) => [profileId(p.n), extOf(p.n)]),
+);
+
+/**
+ * 등록된 휴대전화. 사람 수보다 적다 — 그게 이 표의 요점이다.
+ *
+ * 실제 DB에서는 profile_contact 의 select 정책이 비공개 행을 남에게 주지 않는다.
+ * 목업에는 정책이 없으므로 **읽는 쪽(mock.ts)이 같은 판정을 해야 한다.**
+ * 두 구현이 같은 답을 내는지는 tests/data-contract 가 본다.
+ */
+export const contacts: ProfileContact[] = PEOPLE.filter((p) => p.mobile).map(
+  (p) => ({
+    profile_id: profileId(p.n),
+    mobile: mobileOf(p.n),
+    is_public: p.mobile === "public",
+  }),
+);
 
 const byPersonName = new Map(profiles.map((p) => [p.name, p]));
 

@@ -27,7 +27,10 @@ import {
   type AppNotification,
   type NotificationWithActor,
   type Profile,
+  type ProfileContact,
+  type ProfileView,
   type ProfileWithDepartment,
+  type TransferRequestView,
   type Work,
   type WorkListItem,
 } from "@/lib/types";
@@ -110,6 +113,46 @@ function withoutDeletedComments<T extends { is: (c: string, v: null) => T }>(
 
 const PROFILE_SELECT =
   "id, name, department_id, position, rank, email, avatar_url, is_active, is_demo";
+
+/**
+ * 프로필 화면 하나만 더 묻는 칸.
+ *
+ * 위 공용 목록에 넣지 않는다 — 그러면 업무·결재·대화의 모든 질의가 전화번호를
+ * 들고 다니고, 무엇보다 **0023 이 아직 안 돌아간 DB 에서 앱 전체가 죽는다**
+ * (42703: column profile.phone_ext does not exist). 새 칸이 깨뜨릴 수 있는
+ * 범위는 그 칸을 쓰는 화면까지여야 한다.
+ */
+const PROFILE_DETAIL_SELECT = `${PROFILE_SELECT}, phone_ext`;
+
+/**
+ * 「0023 이 아직 안 돌아갔다」인가.
+ *
+ * 마이그레이션을 사람이 SQL Editor 에서 돌리는 구조라, 코드 배포와 스키마 적용
+ * 사이에는 언제나 틈이 있다. 그 틈에서 나오는 오류는 정확히 둘이다.
+ *
+ *   42703    column profile.phone_ext does not exist
+ *   PGRST205 Could not find the table 'public.profile_contact' in the schema cache
+ *
+ * **이 둘만** 삼킨다. 권한 오류(42501)나 정책이 막은 0행은 여기 해당하지 않으므로
+ * 그대로 올라간다 — 「접근제어가 막았다」를 「스키마가 없다」로 뭉개면, 새는 것을
+ * 못 새는 것으로 착각하게 된다.
+ */
+function isPendingMigration(error: { code?: string } | null): boolean {
+  return error?.code === "42703" || error?.code === "PGRST205";
+}
+
+/** 0023 이 없으면 빈 결과. 있으면 그대로 던진다(위 주석의 이유). */
+async function tolerate<T>(
+  run: () => Promise<{ data: T | null; error: { code?: string } | null }>,
+  fallback: T,
+): Promise<T> {
+  const { data, error } = await run();
+  if (error) {
+    if (isPendingMigration(error)) return fallback;
+    throw error;
+  }
+  return data ?? fallback;
+}
 
 /**
  * 주소에서 온 id가 uuid 모양인가.
@@ -1115,6 +1158,225 @@ export async function getDepartmentTree() {
       ...root,
       children: all.filter((d) => d.parent_id === root.id),
     }));
+}
+
+// ---------------------------------------------------------------------------
+// 프로필
+// ---------------------------------------------------------------------------
+
+/**
+ * 프로필 한 장.
+ *
+ * 휴대전화를 **따로 묻는다.** profile 에 임베드로 얹으면 질의 하나가 줄지만,
+ * 임베드된 표에 정책이 걸려 있을 때 PostgREST 는 그 자리를 null 로 채워 준다 —
+ * 즉 「없다」와 「못 본다」가 같은 모양으로 온다. 지금은 두 경우의 화면이 같아서
+ * 문제가 안 되지만, 나중에 갈라야 할 때 무엇이 왔는지 알 수 없다.
+ * 따로 물으면 정책이 걸렀다는 사실이 0행으로 분명히 남는다.
+ */
+export async function getProfileView(
+  viewer: Profile,
+  id: string,
+): Promise<ProfileView | null> {
+  if (!UUID.test(id)) return null;
+  const supabase = await createClient();
+
+  // 0023 이 아직 안 돌아갔으면 phone_ext 가 없어 42703 이 온다. 그때는 그 칸
+  // 없이 한 번 더 묻는다 — 이름·소속·이메일은 0023 과 무관하게 있는 값이고,
+  // 그것까지 못 보여 줄 이유가 없다(types.ts 의 pendingMigration).
+  const full = await supabase
+    .from("profile")
+    .select(`${PROFILE_DETAIL_SELECT}, department:department_id ( name )`)
+    .eq("id", id)
+    .maybeSingle();
+
+  const pendingMigration = isPendingMigration(full.error);
+  const base = pendingMigration
+    ? await supabase
+        .from("profile")
+        .select(`${PROFILE_SELECT}, department:department_id ( name )`)
+        .eq("id", id)
+        .maybeSingle()
+    : full;
+
+  if (base.error) throw base.error;
+  if (!base.data) return null;
+
+  const {
+    department,
+    phone_ext: phoneExt = null,
+    ...profile
+  } = base.data as unknown as Profile & {
+    phone_ext?: string | null;
+    department: { name: string } | null;
+  };
+
+  // 비공개면 정책이 0행을 준다. 오류가 아니라 「그런 행은 없다」이다.
+  const contact = pendingMigration
+    ? null
+    : await tolerate<ProfileContact | null>(
+        () =>
+          supabase
+            .from("profile_contact")
+            .select("profile_id, mobile, is_public")
+            .eq("profile_id", id)
+            .maybeSingle() as unknown as Promise<{
+            data: ProfileContact | null;
+            error: { code?: string } | null;
+          }>,
+        null,
+      );
+
+  return {
+    profile: { ...profile, department_name: department?.name ?? null },
+    phone_ext: phoneExt,
+    contact,
+    isMe: profile.id === viewer.id,
+    pendingMigration,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 부서 이동
+// ---------------------------------------------------------------------------
+
+/**
+ * 신청 한 줄에 사람과 부서 이름을 붙여 온다.
+ *
+ * 신청자·승인자를 임베드로 함께 받는 이유는 화면이 언제나 둘 다 이름으로
+ * 부르기 때문이다. uuid 를 화면까지 들고 가면 거기서 또 조회가 나간다.
+ */
+const TRANSFER_SELECT = `
+  id, reason, status, decided_at, decided_note, created_at,
+  profile:profile_id ( ${PROFILE_SELECT} ),
+  approver:approver_id ( ${PROFILE_SELECT} ),
+  from_department:from_department_id ( name ),
+  to_department:to_department_id ( name )`;
+
+type TransferRow = {
+  id: string;
+  reason: string | null;
+  status: TransferRequestView["status"];
+  decided_at: string | null;
+  decided_note: string | null;
+  created_at: string;
+  profile: Profile;
+  approver: Profile;
+  from_department: { name: string } | null;
+  to_department: { name: string } | null;
+};
+
+function toTransferView(r: TransferRow): TransferRequestView {
+  return {
+    id: r.id,
+    profile: r.profile,
+    approver: r.approver,
+    from_department_name: r.from_department?.name ?? null,
+    // to_department_id 는 not null 이라 이름이 없을 수 없지만, 임베드는
+    // 타입상 null 이 될 수 있다. 화면에 "null" 이 찍히느니 빈 문자열이 낫다.
+    to_department_name: r.to_department?.name ?? "",
+    reason: r.reason,
+    status: r.status,
+    decided_at: r.decided_at,
+    decided_note: r.decided_note,
+    created_at: r.created_at,
+  };
+}
+
+/** 내가 낸 신청 중 아직 대기 중인 것. 정책상 한 번에 하나뿐이다. */
+export async function getMyPendingTransfer(
+  viewer: Profile,
+): Promise<TransferRequestView | null> {
+  const supabase = await createClient();
+  // 0023 전에는 표 자체가 없다(PGRST205). 「신청이 없다」와 같은 화면이라
+  // 여기서는 굳이 갈라 말하지 않는다 — 화면 위쪽에서 프로필 조회가 이미
+  // pendingMigration 을 한 번 말했다.
+  const row = await tolerate<TransferRow | null>(
+    () =>
+      supabase
+        .from("transfer_request")
+        .select(TRANSFER_SELECT)
+        .eq("profile_id", viewer.id)
+        .eq("status", "pending")
+        .maybeSingle() as unknown as Promise<{
+        data: TransferRow | null;
+        error: { code?: string } | null;
+      }>,
+    null,
+  );
+  return row ? toTransferView(row) : null;
+}
+
+/**
+ * 내가 낸 신청의 이력 — 처리가 끝난 것들.
+ *
+ * 반려된 신청이 화면에서 사라지면, 반려 사유도 함께 사라진다.
+ * 「왜 안 됐는지」는 다시 신청할 때 가장 필요한 정보다.
+ */
+export async function listMyTransferHistory(
+  viewer: Profile,
+  limit = 5,
+): Promise<TransferRequestView[]> {
+  const supabase = await createClient();
+  const rows = await tolerate<TransferRow[]>(
+    () =>
+      supabase
+        .from("transfer_request")
+        .select(TRANSFER_SELECT)
+        .eq("profile_id", viewer.id)
+        .neq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(limit) as unknown as Promise<{
+        data: TransferRow[] | null;
+        error: { code?: string } | null;
+      }>,
+    [],
+  );
+  return rows.map(toTransferView);
+}
+
+/** 내가 결정해야 하는 신청들. 오래 기다린 것이 위로 온다. */
+export async function listTransfersToApprove(
+  viewer: Profile,
+): Promise<TransferRequestView[]> {
+  const supabase = await createClient();
+  // 이것은 **모든 화면의 레이아웃**이 부른다(머리 줄의 점). 0023 전에 여기서
+  // 던지면 프로필뿐 아니라 앱 전체가 죽는다 — 이 한 자리가 tolerate 를
+  // 만든 진짜 이유다.
+  const rows = await tolerate<TransferRow[]>(
+    () =>
+      supabase
+        .from("transfer_request")
+        .select(TRANSFER_SELECT)
+        .eq("approver_id", viewer.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: true }) as unknown as Promise<{
+        data: TransferRow[] | null;
+        error: { code?: string } | null;
+      }>,
+    [],
+  );
+  return rows.map(toTransferView);
+}
+
+/**
+ * 이 이동이 남기고 가는 주담당 업무의 수.
+ *
+ * RLS 로는 셀 수 없다 — 승인자에게 그 과의 업무는 애초에 안 보인다.
+ * 0023 의 transfer_impact 가 당사자 둘에게만 답한다. 실패하면 0을 준다:
+ * 이 수는 경고 문구를 하나 더 띄울지 정할 뿐이고, 그것 때문에 화면 전체가
+ * 안 뜨면 손해가 더 크다.
+ */
+export async function getTransferImpact(requestId: string): Promise<number> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("transfer_impact", {
+      p_request: requestId,
+    });
+    if (error) return 0;
+    return Number(data ?? 0);
+  } catch {
+    return 0;
+  }
 }
 
 // ---------------------------------------------------------------------------

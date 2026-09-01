@@ -49,6 +49,63 @@ npm run db:verify   # 마이그레이션이 실제로 도는지
 npm run db:test     # RLS가 실제로 막는지 (160개)
 ```
 
+## 1-A. 0023 — 프로필: 연락처와 부서 이동 (이미 연결된 프로젝트에 따로 실행)
+
+> 🔴 **배포 전에 SQL Editor 에서 한 번 돌려야 한다.** 안 돌리면 `/me` 와
+> `/people/<id>` 두 화면이 `column profile.phone_ext does not exist`(42703)로
+> 죽는다.
+>
+> **다른 화면은 멀쩡하다.** 0016 때와 일부러 다르게 만들었다 — 그때는
+> `profile.rank` 를 공용 조회 목록(`PROFILE_SELECT`)에 넣는 바람에 표에 칸이
+> 없으면 **업무 목록이 통째로** 비어 보였다. 이번 `phone_ext` 는 프로필 화면만
+> 쓰는 별도 목록(`PROFILE_DETAIL_SELECT`)에 두었다. 새 칸이 깨뜨릴 수 있는
+> 범위를 그 칸을 쓰는 화면까지로 묶어 둔 것이고, 그래도 **돌려야 하는 것은
+> 같다.**
+>
+> 순서: ① SQL Editor 에서 0023 → ② 시드 다시 넣기 → ③ 코드 배포
+> (①과 ③ 사이가 벌어져도 업무·결재·인계는 그대로 돈다)
+
+**한 번에 붙여 넣어도 된다.** 열거형에 값을 더하지 않고 새로 만들기 때문에
+0016 이 겪은 「같은 트랜잭션에서 못 쓴다」 문제가 없다.
+
+무엇이 들어가는가.
+
+```
+profile.phone_ext      사무실 내선번호. 재직자 전원 열람(profile_select 그대로)
+profile_contact        개인 휴대전화. 본인 것이거나 is_public 일 때만 조회된다
+                       ← 칸이 아니라 표인 이유: RLS 는 행만 보고 칸은 못 본다(0011)
+transfer_status        pending / approved / rejected / canceled
+transfer_request       이동 신청. authenticated 에게 SELECT 만 준다
+절차 5개               request_transfer / cancel_transfer / decide_transfer
+                       transfer_impact / app.transfer_approver
+트리거 1개 갱신        trg_profile_immutable_fields
+                       소속은 decide_transfer 안에서만 바뀐다(PG_CONTEXT 판정)
+```
+
+**이 마이그레이션의 요점은 칸을 여는 것이 아니라 문을 내는 것이다.** 0003 이
+막아 둔 `profile.department_id` 를 풀지 않는다. 승인 함수 안에서 온 UPDATE
+하나만 통과시키고, 그 함수는 「옮겨갈 부서의 최고 서열자」 본인이 부를 때만
+일한다. 직급·서열·이메일·계정상태는 **예외 없이 그대로 막혀 있다.**
+
+「지금 그 함수 안인가」는 0015 와 같은 방법으로 안다 — `GET DIAGNOSTICS
+... PG_CONTEXT`. 함수에 사용자 정의 매개변수를 붙이는 방법은 Supabase 에서
+거절된다(superuser 가 아니다).
+
+**다시 붙여 넣어도 안전하다.** `add column if not exists` ·
+`create table if not exists` · `drop policy if exists` · `create or replace` 로만
+되어 있다. 열거형 생성은 `duplicate_object` 를 삼킨다.
+
+시드를 다시 넣으면 내선번호 20개와 휴대전화 6개가 채워진다(그중 4개만 공개).
+안 넣어도 화면은 돌지만 전부 빈칸이라 「공개한 사람과 안 한 사람」을 나란히
+보여 주는 시연이 성립하지 않는다.
+
+확인:
+
+```
+npm run db:verify                                 표 22개 · 정책 62개
+npm run db:test                                   291개 ([연락처] 12 · [부서 이동] 33 포함)
+```
+
 ## 1-0. 0016 · 0017 — 결재 (이미 연결된 프로젝트에 따로 실행)
 
 > ⚠ **이 둘은 코드보다 먼저 돌려야 한다.** 다른 마이그레이션과 순서가 반대다.

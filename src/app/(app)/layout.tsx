@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell/app-shell";
 import { NotificationBell } from "@/components/shell/notification-bell";
-import { countUnreadNotifications, listNotifications } from "@/lib/data";
+import {
+  countUnreadNotifications,
+  listNotifications,
+  listTransfersToApprove,
+} from "@/lib/data";
 import { BELL_LIMIT } from "@/lib/notification";
 import { getViewer, getViewerDepartmentName } from "@/lib/session";
 
@@ -30,15 +34,22 @@ export default async function AppLayout({
 
   // 종에 들어갈 것. 머리 줄은 모든 화면에 있으므로 여기서 한 번만 읽는다.
   // 최근 10건 + 안 읽은 수 — 상한은 화면이 「전부 보기」로 말한다.
-  const [bellItems, unread] = await Promise.all([
+  //
+  // 부서 이동 신청도 여기서 센다. 승인자에게만 0이 아니고, 색인 하나로 끝나는
+  // 질의다(0023 의 transfer_request_approver_idx). 이걸 세지 않으면 승인자는
+  // 자기 앞으로 온 신청이 있다는 것을 **알 방법이 없다** — 신청한 사람은
+  // 기다리고, 승인자는 모르는 상태가 그대로 남는다.
+  const [bellItems, unread, toApprove] = await Promise.all([
     listNotifications(viewer, BELL_LIMIT),
     countUnreadNotifications(viewer),
+    listTransfersToApprove(viewer),
   ]);
 
   return (
     <AppShell
       viewer={viewer}
       departmentName={departmentName ?? "소속 없음"}
+      transferPending={toApprove.length}
       bell={<NotificationBell items={bellItems} unread={unread} />}
     >
       {children}

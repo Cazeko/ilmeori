@@ -9,6 +9,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -223,7 +224,19 @@ export function MemberList({
                   <Avatar profile={m.profile} size="lg" me={isMe} />
                   <div className="min-w-0 flex-1">
                     <p className="text-body-sm font-bold text-gray-90">
-                      {m.profile.name}
+                      {/* 이름을 누르면 그 사람의 프로필로 간다. 여기서 처음
+                          「누구인지 물어볼 수 있는 자리」가 생긴다 — 부서를
+                          넘는 협업에서 참여자 줄에 처음 보는 이름이 뜨는 것이
+                          이 제품의 평범한 상황이기 때문이다.
+                          이름 글자만 링크로 둔다. 줄 전체를 링크로 만들면
+                          그 안에 있는 권한 <select> 와 제출 단추가 링크 안에
+                          갇힌다. */}
+                      <Link
+                        href={`/people/${m.profile_id}`}
+                        className="rounded-xs transition-colors duration-150 hover:text-primary hover:underline"
+                      >
+                        {m.profile.name}
+                      </Link>
                       <span className="ml-1 font-normal text-gray-60">
                         {m.profile.position}
                       </span>

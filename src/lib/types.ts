@@ -103,6 +103,19 @@ export interface Profile {
   is_demo: boolean;
 }
 
+/**
+ * 개인 휴대전화 한 줄.
+ *
+ * 남의 것은 `is_public` 일 때만 조회된다 — 앱이 가리는 것이 아니라 정책이
+ * 행을 안 준다. 그래서 이 값이 `null` 인 것과 「번호가 없는 사람」은 화면에서
+ * 구분되지 않고, 그것이 의도한 동작이다.
+ */
+export interface ProfileContact {
+  profile_id: string;
+  mobile: string;
+  is_public: boolean;
+}
+
 export interface Work {
   id: string;
   title: string;
@@ -470,6 +483,71 @@ export interface HandoverNote {
 /** 참여자 목록에서 소속까지 함께 보여주므로 조회 단계에서 붙여 온다. */
 export interface ProfileWithDepartment extends Profile {
   department_name: string | null;
+}
+
+/** 부서 이동 신청의 처리 상태. supabase/migrations/0023 의 transfer_status 와 같다. */
+export type TransferStatus = "pending" | "approved" | "rejected" | "canceled";
+
+/**
+ * 프로필 한 장 — 「이 사람이 누구인가」에 화면이 필요한 것 전부.
+ *
+ * `contact` 가 null 이라는 것은 **두 가지 중 하나**다. 번호를 등록하지 않았거나,
+ * 등록했지만 공개하지 않았거나. 남이 보는 쪽에서 그 둘은 구분되지 않는다 —
+ * 정책이 비공개 행을 아예 주지 않기 때문이다(0023). 화면도 구분해 말하지 않는다.
+ */
+export interface ProfileView {
+  profile: ProfileWithDepartment;
+  /**
+   * 사무실 내선번호. 행정전화번호부와 같은 성격이라 재직자 전원이 본다.
+   *
+   * ── 왜 Profile 이 아니라 여기 있는가 ─────────────────────────────────────
+   *
+   * 이 값을 Profile 에 두면 **모든 질의가 들고 다닌다.** 업무 카드의 참여자
+   * 줄, 결재선, 대화 작성자 — 전화번호가 필요 없는 자리가 전부다. 실제 비용은
+   * 바이트가 아니라 다른 데 있었다: 공용 select 목록에 칸 하나를 더하는 순간,
+   * 0023 이 아직 안 돌아간 DB 에서는 **앱 전체가 42703 으로 죽는다.**
+   * 프로필 화면 하나를 더하면서 업무 보드를 인질로 잡을 이유가 없다.
+   *
+   * 개인 휴대전화는 아래 contact 다. 「본인이 공개한 경우에만」이라는 칸 단위
+   * 규칙을 RLS 로 표현할 수 없어서 별도의 표로 뺐다(0023).
+   */
+  phone_ext: string | null;
+  contact: ProfileContact | null;
+  /** 지금 보고 있는 사람이 본인인가. 화면이 고치는 칸을 그릴지 정한다. */
+  isMe: boolean;
+  /**
+   * 0023 이 아직 이 프로젝트에 안 돌아갔는가.
+   *
+   * ── 왜 이 칸이 있는가 ────────────────────────────────────────────────────
+   *
+   * 이 저장소의 마이그레이션은 사람이 SQL Editor 에서 돌린다. 그래서 **코드
+   * 배포와 스키마 적용 사이에 언제나 틈이 있고**, 그 틈에서 새 화면이 500 을
+   * 낸다. 0016 때 실제로 그랬다 — 표에 칸이 없는 채로 코드가 나가면
+   * PostgREST 가 42703 으로 거절한다.
+   *
+   * 500 대신 **덜 채워진 화면**을 준다. 이름·소속·이메일은 0023 없이도 나오는
+   * 값이므로 그대로 보이고, 전화번호와 부서 이동만 「아직 준비되지 않았습니다」로
+   * 물러난다. 심사용 주소가 떠 있는 동안 배포 순서 하나로 화면이 죽는 것보다
+   * 낫다.
+   *
+   * 이 값이 참이 되는 경우는 하나뿐이고(스키마 미적용), SQL 을 한 번 돌리면
+   * 영영 거짓이다. 그때 이 칸과 화면의 안내 문구를 함께 지워도 된다.
+   */
+  pendingMigration: boolean;
+}
+
+/** 이동 신청 한 건 — 화면이 이름으로 읽을 수 있게 사람과 부서를 붙여 온다. */
+export interface TransferRequestView {
+  id: string;
+  profile: Profile;
+  approver: Profile;
+  from_department_name: string | null;
+  to_department_name: string;
+  reason: string | null;
+  status: TransferStatus;
+  decided_at: string | null;
+  decided_note: string | null;
+  created_at: string;
 }
 
 export interface MemberWithProfile extends WorkMember {

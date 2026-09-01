@@ -2238,6 +2238,329 @@ console.log("\n[알림] 소음과 권한");
 }
 
 // ---------------------------------------------------------------------------
+console.log("\n[연락처] 휴대전화는 공개한 사람 것만 나온다");
+// ---------------------------------------------------------------------------
+{
+  // 내선은 profile 의 칸이라 재직자 전원이 본다. 본인이 고칠 수 있어야 한다.
+  const setExt = await as(
+    kim,
+    `update profile set phone_ext = '031-5189-2100' where id = $1 returning id`,
+    [kim],
+  );
+  check("내선번호는 본인이 고친다", setExt.ok && setExt.rows.length === 1, setExt.error ?? "");
+  {
+    const r = await as(lee, `select phone_ext from profile where id = $1`, [kim]);
+    check(
+      "내선번호는 타 부서도 본다",
+      r.ok && r.rows[0]?.phone_ext === "031-5189-2100",
+    );
+  }
+  check(
+    "남의 내선번호는 못 고친다",
+    await denied(lee, `update profile set phone_ext = '000' where id = $1 returning id`, [kim]),
+  );
+  check(
+    "내선번호에 아무 글자나 못 넣는다",
+    await denied(kim, `update profile set phone_ext = '내선 없음' where id = $1 returning id`, [kim]),
+  );
+
+  // 휴대전화는 별도 표. 기본은 비공개다.
+  const ins = await as(
+    kim,
+    `insert into profile_contact (profile_id, mobile) values ($1, '010-2000-1234') returning profile_id`,
+    [kim],
+  );
+  check("휴대전화를 본인이 등록한다", ins.ok && ins.rows.length === 1, ins.error ?? "");
+  check(
+    "★ 비공개 휴대전화는 남에게 행 자체가 안 보인다",
+    await denied(park, `select mobile from profile_contact where profile_id = $1`, [kim]),
+  );
+  {
+    const r = await as(kim, `select mobile from profile_contact where profile_id = $1`, [kim]);
+    check("비공개여도 본인은 본다", r.ok && r.rows.length === 1);
+  }
+  check(
+    "남의 번호를 대신 등록할 수 없다",
+    await denied(
+      lee,
+      `insert into profile_contact (profile_id, mobile) values ($1, '010-9999-9999') returning profile_id`,
+      [park],
+    ),
+  );
+  check(
+    "남의 번호를 공개로 돌릴 수 없다",
+    await denied(
+      lee,
+      `update profile_contact set is_public = true where profile_id = $1 returning profile_id`,
+      [kim],
+    ),
+  );
+  check(
+    "번호 형식이 틀리면 들어가지 않는다",
+    await denied(
+      park,
+      `insert into profile_contact (profile_id, mobile) values ($1, '01012345678') returning profile_id`,
+      [park],
+    ),
+  );
+
+  // 본인이 공개로 돌리면 그때 보인다.
+  await as(kim, `update profile_contact set is_public = true where profile_id = $1`, [kim]);
+  {
+    const r = await as(park, `select mobile from profile_contact where profile_id = $1`, [kim]);
+    check(
+      "공개로 돌리면 그때부터 보인다",
+      r.ok && r.rows[0]?.mobile === "010-2000-1234",
+    );
+  }
+  {
+    const r = await as(kim, `delete from profile_contact where profile_id = $1 returning profile_id`, [kim]);
+    check("본인은 번호를 내릴 수 있다", r.ok && r.rows.length === 1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n[부서 이동] 소속은 승인으로만 바뀐다");
+// ---------------------------------------------------------------------------
+{
+  // 대중교통과에 과장을 하나 세운다. 최고 서열자가 승인자가 되는 규칙을
+  // 확인하려면 rank 가 갈리는 사람이 있어야 한다.
+  const [u] = await admin(
+    `insert into auth.users (email) values ('한과장@korea.kr') returning id`,
+  );
+  await admin(
+    `insert into profile (id, name, department_id, email, position, rank)
+     values ($1, '한과장', $2, '한과장@korea.kr', '과장', 30)`,
+    [u.id, deptB.id],
+  );
+  const han = u.id;
+
+  // 김담당이 참여자가 아닌 부서 공개 업무. 「옮겨가면 안 보인다」를 확인하려면
+  // 이런 업무여야 한다 — 자기가 만든 업무는 주담당이라 참여자로도 붙어 있어서
+  // 부서를 옮겨도 계속 보인다(app.can_read_work 가 참여자를 먼저 본다).
+  const [wTheirs] = await admin(
+    `insert into work (title, department_id, owner_id, created_by, visibility)
+     values ('음식물류 폐기물 수수료 개편', $1, $2, $2, 'department') returning id`,
+    [deptA.id, park],
+  );
+  {
+    const r = await as(kim, `select id from work where id = $1`, [wTheirs.id]);
+    check("옮기기 전에는 같은 과의 부서공개 업무가 보인다", r.ok && r.rows.length === 1);
+  }
+
+  // ── 이 기능이 존재하는 이유 ─────────────────────────────────────────────
+  check(
+    "★ 자기 소속을 직접 바꿀 수 없다",
+    await denied(
+      kim,
+      `update profile set department_id = $2 where id = $1 returning id`,
+      [kim, deptB.id],
+    ),
+  );
+  check(
+    "표에 직접 신청을 적을 수 없다",
+    await denied(
+      kim,
+      `insert into transfer_request (profile_id, from_department_id, to_department_id, approver_id)
+       values ($1, $2, $3, $1) returning id`,
+      [kim, deptA.id, deptB.id],
+    ),
+  );
+
+  // ── 신청 ────────────────────────────────────────────────────────────────
+  const req = await as(kim, `select request_transfer($1, $2) as id`, [
+    deptB.id,
+    "  대중교통과 자원순환 연계 업무  ",
+  ]);
+  check("이동을 신청한다", req.ok && req.rows[0]?.id, req.error ?? "");
+  const reqId = req.rows?.[0]?.id;
+
+  {
+    const r = await admin(`select approver_id, reason, status from transfer_request where id = $1`, [reqId]);
+    check("★ 승인자는 옮겨갈 부서의 최고 서열자다", r[0]?.approver_id === han);
+    check("사유의 앞뒤 공백은 깎인다", r[0]?.reason === "대중교통과 자원순환 연계 업무");
+    check("처음 상태는 대기다", r[0]?.status === "pending");
+  }
+  check(
+    "같은 곳으로 두 번 신청할 수 없다",
+    !(await as(kim, `select request_transfer($1, null) as id`, [deptB.id])).ok,
+  );
+  check(
+    "이미 있는 부서로는 신청할 수 없다",
+    !(await as(park, `select request_transfer($1, null) as id`, [deptA.id])).ok,
+  );
+
+  // ── 열람 ────────────────────────────────────────────────────────────────
+  {
+    const r = await as(kim, `select id from transfer_request where id = $1`, [reqId]);
+    check("신청자는 자기 신청을 본다", r.ok && r.rows.length === 1);
+  }
+  {
+    const r = await as(han, `select id from transfer_request where id = $1`, [reqId]);
+    check("승인자는 그 신청을 본다", r.ok && r.rows.length === 1);
+  }
+  check(
+    "★ 남의 이동 신청은 보이지 않는다",
+    await denied(park, `select id from transfer_request where id = $1`, [reqId]),
+  );
+
+  // ── 결정 ────────────────────────────────────────────────────────────────
+  check(
+    "★ 승인자가 아니면 결정할 수 없다",
+    !(await as(park, `select decide_transfer($1, true, null)`, [reqId])).ok,
+  );
+  check(
+    "★ 신청자가 자기 신청을 승인할 수 없다",
+    !(await as(kim, `select decide_transfer($1, true, null)`, [reqId])).ok,
+  );
+  check(
+    "당사자가 아니면 남는 업무 수도 못 묻는다",
+    !(await as(park, `select transfer_impact($1)`, [reqId])).ok,
+  );
+  {
+    // 남고 갈 업무의 수를 여기서 다시 세어 맞춘다. 앞 절들이 김담당 이름으로
+    // 업무를 더 만들기 때문에 상수로 적으면 그쪽을 고칠 때 여기가 깨진다.
+    const [expected] = await admin(
+      `select count(*)::int as n from work
+       where owner_id = $1 and department_id = $2 and status <> 'done'`,
+      [kim, deptA.id],
+    );
+    const r = await as(han, `select transfer_impact($1) as n`, [reqId]);
+    check(
+      "★ 승인자는 남고 갈 업무 수를 본다",
+      r.ok && expected.n > 0 && r.rows[0]?.n === expected.n,
+      r.error ?? `${r.rows?.[0]?.n} ≠ ${expected.n}`,
+    );
+  }
+
+  const ok = await as(han, `select decide_transfer($1, true, '연계 업무 인정')`, [reqId]);
+  check("승인자가 승인한다", ok.ok, ok.error ?? "");
+  {
+    const r = await admin(`select department_id from profile where id = $1`, [kim]);
+    check("★ 승인하면 소속이 실제로 바뀐다", r[0]?.department_id === deptB.id);
+  }
+  {
+    const r = await admin(`select status, decided_note from transfer_request where id = $1`, [reqId]);
+    check("신청이 승인으로 닫힌다", r[0]?.status === "approved" && r[0]?.decided_note === "연계 업무 인정");
+  }
+  check(
+    "이미 처리된 신청은 다시 결정할 수 없다",
+    !(await as(han, `select decide_transfer($1, false, null)`, [reqId])).ok,
+  );
+
+  // ── 옮겨간 뒤 ───────────────────────────────────────────────────────────
+  check(
+    "★ 옮겨가면 옛 부서의 부서공개 업무가 안 보인다",
+    await denied(kim, `select id from work where id = $1`, [wTheirs.id]),
+  );
+  {
+    // 반대로, 주담당으로 붙어 있는 업무는 부서를 옮겨도 계속 보인다.
+    // 「소속만 바뀌고 맡은 일은 그대로 남는다」가 화면이 경고해야 하는 상태다.
+    const r = await as(kim, `select id from work where id = $1`, [wDept.id]);
+    check("주담당인 업무는 옮겨가도 남는다", r.ok && r.rows.length === 1);
+  }
+
+  // ── 승인으로도 열리지 않는 칸 ───────────────────────────────────────────
+  check(
+    "직급은 승인 경로로도 안 바뀐다",
+    await denied(kim, `update profile set position = '과장' where id = $1 returning id`, [kim]),
+  );
+  check(
+    "서열은 승인 경로로도 안 바뀐다",
+    await denied(kim, `update profile set rank = 10 where id = $1 returning id`, [kim]),
+  );
+  check(
+    "이메일도 본인이 못 바꾼다",
+    await denied(kim, `update profile set email = 'x@korea.kr' where id = $1 returning id`, [kim]),
+  );
+
+  // ── 반려와 취소 ─────────────────────────────────────────────────────────
+  const back = await as(kim, `select request_transfer($1, null) as id`, [deptA.id]);
+  check("옮긴 뒤 되돌아가는 신청도 된다", back.ok, back.error ?? "");
+  const backId = back.rows?.[0]?.id;
+  {
+    // 돌아가는 쪽도 같은 규칙이다 — 자원순환과에는 rank 30 인 과장이 있으므로
+    // 주무관 여럿을 제치고 그 사람에게 간다.
+    const r = await admin(
+      `select p.rank, p.department_id from transfer_request r
+       join profile p on p.id = r.approver_id where r.id = $1`,
+      [backId],
+    );
+    check(
+      "되돌아가는 신청도 그 부서의 최고 서열자에게 간다",
+      r[0]?.rank === 30 && r[0]?.department_id === deptA.id,
+      `rank=${r[0]?.rank}`,
+    );
+  }
+  {
+    const r = await as(kim, `select cancel_transfer($1)`, [backId]);
+    check("신청자는 대기 중인 신청을 취소한다", r.ok, r.error ?? "");
+  }
+  {
+    const r = await admin(`select status from transfer_request where id = $1`, [backId]);
+    check("취소로 닫힌다", r[0]?.status === "canceled");
+  }
+
+  const again = await as(kim, `select request_transfer($1, null) as id`, [deptA.id]);
+  const againId = again.rows?.[0]?.id;
+  check("취소한 뒤에는 다시 신청할 수 있다", again.ok, again.error ?? "");
+  {
+    const approver = (await admin(`select approver_id from transfer_request where id = $1`, [againId]))[0].approver_id;
+    const r = await as(approver, `select decide_transfer($1, false, '이번 분기는 어렵습니다')`, [againId]);
+    check("반려한다", r.ok, r.error ?? "");
+    const after = await admin(`select status, department_id from transfer_request r join profile p on p.id = r.profile_id where r.id = $1`, [againId]);
+    check("★ 반려하면 소속이 그대로다", after[0]?.status === "rejected" && after[0]?.department_id === deptB.id);
+  }
+  check(
+    "남의 신청을 취소할 수 없다",
+    !(await as(park, `select cancel_transfer($1)`, [againId])).ok,
+  );
+
+  // ── 승인할 사람이 없는 부서 ─────────────────────────────────────────────
+  //
+  // 「그 부서의 최고 서열자」가 신청자 본인뿐이면 자기 승인이 된다. 그 경로가
+  // 열려 있으면 이 기능 전체가 무의미하므로, 후보가 없으면 **신청 자체가
+  // 만들어지지 않아야** 한다.
+  {
+    const [empty] = await admin(
+      `insert into department (name) values ('빈과') returning id`,
+    );
+    const r = await as(kim, `select request_transfer($1, null) as id`, [empty.id]);
+    check(
+      "★ 승인할 사람이 없는 부서로는 신청이 안 된다",
+      !r.ok && /승인할 사람이 없습니다/.test(r.error ?? ""),
+      r.error ?? "신청이 통과했다",
+    );
+
+    // 그 부서에 나만 있어도 마찬가지다 — 상위 조직이 없으면 올라갈 곳도 없다.
+    await admin(`update profile set department_id = $1 where id = $2`, [empty.id, choi]);
+    const alone = await as(choi, `select request_transfer($1, null) as id`, [deptA.id]);
+    check("혼자인 부서에서 나가는 신청은 된다", alone.ok, alone.error ?? "");
+    await admin(`update profile set department_id = $1 where id = $2`, [deptA.id, choi]);
+  }
+
+  // ── 임베드로 우회되지 않는가 ────────────────────────────────────────────
+  //
+  // PostgREST 는 `profile?select=*,profile_contact(*)` 같은 임베드를 허용한다.
+  // 정책이 **임베드된 표에도** 걸리는지 확인한다 — 안 걸리면 조인 한 줄로
+  // 비공개 번호가 전부 새어 나간다. 여기서는 조인으로 같은 것을 흉내 낸다.
+  {
+    await as(park, `insert into profile_contact (profile_id, mobile) values ($1, '010-3000-7777')`, [park]);
+    const r = await as(
+      lee,
+      `select c.mobile from profile p join profile_contact c on c.profile_id = p.id
+       where p.id = $1`,
+      [park],
+    );
+    check(
+      "★ 조인으로도 비공개 번호가 새지 않는다",
+      r.ok && r.rows.length === 0,
+      r.rows?.[0]?.mobile ?? "",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 await db.close();
 console.log(`\n${pass}개 통과 · ${fail}개 실패`);
 if (fail) {

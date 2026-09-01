@@ -175,11 +175,20 @@ function SidebarCityMark() {
 export function AppShell({
   viewer,
   departmentName,
+  transferPending = 0,
   bell,
   children,
 }: {
   viewer: Profile;
   departmentName: string;
+  /**
+   * 내가 승인해야 하는 부서 이동 신청의 수.
+   *
+   * 알림 갈래를 새로 만들지 않고 머리 줄의 점 하나로 말한다. 알림은 「일어난
+   * 일」을 담는 표이고(0021), 이건 **처리해야 사라지는 것**이라 성격이 다르다 —
+   * 결재의 「내 차례」를 알림에 넣지 않은 것과 같은 판단이다.
+   */
+  transferPending?: number;
   /**
    * 머리 줄의 종. **서버에서 그려 넘긴다** — 알림 목록은 사람마다 다르고
    * DB 를 읽어야 하는데, 이 파일은 client 컴포넌트라 여기서 못 읽는다.
@@ -371,21 +380,51 @@ export function AppShell({
 
         {/* ── 오른쪽: 사람 ──────────────────────────────────────────────── */}
         <div className="flex shrink-0 items-center gap-2">
-          <span className="hidden text-right sm:block">
-            <span className="block text-body-sm font-bold text-gray-90">
-              {viewer.name} {viewer.position}
-            </span>
-            <span className="block text-body-xs text-gray-60">
-              {departmentName}
-            </span>
-          </span>
-          {/* 색이 붙는 유일한 아바타 자리다. 여기 있는 사람은 언제나 「나」라서
+          {bell}
+          {/* 이름과 아바타를 **한 링크**로 묶어 내 프로필로 보낸다.
+              둘을 각각 링크로 만들면 같은 곳으로 가는 링크가 나란히 둘이 되고,
+              키보드로 훑는 사람은 탭을 두 번 눌러 같은 자리에 두 번 선다.
+
+              색이 붙는 유일한 아바타 자리다. 여기 있는 사람은 언제나 「나」라서
               구분할 것이 없는데도 색을 주는 이유는 **이 자리가 색의 뜻을
               가르치기 때문**이다 — 머리 줄에서 이 옅은 주황 원을 본 사람은,
               업무 카드의 참여자 줄에서 같은 원을 보는 순간 「저기 내가 있다」를
               배우지 않고 안다(avatar.tsx 의 MINE 주석). */}
-          {bell}
-          <Avatar profile={viewer} me />
+          <Link
+            href="/me"
+            aria-current={pathname === "/me" ? "page" : undefined}
+            className="flex items-center gap-2 rounded-sm px-1 py-1 transition-colors duration-150 hover:bg-gray-5 active:bg-gray-10"
+          >
+            <span className="hidden text-right sm:block">
+              <span className="block text-body-sm font-bold text-gray-90">
+                {viewer.name} {viewer.position}
+              </span>
+              <span className="block text-body-xs text-gray-60">
+                {departmentName}
+              </span>
+            </span>
+            <span className="relative">
+              <Avatar profile={viewer} me />
+              {/* 내가 결정해야 하는 이동 신청이 있다는 표시.
+                  수를 적지 않고 점 하나만 찍는다 — 32px 아바타 모서리에 숫자를
+                  얹으면 두 자리부터 읽히지 않고, 여기서 답해야 하는 질문은
+                  「몇 건인가」가 아니라 「가 볼 데가 있는가」다. 수는 프로필
+                  화면의 제목이 말한다. 색맹이어도 **자리**로 읽히고, 화면을
+                  못 보는 사람에게는 아래 sr-only 가 글자로 말한다. */}
+              {transferPending > 0 ? (
+                <>
+                  <span
+                    aria-hidden
+                    className="absolute -top-1 -right-1 size-3 rounded-full bg-accent ring-2 ring-surface"
+                  />
+                  <span className="sr-only">
+                    결정할 부서 이동 신청 {transferPending}건
+                  </span>
+                </>
+              ) : null}
+            </span>
+            <span className="sr-only">내 프로필</span>
+          </Link>
           {/* /login으로 가는 링크로 두면 안 된다. proxy가 로그인한 사람을
               /login에서 곧바로 홈으로 되돌려보내 눌러도 제자리가 된다.
               계정을 바꾸려면 세션을 실제로 끊어야 하므로 서버 액션을 태운다.

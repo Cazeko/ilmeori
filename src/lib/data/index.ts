@@ -125,6 +125,34 @@ export const getDepartments = () => impl.getDepartments();
 export const getDepartment = (id: string) => impl.getDepartment(id);
 export const getDepartmentTree = () => impl.getDepartmentTree();
 
+/**
+ * 프로필 한 장 — 내 것이든 남의 것이든 같은 함수가 답한다.
+ *
+ * 「본인인가」를 화면이 판단하지 않고 조회층이 붙여 준다(ProfileView.isMe).
+ * 화면마다 viewer.id 와 비교하기 시작하면 한 곳에서 반드시 빠지고,
+ * 그 한 곳이 남의 휴대전화를 고치는 폼을 그리는 자리가 된다.
+ */
+export const getProfileView = (viewer: Profile, id: string) =>
+  impl.getProfileView(viewer, id);
+
+/**
+ * 부서 이동.
+ *
+ * 데모 모드에서는 넷 다 빈 결과다 — 쓰기가 없으므로 신청도 없다.
+ * 두 구현의 서명이 같으니 화면은 어느 쪽인지 몰라도 된다.
+ */
+export const getMyPendingTransfer = (viewer: Profile) =>
+  impl.getMyPendingTransfer(viewer);
+
+export const listMyTransferHistory = (viewer: Profile, limit?: number) =>
+  impl.listMyTransferHistory(viewer, limit);
+
+export const listTransfersToApprove = (viewer: Profile) =>
+  impl.listTransfersToApprove(viewer);
+
+export const getTransferImpact = (requestId: string) =>
+  impl.getTransferImpact(requestId);
+
 export const getPreviousYearBrief = (viewer: Profile, previousWorkId: string) =>
   impl.getPreviousYearBrief(viewer, previousWorkId);
 

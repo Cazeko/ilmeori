@@ -1034,6 +1034,89 @@ console.log("\n[11] 무JS — 본문이 HTML 에 통째로 실려 오는가");
   }
 }
 
+// ── 11. 프로필 — 고칠 수 있는 것과 없는 것이 화면에서 갈리는가 ──────────────
+console.log("\n[11] 프로필 — 내 것 · 남의 것 · 휴대전화 공개 규칙");
+{
+  const ctx = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    const page = await login(ctx, "김서연");
+
+    // 머리 줄의 이름·아바타가 프로필로 가는 문이다. 이게 없으면 주소를 직접
+    // 치지 않는 한 이 화면에 도달할 길이 없다.
+    ok(
+      "머리 줄에서 내 프로필로 가는 링크가 있다",
+      (await page.locator('header a[href="/me"]').count()) === 1,
+    );
+
+    await page.goto(`${BASE}/me`, { waitUntil: "domcontentloaded" });
+    const me = await allText(page);
+
+    ok("내 프로필이 열린다", me.includes("김서연"));
+    ok("가입 때 등록한 이메일이 보인다", me.includes("demo01@ilmeori.demo"));
+    ok("내선번호가 보인다", /031-000-\d{4}/.test(me), me.match(/031-000-\d{4}/)?.[0]);
+    ok("내 휴대전화가 보인다", /010-0000-\d{4}/.test(me), me.match(/010-0000-\d{4}/)?.[0]);
+
+    // 이 화면의 요점 — 소속은 칸이 아니라 절차다.
+    ok("소속을 못 바꾼다고 화면이 말한다", me.includes("본인이 바꿀 수 없습니다"));
+    ok("부서 이동 자리가 있다", me.includes("부서 이동"));
+    ok(
+      "승인이 필요하다고 적혀 있다",
+      me.includes("승인해야 소속이 바뀝니다"),
+    );
+    // 소속을 직접 고치는 칸이 화면에 있으면 안 된다. 서버와 DB 가 막지만,
+    // 「막히는 칸」을 그려 두는 것 자체가 이 화면이 하는 말과 어긋난다.
+    ok(
+      "소속을 직접 고치는 칸이 없다",
+      (await page.locator('form select[name="department_id"]').count()) === 0,
+    );
+
+    // 스크립트 없이도 폼이 실제로 서 있는가. 데모 모드에서는 읽기 전용이라
+    // 폼 자체가 없는 것이 맞다 — 어느 쪽이든 한 가지 상태여야 한다.
+    const contactForms = await page.locator('input[name="mobile"]').count();
+    const readonly = me.includes("지금은 읽기 전용입니다");
+    ok(
+      "연락처 폼이 있거나, 없는 이유가 적혀 있다",
+      contactForms === 1 || readonly,
+      `폼 ${contactForms}개 · 읽기전용 ${readonly}`,
+    );
+
+    // ── 남의 프로필 ─────────────────────────────────────────────────────────
+    // 박준호는 휴대전화를 등록했지만 **공개하지 않았다**(mock/org.ts).
+    // 그러니 남의 화면에는 번호가 없어야 한다. 이 한 줄이 0023 의 전부다.
+    await page.goto(`${BASE}/people/${ACCOUNTS["박준호"]}`, {
+      waitUntil: "domcontentloaded",
+    });
+    const other = await allText(page);
+    ok("남의 프로필이 열린다", other.includes("박준호"));
+    ok("남의 내선번호는 보인다", /031-000-\d{4}/.test(other));
+    ok(
+      "★ 공개하지 않은 휴대전화는 남에게 안 보인다",
+      !/010-0000-\d{4}/.test(other),
+      other.match(/010-0000-\d{4}/)?.[0] ?? "",
+    );
+    ok("대신 공개하지 않았다고 말한다", other.includes("공개하지 않았습니다"));
+
+    // 최민재는 공개했다. 같은 화면이 공개한 사람에게는 번호를 보여야
+    // 「안 보이는 것」이 규칙 때문이지 화면이 고장 난 것이 아님이 확인된다.
+    await page.goto(`${BASE}/people/${ACCOUNTS["최민재"]}`, {
+      waitUntil: "domcontentloaded",
+    });
+    const open = await allText(page);
+    ok("★ 공개한 사람의 휴대전화는 보인다", /010-0000-\d{4}/.test(open));
+
+    // 없는 사람. notFound() 를 안 쓰기로 했으므로 본문이 실제로 그려져야 한다.
+    await page.goto(`${BASE}/people/00000000-0000-4000-8000-000000000000`, {
+      waitUntil: "domcontentloaded",
+    });
+    ok(
+      "없는 직원 주소가 빈 화면이 아니다",
+      (await allText(page)).includes("그런 직원이 없습니다"),
+    );
+  } finally {
+    await ctx.close();
+  }
+}
+
 await browser.close();
 
 console.log(`\n통과 ${pass}건 / 실패 ${fails.length}건`);

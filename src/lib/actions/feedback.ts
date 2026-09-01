@@ -320,6 +320,62 @@ const MESSAGES = {
     "그 사이 결재가 움직였습니다. 다른 사람이 먼저 처리했거나 앞 순서가 아직 끝나지 않았습니다. 새로고침한 뒤 결재란을 다시 확인해 주세요.",
   ],
 
+  // ── 프로필·연락처 ─────────────────────────────────────────────────────
+  "contact.saved": ["success", "연락처를 저장했습니다."],
+  "contact.mobile_removed": [
+    "success",
+    "휴대전화 번호를 내렸습니다. 등록한 적 없는 상태로 돌아갑니다.",
+  ],
+  "contact.ext_invalid": [
+    "danger",
+    "내선번호는 숫자와 붙임표만 쓸 수 있습니다. 예: 031-000-2001",
+  ],
+  "contact.mobile_invalid": [
+    "danger",
+    "휴대전화 번호 형식이 맞지 않습니다. 010-0000-0000 처럼 붙임표를 넣어 적어 주세요.",
+  ],
+
+  // ── 부서 이동 ─────────────────────────────────────────────────────────
+  //
+  // 이 갈래의 문구는 **누가 결정하는지**를 매번 다시 말한다. 「신청했습니다」로
+  // 끝내면 사람은 소속이 이미 바뀐 줄 알고 그 부서 업무를 찾으러 간다.
+  "transfer.requested": [
+    "success",
+    "부서 이동을 신청했습니다. 옮겨갈 부서의 상급자가 승인해야 소속이 바뀝니다. 그때까지는 지금 소속 그대로입니다.",
+  ],
+  "transfer.canceled": ["success", "이동 신청을 취소했습니다."],
+  "transfer.approved": [
+    "success",
+    "이동을 승인했습니다. 그 사람의 소속이 바뀌었고, 옛 부서의 부서공개 업무는 이제 보이지 않습니다.",
+  ],
+  "transfer.rejected": ["success", "이동을 반려했습니다. 사유가 신청자에게 그대로 보입니다."],
+  "transfer.no_target": ["danger", "옮겨갈 부서를 골라 주세요."],
+  "transfer.same_department": ["warning", "이미 그 부서 소속입니다."],
+  "transfer.duplicate": [
+    "warning",
+    "이미 처리를 기다리는 신청이 있습니다. 그 건을 취소한 뒤에 다시 신청해 주세요.",
+  ],
+  "transfer.no_approver": [
+    "danger",
+    "그 부서에는 이 신청을 승인할 사람이 없습니다. 재직자가 없거나 신청한 본인뿐인 부서입니다. 인사 담당자에게 문의해 주세요.",
+  ],
+  "transfer.need_reason": [
+    "danger",
+    "반려 사유를 적어 주세요. 사유 없는 반려는 「왜 안 됐는지 물어보러 가야 하는」 상황을 그대로 남깁니다.",
+  ],
+  "transfer.reason_long": [
+    "danger",
+    "사유가 너무 깁니다. 500자까지 적을 수 있습니다.",
+  ],
+  "transfer.stale": [
+    "warning",
+    "이미 처리된 신청입니다. 그 사이 다른 사람이 결정했거나 신청자가 취소했습니다. 새로고침한 뒤 확인해 주세요.",
+  ],
+  "transfer.not_approver": [
+    "danger",
+    "이 신청의 승인자가 아닙니다. 승인자는 옮겨갈 부서의 최고 서열자 한 사람으로 신청할 때 정해집니다.",
+  ],
+
   // ── 공통 실패 ─────────────────────────────────────────────────────────
   invalid: ["danger", "입력한 내용을 다시 확인해 주세요."],
   denied: ["danger", "이 작업을 할 권한이 없습니다."],
@@ -385,6 +441,31 @@ export function classifyError(error: PostgrestError | null): FeedbackCode {
   if (error.message.includes("마지막 소유자")) return "member.last_owner";
   if (error.message.includes("보충을 더 담을 수 없습니다")) {
     return "handover.note.too_many";
+  }
+
+  // 부서 이동(0023)이 던진 것들. 전부 check_violation 이나
+  // insufficient_privilege 라 코드만 보면 「저장하지 못했습니다」로 뭉개진다.
+  // 이 갈래는 사용자가 스스로 고칠 수 있는 실패뿐이라 하나하나 이름을 붙인다.
+  if (error.message.includes("이미 그 부서 소속")) {
+    return "transfer.same_department";
+  }
+  if (error.message.includes("승인할 사람이 없습니다")) {
+    return "transfer.no_approver";
+  }
+  if (error.message.includes("이 신청의 승인자가 아닙니다")) {
+    return "transfer.not_approver";
+  }
+  if (
+    error.message.includes("이미 처리된 신청") ||
+    error.message.includes("소속이 바뀌었습니다")
+  ) {
+    return "transfer.stale";
+  }
+  // 대기 중인 신청이 이미 있을 때. 부분 유일 색인이 23505 로 막는데, 아래
+  // switch 는 그 코드를 「이미 참여하고 있는 사람입니다」로 읽는다 — 이 화면과
+  // 아무 상관 없는 문장이다. 색인 이름으로 먼저 갈라낸다.
+  if (error.message.includes("transfer_request_one_pending")) {
+    return "transfer.duplicate";
   }
 
   // 서식 문서의 크기 제한(0018 의 document_blocks_size)에 걸린 것.

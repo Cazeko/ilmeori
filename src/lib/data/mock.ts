@@ -28,7 +28,7 @@ import {
   workMembers,
   works,
 } from "@/lib/mock/works";
-import { departments, profiles } from "@/lib/mock/org";
+import { contacts, departments, extensions, profiles } from "@/lib/mock/org";
 import { getDemoState, type DemoState } from "@/lib/demo-state";
 import { searchTerm } from "@/lib/search-term";
 import { ACCESS_LOG_LIMIT, WORKS_LIMIT, byUrgency } from "./types";
@@ -63,12 +63,15 @@ import {
   type AppNotification,
   type NotificationWithActor,
   type Profile,
+  type ProfileView,
   type ProfileWithDepartment,
+  type TransferRequestView,
   type Work,
   type WorkListItem,
 } from "@/lib/types";
 
 const profileById = new Map(profiles.map((p) => [p.id, p]));
+const contactByProfile = new Map(contacts.map((c) => [c.profile_id, c]));
 const deptById = new Map(departments.map((d) => [d.id, d]));
 
 function requireProfile(id: string): Profile {
@@ -525,6 +528,68 @@ export async function getDepartmentTree() {
     ...root,
     children: departments.filter((d) => d.parent_id === root.id),
   }));
+}
+
+// ---------------------------------------------------------------------------
+// 프로필
+// ---------------------------------------------------------------------------
+
+/**
+ * 프로필 한 장.
+ *
+ * **여기서 공개 판정을 직접 해야 한다.** 실제 DB에서는 profile_contact 의
+ * select 정책이 비공개 행을 아예 주지 않는데(0023), 목업에는 정책이 없으므로
+ * 읽는 쪽이 같은 규칙을 흉내 낸다. 이걸 빠뜨리면 데모 모드에서만 남의
+ * 휴대전화가 보이고, 그 화면이 그대로 심사장에 뜬다.
+ */
+export async function getProfileView(
+  viewer: Profile,
+  id: string,
+): Promise<ProfileView | null> {
+  const profile = profileById.get(id);
+  if (!profile || !profile.is_active) return null;
+
+  const found = contactByProfile.get(id) ?? null;
+  const isMe = profile.id === viewer.id;
+  return {
+    profile: withDept(profile),
+    phone_ext: extensions[id] ?? null,
+    contact: found && (isMe || found.is_public) ? found : null,
+    isMe,
+    // 목업에는 스키마가 없으니 「아직 안 돌아갔다」도 없다.
+    pendingMigration: false,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 부서 이동
+//
+// 데모 모드에서는 언제나 비어 있다. 신청도 승인도 쓰기이고, 데모 모드는
+// 읽기 전용이기 때문이다(env.ts 의 canMutate). 화면은 그 사실을 글자로 적고
+// 신청 폼 자체를 그리지 않는다 — 눌리지 않는 버튼을 보여 주느니 없는 편이 낫다.
+// ---------------------------------------------------------------------------
+
+export async function getMyPendingTransfer(
+  _viewer: Profile,
+): Promise<TransferRequestView | null> {
+  return null;
+}
+
+export async function listMyTransferHistory(
+  _viewer: Profile,
+  _limit = 5,
+): Promise<TransferRequestView[]> {
+  return [];
+}
+
+export async function listTransfersToApprove(
+  _viewer: Profile,
+): Promise<TransferRequestView[]> {
+  return [];
+}
+
+export async function getTransferImpact(_requestId: string): Promise<number> {
+  return 0;
 }
 
 /**

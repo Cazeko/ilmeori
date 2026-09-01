@@ -365,6 +365,9 @@ console.log("\n열거형 — DB 와 타입이 같은 말을 하는가");
 const ENUM_PAIRS = [
   { sql: "activity_kind", ts: "ActivityKind" },
   { sql: "notification_kind", ts: "NotificationKind" },
+  // 0023. TransferStatusBadge 의 TONE·LABEL 이 Record<TransferStatus, …> 라
+  // 위 둘과 정확히 같은 방식으로 터진다 — DB 에만 값이 늘면 <undefined />.
+  { sql: "transfer_status", ts: "TransferStatus" },
 ];
 
 const sqlText = (

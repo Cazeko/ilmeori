@@ -77,6 +77,7 @@ try {
       {
         department: org.departments.length,
         profile: org.profiles.length,
+        profile_contact: org.contacts.length,
         work: works.works.length,
         work_member: works.workMembers.length,
         document: works.documents.length,
@@ -213,7 +214,7 @@ function rows(values) {
 }
 
 function build(org, works) {
-  const { departments, profiles } = org;
+  const { departments, profiles, contacts, extensions } = org;
   const {
     works: workRows,
     workMembers,
@@ -283,8 +284,10 @@ function build(org, works) {
     "-- 실패하면 통째로 롤백되므로 꺼진 채로 남을 일은 없다.",
     "-- (force 표시는 disable 해도 유지되므로 다시 켜면 원래 상태로 돌아온다)",
     "-- -----------------------------------------------------------------------------",
-    "alter table department    disable row level security;",
-    "alter table profile       disable row level security;",
+    "alter table department      disable row level security;",
+    "alter table profile         disable row level security;",
+    // 0023 의 새 표. force row level security 가 걸려 있어 소유자도 막힌다.
+    "alter table profile_contact disable row level security;",
     "alter table work          disable row level security;",
     "alter table work_member   disable row level security;",
     "alter table document      disable row level security;",
@@ -386,13 +389,29 @@ function build(org, works) {
     "-- -----------------------------------------------------------------------------",
     "-- 3. 사람 — 전부 가상 인물이다",
     "-- -----------------------------------------------------------------------------",
-    "insert into profile (id, name, department_id, position, rank, email, is_active, is_demo) values",
+    "insert into profile (id, name, department_id, position, rank, email, phone_ext, is_active, is_demo) values",
     rows(
       profiles.map(
         (x) =>
-          `${q(x.id)}, ${q(x.name)}, ${q(x.department_id)}, ${q(x.position)}, ${x.rank}, ${q(x.email)}, ${bool(x.is_active)}, ${bool(x.is_demo)}`,
+          `${q(x.id)}, ${q(x.name)}, ${q(x.department_id)}, ${q(x.position)}, ${x.rank}, ${q(x.email)}, ${q(extensions[x.id] ?? null)}, ${bool(x.is_active)}, ${bool(x.is_demo)}`,
       ),
     ) + "\non conflict (id) do nothing;",
+    "",
+  );
+
+  // --- profile_contact ------------------------------------------------------
+  // 사람 수보다 적다. 번호를 등록하지 않은 사람은 행이 없고, 등록했지만
+  // 공개하지 않은 사람은 행은 있으나 남에게 조회되지 않는다(0023).
+  p(
+    "-- -----------------------------------------------------------------------------",
+    "-- 3-2. 개인 휴대전화 — 등록한 사람만, 공개는 본인이 정한 대로",
+    "-- -----------------------------------------------------------------------------",
+    "insert into profile_contact (profile_id, mobile, is_public) values",
+    rows(
+      contacts.map(
+        (x) => `${q(x.profile_id)}, ${q(x.mobile)}, ${bool(x.is_public)}`,
+      ),
+    ) + "\non conflict (profile_id) do nothing;",
     "",
   );
 
@@ -651,8 +670,9 @@ function build(org, works) {
     "alter table comment      enable trigger user;",
     "alter table attachment   enable trigger user;",
     "",
-    "alter table department    enable row level security;",
-    "alter table profile       enable row level security;",
+    "alter table department      enable row level security;",
+    "alter table profile         enable row level security;",
+    "alter table profile_contact enable row level security;",
     "alter table work          enable row level security;",
     "alter table work_member   enable row level security;",
     "alter table document      enable row level security;",
