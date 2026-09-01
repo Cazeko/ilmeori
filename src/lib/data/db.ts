@@ -34,6 +34,7 @@ import {
 import { ACCESS_LOG_LIMIT, WORKS_LIMIT, byUrgency } from "./types";
 import type {
   ApprovalSummary,
+  HandoverSummary,
   HandoverView,
   WorkFilter,
   WorkRecords,
@@ -1219,11 +1220,31 @@ const HANDOVER_SELECT = `
   items:handover_item ( work_id, transferred )
 `;
 
+/**
+ * 목록용. 업무는 안 읽는다 — 세기만 하므로 `transferred` 한 칸이면 된다.
+ * (왜 HandoverView 를 목록에 안 쓰는지는 data/types.ts 의 HandoverSummary)
+ */
+const HANDOVER_LIST_SELECT = `
+  id, status, created_at, completed_at,
+  from_profile:from_profile_id ( ${PROFILE_SELECT} ),
+  to_profile:to_profile_id ( ${PROFILE_SELECT} ),
+  items:handover_item ( transferred )
+`;
+
 // from·to 는 SQL 예약어라 별칭으로 쓰지 않는다. 받아 온 뒤 화면이 쓰는 이름으로 바꾼다.
 type RawHandover = Handover & {
   from_profile: Profile;
   to_profile: Profile;
   items: Array<{ work_id: string; transferred: boolean }>;
+};
+
+type RawHandoverSummary = Pick<
+  Handover,
+  "id" | "status" | "created_at" | "completed_at"
+> & {
+  from_profile: Profile;
+  to_profile: Profile;
+  items: Array<{ transferred: boolean }>;
 };
 
 /**
@@ -1266,6 +1287,46 @@ export async function getHandoverFor(
     .maybeSingle();
   if (error) throw error;
   return data ? buildHandover(data as unknown as RawHandover) : null;
+}
+
+/**
+ * 내가 얽힌 인계 **전부**. 최근 것이 먼저.
+ *
+ * ── 왜 필요한가 ────────────────────────────────────────────────────────────
+ *
+ * `getHandoverFor` 는 최신 한 건만 돌려준다. 그 설계 때문에 **새 인계를
+ * 시작하는 순간 끝난 인계서가 화면에서 사라졌다** — 행은 남아 있는데 볼 길이
+ * 없었고, 한/글 내려받기도 같이 죽었다(그 라우트도 getHandoverFor 를 쓴다).
+ *
+ * 인계서는 결재에 올라가는 공문서다. 「지난번 것은 못 봅니다」는 이 제품이
+ * 할 수 있는 말이 아니다.
+ *
+ * 여기서도 걸러 내지 않는다 — `handover_select` 가 당사자에게만 행을 준다.
+ */
+export async function listHandovers(
+  // 목업 구현과 서명을 맞춘다(index.ts 머리 주석). 여기서는 RLS 가 판정하므로 쓰지 않는다.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _viewer: Profile,
+): Promise<HandoverSummary[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("handover")
+    .select(HANDOVER_LIST_SELECT)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((raw) => {
+    const r = raw as unknown as RawHandoverSummary;
+    return {
+      id: r.id,
+      status: r.status,
+      from: r.from_profile,
+      to: r.to_profile,
+      itemCount: r.items.length,
+      transferredCount: r.items.filter((i) => i.transferred).length,
+      created_at: r.created_at,
+      completed_at: r.completed_at,
+    };
+  });
 }
 
 /**

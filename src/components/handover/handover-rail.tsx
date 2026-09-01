@@ -56,6 +56,8 @@ export function HandoverRail({
   notUsed,
   canWriteNotes,
   canStartNew,
+  exportHref,
+  archived,
 }: {
   status: HandoverStatus;
   isSender: boolean;
@@ -72,6 +74,16 @@ export function HandoverRail({
   canWriteNotes: boolean;
   /** 새 인계를 시작할 수 있는가(데모 모드에서는 못 한다) */
   canStartNew: boolean;
+  /**
+   * 한/글 내려받기 주소.
+   *
+   * 지난 인계서에서는 그 건의 주소여야 한다 — `/handover/export/hwpx` 는
+   * getHandoverFor 를 쓰므로 최신 것을 주고, 그러면 화면과 파일이 다른
+   * 문서가 된다.
+   */
+  exportHref: string;
+  /** 지난 인계서를 보고 있는가. 참이면 이 기둥은 아무것도 바꾸지 않는다. */
+  archived: boolean;
 }) {
   return (
     <section
@@ -100,6 +112,8 @@ export function HandoverRail({
           notUsed={notUsed}
           canWriteNotes={canWriteNotes}
           canStartNew={canStartNew}
+          exportHref={exportHref}
+          archived={archived}
         />
       </div>
     </section>
@@ -118,6 +132,8 @@ function Action({
   notUsed,
   canWriteNotes,
   canStartNew,
+  exportHref,
+  archived,
 }: Parameters<typeof HandoverRail>[0]) {
   // ── 끝난 인계는 **양쪽에 같은 말**을 한다 ─────────────────────────────────
   //
@@ -145,14 +161,31 @@ function Action({
             </span>
           </p>
         </div>
-        {/* 끝난 뒤 이 화면에서 할 수 있는 일 둘 — 문서를 챙기는 것과
-            다음 인계를 여는 것. 왼쪽의 내보내기 판은 이때 안 뜬다(page.tsx). */}
+        {/* 끝난 뒤 이 화면에서 할 수 있는 일 셋 — 문서를 챙기는 것,
+            인계 첫 화면으로 돌아가는 것, 다음 인계를 여는 것.
+            왼쪽의 내보내기 판은 이때 안 뜬다(handover-screen.tsx). */}
         <div className="flex flex-col gap-2">
-          <DownloadLink href="/handover/export/hwpx" variant="secondary" size="sm" block>
+          <DownloadLink href={exportHref} variant="secondary" size="sm" block>
             <Download aria-hidden className="size-4" />
             한/글 파일(.hwpx)
           </DownloadLink>
-          {canStartNew ? (
+          {/* ── 첫 화면으로 ────────────────────────────────────────────────
+              `/handover` 는 **언제나 최신 인계**를 그린다(getHandoverFor).
+              그래서 인계가 하나라도 있으면 「지금 넘긴다면 무엇이 실리나」를
+              말하는 첫 화면에 **닿을 방법이 없었다.** 물음표 하나가 그 문을
+              연다 — 새 라우트를 만들지 않고, 뒤로가기와도 안 부딪힌다.
+
+              지난 인계서에서는 이 단추가 더 중요하다. 거기서 「새 인계 시작」만
+              있으면, 읽으러 들어온 사람에게 화면이 내미는 유일한 길이 **새
+              문서를 만드는 것**이 된다. */}
+          <ButtonLink href="/handover?start=1" variant="secondary" size="sm" block>
+            인계 첫 화면으로
+            <ArrowRight aria-hidden className="size-4" />
+          </ButtonLink>
+          {/* 지난 인계서에서는 「새 인계 시작」을 안 그린다. 그 단추는 최신
+              인계 화면의 것이고, 여기서 누르면 **읽고 있던 문서와 무관한
+              일**이 벌어진다. 첫 화면에 지난 인계 목록과 함께 서 있다. */}
+          {canStartNew && !archived ? (
             <>
               <ButtonLink href="/handover/new" variant="secondary" size="sm" block>
                 새 인계 시작

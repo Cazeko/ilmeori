@@ -6,6 +6,7 @@ import type {
   DocSectionWithEditor,
   Document,
   Handover,
+  HandoverStatus,
   Profile,
   WorkListItem,
 } from "@/lib/types";
@@ -111,6 +112,32 @@ export type HandoverView = {
   from: Profile;
   to: Profile;
   items: Array<{ work: WorkListItem; transferred: boolean }>;
+};
+
+/**
+ * 인계 **목록** 한 줄.
+ *
+ * ── 왜 HandoverView 를 목록에 쓰지 않는가 ──────────────────────────────────
+ *
+ * HandoverView 는 업무를 통째로 물어 온다(getWorksByIds). 목록은 한 사람이
+ * 겪은 인계 전부를 그리는 자리라, 그렇게 하면 화면 하나가 지난 인계에 실렸던
+ * 업무를 **전부** 다시 읽는다. 목록이 말하는 것은 「언제 · 누구에게 · 몇 건」
+ * 뿐이므로 세는 값만 담는다.
+ *
+ * 업무 제목을 여기 넣지 않는 것도 같은 이유다 — 제목을 보려면 그 인계서를
+ * 열면 되고, 목록에서 제목을 말하기 시작하면 이 판이 문서 등급이 된다.
+ */
+export type HandoverSummary = {
+  id: string;
+  status: HandoverStatus;
+  from: Profile;
+  to: Profile;
+  /** 인계서에 실린 업무 수 */
+  itemCount: number;
+  /** 그중 실제로 주담당이 옮겨 간 수. 대상 수와 다를 수 있다(execute_handover). */
+  transferredCount: number;
+  created_at: string;
+  completed_at: string | null;
 };
 
 /**

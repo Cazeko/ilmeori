@@ -34,6 +34,7 @@ import { searchTerm } from "@/lib/search-term";
 import { ACCESS_LOG_LIMIT, WORKS_LIMIT, byUrgency } from "./types";
 import type {
   ApprovalSummary,
+  HandoverSummary,
   HandoverView,
   WorkFilter,
   WorkRecords,
@@ -759,6 +760,42 @@ export async function getHandover(
 ): Promise<HandoverView | null> {
   const h = handovers.find((x) => x.id === id);
   return h ? buildHandover(h) : null;
+}
+
+/**
+ * 내가 얽힌 인계 전부(db.ts 의 같은 이름 참조).
+ *
+ * 시드에는 인계가 한 건뿐이고 데모에서는 새 인계를 만들 수 없다(canMutate).
+ * 그래서 이 목록은 목업에서 **0 또는 1**이다 — 그래도 화면이 두 구현에서
+ * 같은 모양을 받아야 하므로 빈 배열을 돌려주지 않고 그 한 건을 담는다.
+ */
+export async function listHandovers(
+  viewer: Profile,
+): Promise<HandoverSummary[]> {
+  const state = await getDemoState();
+  return handovers
+    .filter(
+      (x) => x.from_profile_id === viewer.id || x.to_profile_id === viewer.id,
+    )
+    .map((base) => {
+      const status = state.handoverStatus ?? base.status;
+      const items = handoverItems.filter((i) => i.handover_id === base.id);
+      return {
+        id: base.id,
+        status,
+        from: requireProfile(base.from_profile_id),
+        to: requireProfile(base.to_profile_id),
+        itemCount: items.length,
+        transferredCount: items.filter(
+          (i) => state.transferred.includes(i.work_id) || i.transferred,
+        ).length,
+        created_at: base.created_at,
+        completed_at:
+          status === "completed"
+            ? (base.completed_at ?? state.completedAt ?? null)
+            : null,
+      };
+    });
 }
 
 async function buildHandover(base: Handover): Promise<HandoverView> {

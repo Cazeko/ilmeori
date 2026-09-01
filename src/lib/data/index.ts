@@ -10,7 +10,7 @@ import type {
   Profile,
   WorkListItem,
 } from "@/lib/types";
-import type { HandoverView, WorkFilter } from "./types";
+import type { HandoverSummary, HandoverView, WorkFilter } from "./types";
 
 /**
  * 데이터 접근 층 — 화면과 저장소 사이의 유일한 경계.
@@ -31,6 +31,7 @@ const impl = isSupabaseConfigured ? db : mock;
 
 export type {
   ApprovalSummary,
+  HandoverSummary,
   HandoverView,
   WorkFilter,
   WorkRecords,
@@ -134,6 +135,15 @@ export const getHandoverFor = (viewer: Profile): Promise<HandoverView | null> =>
 
 export const getHandover = (viewer: Profile, id: string) =>
   impl.getHandover(viewer, id);
+
+/**
+ * 내가 얽힌 인계 전부, 최근 것이 먼저.
+ *
+ * `getHandoverFor` 가 최신 한 건만 돌려주는 탓에 새 인계를 시작하면 끝난
+ * 인계서가 화면에서 사라졌다. 그것을 되찾는 목록이다(db.ts 의 같은 이름).
+ */
+export const listHandovers = (viewer: Profile): Promise<HandoverSummary[]> =>
+  impl.listHandovers(viewer);
 
 /**
  * 인계자가 서식 항목에 보탠 글.

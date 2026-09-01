@@ -727,6 +727,70 @@
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
+
+  /* ── 인계서 접기 — 인계가 끝난 화면에서만 ────────────────────────────────
+
+     손잡이(`#handover-fold`)는 끝난 화면에서만 그려진다(sheet-fold.tsx).
+     **없으면 아래 선택자가 아무것도 안 맞히므로 서식은 그대로 보인다** —
+     실행 전 화면에는 접는 장치가 아예 없다는 뜻이고, 그게 맞다.
+
+     기본이 접힘이다(체크 안 됨 = 접힘). 끝난 화면에서 사람이 실제로 하는 일은
+     문답과 파일 내려받기인데, 약 4,500px 짜리 서식이 펼쳐져 있으면 그 둘이 늘
+     스크롤 저 아래에 있다. */
+  #handover-fold:not(:checked) ~ .sheet {
+    display: none;
+  }
+  /* 접힌 동안에는 「문장마다 출처 보기」도 감춘다. 안 보이는 글의 출처를
+     켜고 끄는 단추는 눌러도 아무 일이 없는 단추다.
+     캡션 문장은 남긴다 — 「무엇을 몇 건 실었는가」는 서식이 접혀 있어도
+     이 문서에 대한 사실이다. */
+  #handover-fold:not(:checked) ~ .prov-row .prov-toggle {
+    display: none;
+  }
+
+  .fold-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px; /* 손가락 표적 44px(2.5.5) */
+    padding: 0 16px;
+    border: 1px solid var(--color-gray-50);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-gray-80);
+    font-size: var(--text-body-sm);
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+      background-color 150ms,
+      border-color 150ms;
+  }
+  .fold-toggle:hover {
+    background: var(--color-gray-5);
+  }
+  .fold-toggle:active {
+    background: var(--color-gray-10);
+  }
+  #handover-fold:focus-visible ~ .fold-toggle {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  /* 화살표가 상태를 말한다. 접혀 있으면 아래(펼친다), 펴져 있으면 위(접는다). */
+  #handover-fold:checked ~ .fold-toggle svg {
+    transform: rotate(180deg);
+  }
+
+  /* 낱말은 둘 다 DOM 에 있고 CSS 가 보이는 쪽만 고른다. `content:` 로 글자를
+     만들지 않는다 — 이 저장소가 시험으로 지키는 규칙이다(handover-sheet [6]). */
+  .fold-close {
+    display: none;
+  }
+  #handover-fold:checked ~ .fold-toggle .fold-open {
+    display: none;
+  }
+  #handover-fold:checked ~ .fold-toggle .fold-close {
+    display: inline;
+  }
 }
 
 @media print {
@@ -861,5 +925,17 @@
     /* 서랍이 열린 채로 Ctrl+P 를 눌러도 종이는 깨끗해야 한다. */
     background: transparent;
     outline: 0;
+  }
+
+  /* ── 접어 둔 채로 인쇄해도 종이에는 서식이 나온다 ─────────────────────
+     끝난 화면에서 서식은 기본이 접힘이다(sheet-fold.tsx). 그 상태로 Ctrl+P 를
+     누르면 **빈 종이가 나가는 것**이 이 장치의 가장 비싼 실패다. 화면 상태가
+     종이를 정하면 안 된다는 것은 바로 위 출처 층에서 이미 정한 규칙이고,
+     접기도 같은 규칙 아래 있다. 손잡이 자체는 화면 장치라 종이에서 지운다. */
+  #handover-fold:not(:checked) ~ .sheet {
+    display: block;
+  }
+  .fold-toggle {
+    display: none;
   }
 }
