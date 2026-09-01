@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Mail,
   Menu,
+  Network,
   Repeat,
   ScrollText,
   Search,
@@ -60,6 +61,17 @@ const NAV: Array<{ heading: string; items: NavItem[] }> = [
   // (「AI 어디 있어요」·「이거 진짜 돌아요」)이지 일하는 사람의 질문이 아니다.
   // 하루 여덟 시간 이 옆줄을 보는 사람에게 그 칸은 한 번도 눌리지 않는다.
   // 메뉴는 일하는 순서대로만 둔다.
+  //
+  // 조직도가 다시 묶음 하나를 세운다. 위와 같은 잘못이 아닌지 따져 보고 넣었다 —
+  // 이 화면이 답하는 것은 **일하는 사람의 질문**이다. 부서를 넘는 협업이 이
+  // 제품의 전제인데 「그 일은 어느 과가 하나 · 거기 누가 있나」를 물어볼 자리가
+  // 없었다. 위 묶음의 화면들과 성격이 달라 「업무」에 끼워 넣지 않는다. 저것들은
+  // 내가 **처리해야 하는 것**이 쌓이는 함이고, 조직도는 언제나 그 자리에 있는
+  // 명부다.
+  {
+    heading: "조직",
+    items: [{ href: "/org", label: "조직도", icon: Network }],
+  },
   {
     heading: "기록",
     items: [{ href: "/audit", label: "열람기록", icon: ScrollText }],

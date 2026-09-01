@@ -1117,6 +1117,136 @@ console.log("\n[11] 프로필 — 내 것 · 남의 것 · 휴대전화 공개 �
   }
 }
 
+// ── 12. 조직도 — 훑고, 이름을 누르고, 그래도 안 새는가 ──────────────────────
+console.log("\n[12] 조직도 — 명부 · 떠 있는 인물 카드");
+{
+  const ctx = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    const page = await login(ctx, "김서연");
+
+    // 왼쪽 메뉴에 자리가 있어야 한다. 주소를 직접 쳐야만 닿는 화면은 없는 것과 같다.
+    ok(
+      "왼쪽 메뉴에 조직도가 있다",
+      (await page.locator('nav a[href="/org"]').count()) >= 1,
+    );
+
+    await page.goto(`${BASE}/org`, { waitUntil: "domcontentloaded" });
+    const list = await allText(page);
+
+    ok("조직도가 열린다", list.includes("조직도"));
+    // 조직도는 일부가 아니라 전부여야 한다. 실·국 첫 것과 끝 것, 그리고
+    // 사람이 한 명도 없는 과가 함께 실려 있는지 본다.
+    ok("첫 실·국이 있다", list.includes("공보실"));
+    ok("끝 실·국이 있다", list.includes("기후에너지환경국"));
+    ok("사람이 없는 과도 빠지지 않는다", list.includes("홍보담당관"));
+    ok("과가 하는 일이 실린다", list.includes("청소행정, 자원순환, 자원화시설"));
+    ok("내 부서에 표시가 붙는다", list.includes("우리 과"));
+
+    // ★ 이 화면의 요점. 명부 자체에는 **어떤 전화번호도 실려 있지 않다.**
+    // 스무 명분 카드를 미리 그려 두고 CSS 로 감추는 방법을 안 쓴 이유가 이것이라,
+    // 감추기로 되돌아가면 여기서 걸린다.
+    ok(
+      "★ 명부에는 전화번호가 한 건도 실려 있지 않다",
+      !/0(31-000|10-0000)-\d{4}/.test(list),
+      list.match(/0(31-000|10-0000)-\d{4}/)?.[0] ?? "",
+    );
+
+    // ── 이름을 누른다. 스크립트가 꺼진 채로 ─────────────────────────────────
+    await page.locator(`#p-${ACCOUNTS["박준호"]}`).click();
+    await page.waitForLoadState("domcontentloaded");
+
+    ok(
+      "★ 스크립트 없이도 카드가 열린다",
+      (await page.locator('[role="dialog"]').count()) === 1,
+    );
+    ok("주소에 누른 사람이 남는다", page.url().includes(`person=${ACCOUNTS["박준호"]}`));
+
+    const card = await page.locator('[role="dialog"]').innerText();
+    ok("카드에 이름이 있다", card.includes("박준호"));
+    ok("카드에 이메일이 있다", card.includes("demo02@ilmeori.demo"));
+    ok("카드에 내선번호가 있다", /031-000-\d{4}/.test(card));
+    // 박준호는 휴대전화를 등록했지만 공개하지 않았다(mock/org.ts).
+    // /people/[id] 와 같은 규칙이 이 창에도 걸리는지 본다 — 조회층이 하나이므로
+    // 갈릴 수 없어야 하고, 갈리면 그건 두 벌로 적혔다는 뜻이다.
+    ok(
+      "★ 공개하지 않은 휴대전화는 카드에도 안 나온다",
+      !/010-0000-\d{4}/.test(card),
+      card.match(/010-0000-\d{4}/)?.[0] ?? "",
+    );
+    ok("대신 공개하지 않았다고 말한다", card.includes("공개하지 않았습니다"));
+
+    // 닫는 것도 링크다.
+    await page.locator("#person-card-close").click();
+    await page.waitForLoadState("domcontentloaded");
+    ok(
+      "★ 스크립트 없이도 카드가 닫힌다",
+      (await page.locator('[role="dialog"]').count()) === 0,
+    );
+    ok("닫으면 눌렀던 줄로 돌아온다", page.url().endsWith(`#p-${ACCOUNTS["박준호"]}`));
+
+    // 공개한 사람은 보여야 한다. 안 보이는 것이 규칙 때문이지 고장이 아님을
+    // 같은 화면에서 확인할 수 있어야 한다.
+    await page.goto(`${BASE}/org?person=${ACCOUNTS["최민재"]}`, {
+      waitUntil: "domcontentloaded",
+    });
+    ok(
+      "★ 공개한 사람의 휴대전화는 카드에 보인다",
+      /010-0000-\d{4}/.test(await page.locator('[role="dialog"]').innerText()),
+    );
+
+    // 주소를 손으로 고친 경우. 없는 사람도, uuid 가 아닌 값도 화면을 죽이지 않는다.
+    await page.goto(`${BASE}/org?person=00000000-0000-4000-8000-000000000000`, {
+      waitUntil: "domcontentloaded",
+    });
+    ok(
+      "없는 사람은 빈 창이 아니라 그렇다고 말한다",
+      (await allText(page)).includes("그런 직원이 없습니다"),
+    );
+    const junk = await page.goto(`${BASE}/org?person=not-a-uuid`, {
+      waitUntil: "domcontentloaded",
+    });
+    ok("uuid 가 아닌 값에 화면이 죽지 않는다", junk.status() === 200, `${junk.status()}`);
+    ok(
+      "uuid 가 아니면 창을 아예 열지 않는다",
+      (await page.locator('[role="dialog"]').count()) === 0,
+    );
+
+    // ── 찾기 — GET 폼이라 스크립트가 없어도 돈다 ────────────────────────────
+    await page.goto(`${BASE}/org?q=${encodeURIComponent("자원")}`, {
+      waitUntil: "domcontentloaded",
+    });
+    // 본문만 본다. `allText` 는 머리 줄까지 담는데, 거기에는 보고 있는 사람의
+    // 소속(김서연 → 전국체전추진단)이 늘 적혀 있다 — 그걸 명부의 결과로 세면
+    // 「걸러졌는가」를 묻는 시험이 언제나 실패한다. 실제로 한 번 그렇게 걸렸다.
+    const found = await page.locator("main").innerText();
+    ok("찾은 것이 남는다", found.includes("자원순환과"));
+    ok("걸리지 않은 과는 빠진다", !found.includes("전국체전추진단"));
+    ok("하는 일로도 찾는다", found.includes("해양수산과"));
+    ok("걸러진 화면에서는 「찾은 사람」이라고 말한다", found.includes("찾은 사람"));
+
+    // ── 오와 열 ─────────────────────────────────────────────────────────────
+    // 이 화면의 약속은 「세 열이 한 세로선에 선다」이고, 그건 CSS 격자를 한 곳에서
+    // 정의했기 때문에 성립한다. 두 벌로 갈라지면 여기서 걸린다.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${BASE}/org`, { waitUntil: "domcontentloaded" });
+    const columns = await page.evaluate(() => {
+      const rows = [...document.querySelectorAll("section ul > li")].slice(0, 12);
+      const xs = rows.map((li) =>
+        [...li.children].map((c) => Math.round(c.getBoundingClientRect().x)),
+      );
+      return { rows: xs.length, unique: xs.map((x) => x.join(",")) };
+    });
+    ok("줄이 실제로 그려졌다", columns.rows >= 5, `${columns.rows}줄`);
+    ok(
+      "★ 모든 줄의 세 열이 같은 세로선에서 시작한다",
+      new Set(columns.unique).size === 1,
+      [...new Set(columns.unique)].join(" / "),
+    );
+  } finally {
+    await ctx.close();
+  }
+}
+
 await browser.close();
 
 console.log(`\n통과 ${pass}건 / 실패 ${fails.length}건`);
