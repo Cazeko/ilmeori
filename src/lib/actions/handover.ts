@@ -9,7 +9,14 @@ import {
 } from "@/lib/data";
 import { getDemoState, resetDemoState, setDemoState } from "@/lib/demo-state";
 import { isSupabaseConfigured } from "@/lib/env";
-import { buildHandoverDraft, draftParagraphText } from "@/lib/handover-draft";
+import {
+  buildHandoverDraft,
+  draftParagraphText,
+  missedAnchor,
+  missedNoteBody,
+  missedSourceRef,
+  missedTargetBlock,
+} from "@/lib/handover-draft";
 import { requireViewer } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -21,6 +28,7 @@ import {
   HANDOVER_TALK_ANCHOR,
   type Handover,
   type HandoverBlockKey,
+  HANDOVER_SCREENING_ANCHOR,
 } from "@/lib/types";
 import { classifyError } from "./feedback";
 import { changed, finish, openSession, holdFloor } from "./guard";
@@ -274,44 +282,74 @@ export async function startHandover(formData: FormData) {
  * 확인 단계(confirmed)에서도 열어 둔다. 잠기는 것은 실행된 뒤다 —
  * 「내용을 확인했습니다」는 아직 되돌릴 수 있는 걸음이고, 실행은 아니다.
  */
-/**
- * 한 인계 건에 쌓을 수 있는 보충 수. **DB의 trg_handover_note_limit 과 같은 값이다.**
- *
- * 실제로 막는 것은 DB다. 여기서 한 번 더 세는 이유는 사용자에게 읽을 수 있는
- * 말을 해 주기 위해서다 — 트리거가 던지는 예외는 화면에 그대로 옮길 수 없다.
- * 상한을 넘겨서 손해를 보는 쪽은 인계자가 아니라 **인수자**다. 인계서를 받아
- * 읽어야 하는 사람의 화면과 인쇄본이 무거워지고, 실행이 끝나면 아무도 지울 수 없다.
- */
-const HANDOVER_NOTE_LIMIT = 30;
-
 /** 성공하면 그 항목으로 돌아온다. 일곱 칸짜리 문서에서 맨 위로 튕기면 무엇이 달라졌는지 못 본다. */
 function blockPath(key: HandoverBlockKey): string {
   return `/handover#${handoverBlockAnchor(key)}`;
 }
 
+type NoteSession = Awaited<ReturnType<typeof openSession>>;
+
+/**
+ * 보충을 적을 수 있는 인계 건 — 「보충 적기」와 「보충으로 넣기」가 같은 규칙을 쓴다.
+ *
+ * 화면에 떠 있던 인계와 지금 진행 중인 인계가 다르면(stale) 그 사이 취소되고
+ * 새로 시작됐다는 뜻이다. 인계서는 넘기는 사람이 쓰고 서명하는 문서라 인수자는
+ * 못 넣는다(denied). 실행된 뒤에는 잠긴다(locked). 정책(handover_note_insert)도
+ * 같은 셋을 본다 — 여기서는 사람 말로 먼저 막을 뿐이다.
+ */
+async function writableNoteTarget(
+  viewer: NoteSession["viewer"],
+  rawId: FormDataEntryValue | null,
+) {
+  const view = await getHandoverFor(viewer);
+  if (!view) finish("/handover", "invalid");
+  if (rawId !== view.handover.id) finish("/handover", "stale");
+  if (view.from.id !== viewer.id) finish("/handover", "denied");
+  if (view.handover.status === "completed") {
+    finish("/handover", "handover.note.locked");
+  }
+  return view;
+}
+
+/**
+ * 보충 한 줄 저장. 상한(30개)은 DB 트리거(trg_handover_note_limit)가 막고
+ * classifyError 가 그 말을 옮긴다 — 앱에서 미리 세지 않는다. 미리 세면 두 창에서
+ * 동시에 적을 때 어긋나고, 같은 셈이 두 액션에 두 벌 생긴다.
+ */
+async function insertHandoverNote(
+  session: NoteSession,
+  handoverId: string,
+  row: { block_key: HandoverBlockKey; body: string; source_ref?: string },
+  back: string,
+) {
+  const { error } = await session.supabase.from("handover_note").insert({
+    handover_id: handoverId,
+    ...row,
+    // author_id를 폼에서 받지 않는다. 남의 이름으로 인계서에 문장을 넣는 경로를 없앤다.
+    author_id: session.viewer.id,
+  });
+  if (error) {
+    const code = classifyError(error);
+    if (code === "handover.note.pending") {
+      console.error(
+        "[handover_note] source_ref 칸이 없습니다. supabase/migrations/0024_handover_note_source.sql 을 실행해야 「보충으로 넣기」가 동작합니다.",
+      );
+    }
+    finish(back, code);
+  }
+}
+
 export async function addHandoverNote(formData: FormData) {
-  const { viewer, supabase } = await openSession();
+  const session = await openSession();
 
   const rawKey = formData.get("blockKey");
-  const rawId = formData.get("handoverId");
   const rawBody = formData.get("body");
 
   // 폼에 없는 값도 얼마든지 실어 보낼 수 있다. 아는 칸 이름이 아니면 여기서 끝낸다.
   // (DB의 handover_note_block_key_check도 같은 목록을 요구한다)
   if (!isHandoverBlockKey(rawKey)) finish("/handover", "invalid");
 
-  const view = await getHandoverFor(viewer);
-  if (!view) finish("/handover", "invalid");
-  // 화면에 떠 있던 인계와 지금 진행 중인 인계가 다르면, 그 사이 취소되고 새로
-  // 시작됐다는 뜻이다. 엉뚱한 인계서에 글이 들어가는 것보다 다시 하라고 말하는
-  // 편이 낫다.
-  if (rawId !== view.handover.id) finish("/handover", "stale");
-  // 인계서는 넘기는 사람이 쓰고 서명하는 문서다. 인수자가 문장을 넣을 수 있으면
-  // 서명란의 뜻이 사라진다. 정책(handover_note_insert)도 같은 것을 요구한다.
-  if (view.from.id !== viewer.id) finish("/handover", "denied");
-  if (view.handover.status === "completed") {
-    finish("/handover", "handover.note.locked");
-  }
+  const view = await writableNoteTarget(session.viewer, formData.get("handoverId"));
 
   if (typeof rawBody !== "string") finish("/handover", "invalid");
   const body = rawBody.trim();
@@ -322,31 +360,59 @@ export async function addHandoverNote(formData: FormData) {
   // 결재 문서에 그대로 인쇄된다.** 자른 사실을 아무도 모른다는 것이 문제다.
   if (body.length > HANDOVER_NOTE_MAX) finish("/handover", "handover.note.long");
 
-  // 한 인계 건에 쌓을 수 있는 수. 상한이 없으면 인계자가 자기 인계서 하나로
-  // 인수자의 화면과 인쇄본을 못 쓰게 만들 수 있고, 실행된 뒤에는 아무도 지울 수
-  // 없다. 일곱 칸짜리 서식에 서른 줄이면 실제 쓰임에는 넉넉하다.
-  const { count, error: countError } = await supabase
-    .from("handover_note")
-    .select("id", { count: "exact", head: true })
-    .eq("handover_id", view.handover.id);
-  if (countError) finish("/handover", classifyError(countError));
-  if ((count ?? 0) >= HANDOVER_NOTE_LIMIT) {
-    finish("/handover", "handover.note.too_many");
-  }
-
-  const { error } = await supabase.from("handover_note").insert({
-    handover_id: view.handover.id,
-    block_key: rawKey,
-    body,
-    // author_id를 폼에서 받지 않는다. 남의 이름으로 인계서에 문장을 넣는 경로를 없앤다.
-    author_id: viewer.id,
-  });
   // 실패는 항목이 아니라 화면 맨 위로 돌려보낸다. 알림 판이 거기 있고,
   // 항목으로 튀면 무엇이 잘못됐는지 적힌 줄을 지나치게 된다.
-  if (error) finish("/handover", classifyError(error));
+  await insertHandoverNote(session, view.handover.id, { block_key: rawKey, body }, "/handover");
 
   revalidatePath("/handover");
   finish(blockPath(rawKey), "handover.note.added");
+}
+
+/**
+ * 「보충으로 넣기」 — 규칙이 안 실은 기록을 원문 그대로 보충으로.
+ *
+ * 폼은 기록의 키만 보낸다. **글은 폼에서 받지 않는다.** 서버가 초안을 다시
+ * 만들어 그 키의 기록을 찾고, 그 원문으로 보충을 만든다 — 그래야 「원문
+ * 그대로」가 주장이 아니라 구조가 된다. 어느 칸으로 가는지도 여기서 정한다
+ * (missedTargetBlock). 같은 기록은 한 번만 — DB 의 부분 유일 인덱스(0024)가
+ * 막고, 여기서는 그 실패를 사람 말로 옮긴다.
+ *
+ * 저장 규칙(누가·언제·몇 개)은 addHandoverNote 와 같다. 정책도 같은 것을 본다.
+ */
+export async function moveMissedToNote(formData: FormData) {
+  const session = await openSession();
+
+  // 폼은 「어느 기록이었나」(missedSourceRef)만 보낸다. 글은 서버가 초안에서 찾는다.
+  const rawSrc = formData.get("src");
+  if (typeof rawSrc !== "string" || !/^(comment|section):.+$/.test(rawSrc)) {
+    finish("/handover", "invalid");
+  }
+
+  const view = await writableNoteTarget(session.viewer, formData.get("handoverId"));
+
+  // 화면이 보여 준 것과 같은 초안에서 찾는다. 식별자만 맞고 기록이 없으면 그 사이
+  // 대화가 지워졌거나 업무가 빠진 것이다 — 없는 글을 지어 넣지 않는다.
+  const draft = await buildHandoverDraft(view);
+  const record = [
+    ...draft.screening.comments.missed,
+    ...draft.screening.sections.missed,
+  ].find((m) => missedSourceRef(m) === rawSrc);
+  if (!record) finish(`/handover#${HANDOVER_SCREENING_ANCHOR}`, "invalid");
+
+  const back = `/handover#${missedAnchor(record)}`;
+  await insertHandoverNote(
+    session,
+    view.handover.id,
+    {
+      block_key: missedTargetBlock(record),
+      body: missedNoteBody(record),
+      source_ref: rawSrc,
+    },
+    back,
+  );
+
+  revalidatePath("/handover");
+  finish(back, "handover.note.moved");
 }
 
 /**

@@ -646,6 +646,12 @@
      바꾸는 사건**으로 보기에도 수가 적다 — 토글이 값하는 것은 빗살의 양이 아니라
      「이 문장이 어디서 왔는지 물을 수 있다」는 사실이고, 그 사실을 말하는 것은
      발표자의 한 문장이다. 화면이 대신 외치게 만들지 않는다. */
+  /* 항목 머리의 「근거:」 줄(print-sheet 의 blockLead) — 출처 층과 함께 켜진다.
+     표시 방식(flex)은 요소의 유틸리티가 갖고, 여기서는 **꺼진 동안 가리기만**
+     한다. 그래야 나중에 클래스를 고쳐도 토글이 조용히 죽지 않는다. */
+  #handover-prov:not(:checked) ~ .sheet .block-sources {
+    display: none;
+  }
   #handover-prov:checked ~ .sheet [data-src] {
     /* 인라인 그대로면 선이 **글자 높이만큼만** 그어진다. inline-block 이면
        줄 상자 전체를 지나가고, 긴 꼬리표가 두 줄로 접힐 때도 한 줄기로 남는다.
@@ -794,6 +800,11 @@
 }
 
 @media print {
+  /* 「근거:」 줄은 화면 장치다. print:hidden 이 이미 막지만 여기서도 되돌린다. */
+  .sheet .block-sources {
+    display: none;
+  }
+
   @page {
     size: A4;
     margin: 18mm 20mm 20mm;

@@ -703,6 +703,32 @@ const NOTE_INSERT = `insert into handover_note (handover_id, block_key, body, au
   // 서식 칸 일곱 개가 **전부** 실제로 열려 있는가. 둘만 찔러 보면 나머지 다섯에
   // 오타가 있어도 초록불이고, 그 오타는 화면에 입력칸은 보이는데 저장만 안 되는
   // 모양으로 나온다.
+  // ── 「보충으로 넣기」의 자국(0024) ──────────────────────────────────────
+  // 규칙이 안 실은 기록을 원문 그대로 보충으로 옮기면 어느 기록이었는지가
+  // source_ref 에 남는다. 같은 기록을 두 번 넣는 것은 앱이 아니라 DB가 막아야
+  // 한다 — 두 번 누르거나 두 창에서 누르는 것은 앱이 못 본다.
+  const NOTE_INSERT_SRC = `insert into handover_note (handover_id, block_key, body, author_id, source_ref)
+                           values ($1, $2, $3, $4, $5) returning id`;
+  {
+    const r = await as(kim, NOTE_INSERT_SRC,
+      [hn.id, "1-issues", "[대화 — 배도현 주무관]\n“원문 그대로”", kim, "comment:c-1"]);
+    check("안 실린 기록을 옮긴 보충은 어느 기록이었는지를 남긴다",
+      r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+  }
+  {
+    const r = await as(kim, NOTE_INSERT_SRC,
+      [hn.id, "1-issues", "[대화 — 배도현 주무관]\n“원문 그대로”", kim, "comment:c-1"]);
+    check("같은 기록은 한 인계 건에 한 번만 들어간다 (DB가 막는다)",
+      !r.ok && /23505|handover_note_source_ref_key/i.test(r.error ?? ""),
+      r.ok ? "두 번 들어갔다" : r.error);
+  }
+  {
+    const r = await as(kim, NOTE_INSERT_SRC, [hn.id, "1-issues", "아무 글", kim, "chat:c-9"]);
+    check("어느 기록이었는지는 정한 모양(comment:·section:)이어야 한다",
+      !r.ok && /handover_note_source_ref_check|23514/i.test(r.error ?? ""),
+      r.ok ? "들어갔다" : r.error);
+  }
+
   {
     const sqlKeys = [
       ...(await readFile(join(HERE, "migrations", "0014_handover_note.sql"), "utf8"))

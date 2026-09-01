@@ -111,9 +111,16 @@ console.log("\n[1] 인계서 — 대화에서 현안 뽑기");
   );
   ok("배도현의 기한 충돌 대화가 실렸다", body.includes("요구서 제출 기한과 겹칩니다"));
   ok("박준호의 후속 약속이 실렸다", body.includes("8월 8일까지 반영본을 받기로 했으니"));
+  // 「안 실렸다」는 **서식**에 대한 말이다. 같은 화면의 「규칙이 무엇을 걸렀나」는
+  // 바로 그 대화를 원문으로 내놓으므로 body 전체로 재면 늘 빨갛다.
+  const sheetText = await page.locator(".sheet").evaluate((el) => el.textContent ?? "");
   ok(
     "현안이 아닌 대화는 안 실렸다",
-    !body.includes("정기인사로 이 업무를 이하람 주무관에게"),
+    !sheetText.includes("정기인사로 이 업무를 이하람 주무관에게"),
+  );
+  ok(
+    "안 실린 대화는 「규칙이 무엇을 걸렀나」에 원문으로 남는다",
+    body.includes("정기인사로 이 업무를 이하람 주무관에게"),
   );
   ok("「확인된 현안사항이 없습니다」가 사라졌다", !body.includes("확인된 현안사항이 없습니다"));
   ok("근거 꼬리표가 몇 건 중 몇 건인지 밝힌다", /대화 \d+건 중 .*?\d+건/.test(body));
@@ -136,10 +143,20 @@ console.log("\n[1] 인계서 — 대화에서 현안 뽑기");
   ok("일곱 항목이 모두 들어간다", raw.includes("1-가.") && raw.includes("4. 그 밖의 참고사항"));
   ok("종이에도 대화 인용이 실린다", raw.includes("[대화 —"));
   ok("출처 요약이 맨 아래에 있다", raw.includes("서식 순서대로 뽑아 정리한 것입니다"));
-  ok("종이에는 근거 꼬리표가 안 나온다", !raw.includes("근거:"));
   ok("물품·예산은 손으로 적을 빈칸이다", raw.includes("재무회계시스템"));
 
   await page.emulateMedia({ media: "print" });
+  // 「근거:」 줄은 이제 서식 **안**의 화면 장치다(print-sheet 의 blockLead).
+  // 글자로 찾지 않는다 — 인용된 문서 본문에도 「근거:」로 시작하는 줄이 있다.
+  // 인쇄 매체에서 그 요소가 **그려지지 않는가**를 본다.
+  ok(
+    "종이에는 근거 꼬리표가 안 나온다",
+    (await page.locator(".sheet .block-sources:visible").count()) === 0,
+  );
+  ok(
+    "종이에는 누를 것이 없다",
+    (await page.locator(".sheet form:visible, .sheet button:visible").count()) === 0,
+  );
   ok("인쇄에서 상단 바가 사라진다", (await page.locator("header").first().isVisible()) === false);
   ok("인쇄에서 왼쪽 메뉴가 사라진다", (await page.locator("aside").first().isVisible()) === false);
   ok("인쇄에서 서식이 나타난다", await sheet.isVisible());
@@ -525,7 +542,8 @@ console.log("\n[7] 인계서 보충 — 스크립트 없이 적고, 종이에 �
 
   /** 이 실행이 남긴 것만 지우기 위한 표식. */
   const MARK = `[검증 ${Date.now().toString(36)}]`;
-  const rows = (p = page) => p.locator('li:has(input[name="noteId"])');
+  // 보충 한 줄은 이제 서식 안의 .note 다(print-sheet). 지우기 폼이 그 안에 선다.
+  const rows = (p = page) => p.locator('.sheet .note:has(input[name="noteId"])');
 
   /** 표식이 붙은 보충을 지운다. 지우고 나면 화면이 다시 그려지므로 매번 다시 찾는다. */
   const sweep = async (mark) => {
@@ -592,7 +610,7 @@ console.log("\n[7] 인계서 보충 — 스크립트 없이 적고, 종이에 �
 
       const sheet = (await page.locator(".sheet").textContent()) ?? "";
       ok("종이에도 실린다", sheet.includes(text));
-      ok("종이에서는 이름과 날짜가 붙는다", sheet.includes("인계자 보충 — 박준호"));
+      ok("종이에서는 이름과 날짜가 붙는다", sheet.includes("인계자 보충: 박준호"));
       ok(
         "적어 넣었으면 손으로 적을 빈칸은 인쇄하지 않는다",
         (await page.locator(".sheet div.border-black").count()) === 0,

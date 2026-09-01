@@ -22,7 +22,7 @@ import { formatDate, formatDueLabel } from "@/lib/format";
 import { getHandoverFor, listHandovers, listWorks, roleIn } from "@/lib/data";
 import type { HandoverView } from "@/lib/data";
 import { requireViewer } from "@/lib/session";
-import { isHandoverBlockKey, type Profile } from "@/lib/types";
+import type { Profile } from "@/lib/types";
 
 export const metadata: Metadata = { title: "인계·인수" };
 
@@ -70,16 +70,7 @@ export default async function HandoverPage({
     );
   }
 
-  // 「보충으로 넣기」가 보낸 자리. 둘 다 아는 값일 때만 넘긴다 — 칸 이름은
-  // 아는 목록으로 거르고, 기록 키는 화면이 자기 초안 안에서 다시 찾는다.
-  const fill =
-    typeof sp.fill === "string" && isHandoverBlockKey(sp.block)
-      ? { key: sp.fill, block: sp.block }
-      : null;
-
-  return (
-    <HandoverScreen view={view} viewer={viewer} msg={sp.msg} fill={fill} />
-  );
+  return <HandoverScreen view={view} viewer={viewer} msg={sp.msg} />;
 }
 
 /**

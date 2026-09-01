@@ -214,6 +214,18 @@ const MESSAGES = {
     "danger",
     "이 인계서에 보충을 더 담을 수 없습니다. 한 건에 30개까지입니다. 필요 없는 것을 지운 뒤 다시 적어 주세요.",
   ],
+  "handover.note.moved": [
+    "success",
+    "안 실린 기록을 보충으로 넣었습니다. 원문 그대로 「인계자 보충」이 됐고, 인쇄본과 한/글 파일에도 그렇게 나옵니다.",
+  ],
+  "handover.note.exists": [
+    "warning",
+    "이미 보충으로 넣은 기록입니다. 다듬으려면 그 보충을 지우고 새로 적어 주세요.",
+  ],
+  "handover.note.pending": [
+    "danger",
+    "「보충으로 넣기」에 필요한 DB 변경(0024)이 아직 적용되지 않았습니다. supabase/migrations/0024_handover_note_source.sql 을 실행하면 동작합니다. 「보충 적기」로 직접 적는 것은 지금도 됩니다.",
+  ],
   "handover.note.locked": [
     "danger",
     "이미 실행된 인계입니다. 보충 내용을 더하거나 지울 수 없습니다. 권한이 실제로 옮겨 간 뒤의 인계서는 그때 무엇이 적혀 있었는지가 곧 기록입니다.",
@@ -441,6 +453,19 @@ export function classifyError(error: PostgrestError | null): FeedbackCode {
   if (error.message.includes("마지막 소유자")) return "member.last_owner";
   if (error.message.includes("보충을 더 담을 수 없습니다")) {
     return "handover.note.too_many";
+  }
+  // 같은 기록을 두 번 넣었다(0024 의 부분 유일 인덱스). 아래 23505 일반 분기보다
+  // 먼저 이름으로 가른다 — transfer_request_one_pending 과 같은 자리.
+  if (error.message.includes("handover_note_source_ref_key")) {
+    return "handover.note.exists";
+  }
+  // 코드가 스키마보다 먼저 배포됐다. PostgREST 는 없는 칸을 PGRST204 로,
+  // Postgres 는 42703 으로 말한다(db.ts 의 isPendingMigration 과 같은 틈).
+  if (
+    (error.code === "PGRST204" || error.code === "42703") &&
+    error.message.includes("source_ref")
+  ) {
+    return "handover.note.pending";
   }
 
   // 부서 이동(0023)이 던진 것들. 전부 check_violation 이나

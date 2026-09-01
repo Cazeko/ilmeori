@@ -458,6 +458,13 @@ export const HANDOVER_MESSAGE_LIMIT = 200;
 export const HANDOVER_TALK_ANCHOR = "handover-talk";
 
 /**
+ * 「규칙이 무엇을 걸렀나」 판의 id. 서식 위 캡션·오른쪽 기둥·「보충으로 넣기」의
+ * 되돌아오는 자리가 전부 여기를 가리킨다. 화면 부품과 서버 액션이 같은 글자를
+ * 손으로 적으면 한쪽만 고치는 날이 온다 — handoverBlockAnchor 와 같은 이유.
+ */
+export const HANDOVER_SCREENING_ANCHOR = "screening";
+
+/**
  * 인계자가 서식 항목에 직접 보탠 글.
  *
  * 규칙이 뽑은 문단(DraftBlock.paragraphs)과 **섞지 않는다.** 섞으면 어느 문장이
@@ -468,6 +475,13 @@ export interface HandoverNote {
   handover_id: string;
   block_key: HandoverBlockKey;
   body: string;
+  /**
+   * 「보충으로 넣기」로 옮긴 것이면 어느 기록이었는지 — `comment:<id>` 또는
+   * `section:<키>`(handover-draft.ts 의 missedSourceRef). 직접 적은 보충은 null.
+   * 화면이 「규칙이 무엇을 걸렀나」의 줄을 「보충됨」으로 바꾸고, DB 가 같은
+   * 기록을 두 번 넣는 것을 막는 근거다(0024).
+   */
+  source_ref: string | null;
   author_id: string;
   created_at: string;
 }

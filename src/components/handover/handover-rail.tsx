@@ -11,11 +11,15 @@ import { confirmHandover, executeHandover } from "@/lib/actions/handover";
 import { ButtonLink, DownloadLink } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { ProgressSteps } from "@/components/handover/progress-steps";
-import { SCREENING_ANCHOR } from "@/components/handover/screening-panel";
 import { josa } from "@/lib/format";
-import { handoverBlockAnchor } from "@/lib/types";
+import { HANDOVER_SCREENING_ANCHOR, handoverBlockAnchor } from "@/lib/types";
 import type { DraftBlock } from "@/lib/handover-draft";
-import type { HandoverStatus, Profile, WorkListItem } from "@/lib/types";
+import type {
+  HandoverBlockKey,
+  HandoverStatus,
+  Profile,
+  WorkListItem,
+} from "@/lib/types";
 
 /**
  * 오른쪽 여백에 붙박이로 서는 기둥 — **지금 어느 단계이고 무엇을 누르는가.**
@@ -58,6 +62,7 @@ export function HandoverRail({
   canStartNew,
   exportHref,
   archived,
+  toc,
 }: {
   status: HandoverStatus;
   isSender: boolean;
@@ -84,6 +89,24 @@ export function HandoverRail({
   exportHref: string;
   /** 지난 인계서를 보고 있는가. 참이면 이 기둥은 아무것도 바꾸지 않는다. */
   archived: boolean;
+  /**
+   * 서식 항목 차례 — 붙박이 기둥에서 원하는 항목으로 바로 간다.
+   *
+   * 서식이 4,500px 쯤 되고 보충 칸이 그 안에 있으니, 어느 칸에 무엇이 있는지를
+   * 스크롤하지 않고 알 길이 여기뿐이다. 수는 보충뿐이다 — 근거 수를 함께 적으면
+   * 두 숫자가 한 줄에 서서 어느 것이 내 일인지 읽는 데 한 박자가 더 든다.
+   *
+   * **비어 있으면 안 그린다.** 끝난 인계·지난 인계서는 서식이 접혀 있어
+   * (sheet-fold) 항목 id 가 화면에 없고, 그때 링크는 주소만 바꾸고 아무 데도
+   * 안 간다. 화면이 그 경우 빈 배열을 넘긴다.
+   */
+  toc: Array<{
+    key: HandoverBlockKey;
+    heading: string;
+    notes: number;
+    /** 근거가 없어 비워 둔 칸인데 아직 아무도 안 적었다 */
+    empty: boolean;
+  }>;
 }) {
   return (
     <section
@@ -96,6 +119,42 @@ export function HandoverRail({
       <div className="px-4 py-4">
         <ProgressSteps current={status} />
       </div>
+
+      {/* 항목 차례. 링크는 서식 안의 그 항목(handoverBlockAnchor)으로 간다. */}
+      {toc.length > 0 ? (
+      <nav aria-label="서식 항목" className="border-t border-rule-hair px-4 py-3">
+        <p className="text-body-xs font-bold text-gray-60">항목으로 가기</p>
+        <ol className="mt-2 flex flex-col gap-1">
+          {toc.map((t) => (
+            <li
+              key={t.key}
+              className="flex items-baseline justify-between gap-2 text-body-xs"
+            >
+              <Link
+                href={`#${handoverBlockAnchor(t.key)}`}
+                className="min-w-0 truncate font-bold text-primary"
+              >
+                {t.heading}
+              </Link>
+              <span className="shrink-0 tabular-nums text-gray-60">
+                {t.empty ? "빈칸" : t.notes > 0 ? `보충 ${t.notes}` : ""}
+              </span>
+            </li>
+          ))}
+          {notUsed > 0 ? (
+            <li className="flex items-baseline justify-between gap-2 border-t border-rule-hair pt-1 text-body-xs">
+              <Link
+                href={`#${HANDOVER_SCREENING_ANCHOR}`}
+                className="min-w-0 truncate font-bold text-primary"
+              >
+                규칙이 안 실은 것
+              </Link>
+              <span className="shrink-0 tabular-nums text-gray-60">{notUsed}건</span>
+            </li>
+          ) : null}
+        </ol>
+      </nav>
+      ) : null}
 
       {/* 단계와 단추 사이는 선으로 끊는다. 위는 「어디까지 왔나」이고
           아래는 「지금 무엇을 하나」라 하는 일이 다르다. */}
@@ -134,7 +193,7 @@ function Action({
   canStartNew,
   exportHref,
   archived,
-}: Parameters<typeof HandoverRail>[0]) {
+}: Omit<Parameters<typeof HandoverRail>[0], "toc">) {
   // ── 끝난 인계는 **양쪽에 같은 말**을 한다 ─────────────────────────────────
   //
   // 이 갈래가 없던 동안 인수자에게는 실행이 끝난 뒤에도 「이 인계는 박준호
@@ -274,7 +333,7 @@ function Action({
                 </p>
                 <p className="mt-1">
                   <Link
-                    href={`#${SCREENING_ANCHOR}`}
+                    href={`#${HANDOVER_SCREENING_ANCHOR}`}
                     className="text-body-sm font-bold text-primary"
                   >
                     규칙이 무엇을 걸렀나

@@ -251,6 +251,26 @@ const VOID = new Set([
   "link", "meta", "param", "source", "track", "wbr",
 ]);
 
+/**
+ * 마크업의 태그를 차례대로 — 여는/닫는 여부, 이름, 잎(닫는 태그가 없는 것)인지.
+ * 아래 두 걷기(topChildren · stripPrintHidden)가 같은 토크나이저를 쓴다.
+ * 따로 두면 void 요소 하나를 한쪽에서만 고치는 날이 온다.
+ */
+function* tagTokens(markup) {
+  for (const m of markup.matchAll(/<(\/?)([a-z0-9]+)\b([^>]*?)(\/?)>/gi)) {
+    const [whole, close, raw, attrs, selfClose] = m;
+    const tag = raw.toLowerCase();
+    yield {
+      index: m.index,
+      whole,
+      attrs,
+      close: Boolean(close),
+      tag,
+      leaf: Boolean(selfClose) || VOID.has(tag),
+    };
+  }
+}
+
 /** 바깥 요소 **바로 아래** 자식들의 태그 이름을 차례대로. */
 function topChildren(markup) {
   const inner = markup
@@ -258,15 +278,13 @@ function topChildren(markup) {
     .replace(/<\/[a-z]+>$/i, "");
   const out = [];
   let depth = 0;
-  for (const m of inner.matchAll(/<(\/?)([a-z0-9]+)\b[^>]*?(\/?)>/gi)) {
-    const [, close, raw, selfClose] = m;
-    const tag = raw.toLowerCase();
-    if (close) {
+  for (const tk of tagTokens(inner)) {
+    if (tk.close) {
       depth -= 1;
       continue;
     }
-    if (depth === 0) out.push(tag);
-    if (!selfClose && !VOID.has(tag)) depth += 1;
+    if (depth === 0) out.push(tk.tag);
+    if (!tk.leaf) depth += 1;
   }
   return out;
 }
@@ -669,6 +687,113 @@ ok(
   [...cOn].filter((p) => !cOff.has(p)).join(",") === "background",
   `[${[...cOn].filter((p) => !cOff.has(p)).join(",")}]`,
 );
+
+// ---------------------------------------------------------------------------
+console.log("\n[9] 서식 안의 화면 장치는 종이에 안 나온다");
+// ---------------------------------------------------------------------------
+
+// 보충 칸(BlockNoteForm)과 보충 지우기가 이제 서식 **안**에 선다 — 적는 자리가
+// 곧 실리는 자리여야 해서다. 그래서 [3]의 「누를 것이 없다」는 종이에 대해
+// 말해야 한다. 종이 = `print:hidden` 을 걷어낸 서식. 여기서 그것을 실제로
+// 걷어낸 뒤 [2]·[3]과 같은 것을 다시 본다.
+
+/** `print:hidden` 이 붙은 요소를 자식까지 통째로 걷어낸다. */
+function stripPrintHidden(markup) {
+  let out = "";
+  let last = 0;
+  let depth = 0;
+  for (const tk of tagTokens(markup)) {
+    if (depth === 0) {
+      if (!tk.close && /class="[^"]*\bprint:hidden\b/.test(tk.attrs)) {
+        out += markup.slice(last, tk.index);
+        if (tk.leaf) last = tk.index + tk.whole.length;
+        else depth = 1;
+      }
+      continue;
+    }
+    if (tk.close) depth -= 1;
+    else if (!tk.leaf) depth += 1;
+    if (depth === 0) last = tk.index + tk.whole.length;
+  }
+  return out + markup.slice(last);
+}
+ok(
+  "이 걷어내기가 겹친 요소까지 실제로 지운다",
+  stripPrintHidden(
+    '<section><p>본문</p><div class="a print:hidden"><form><textarea></textarea></form><div class="print:hidden"><input/></div></div><p>뒤</p></section>',
+  ) === "<section><p>본문</p><p>뒤</p></section>",
+);
+
+const noteForNine = new Map([
+  [
+    noteBlock.key,
+    [
+      {
+        id: "n9",
+        block_key: noteBlock.key,
+        body: noteBody,
+        created_at: "2026-08-20T09:00:00+09:00",
+        author: { name: "박준호", position: "주무관" },
+      },
+    ],
+  ],
+]);
+const withDevices = renderToStaticMarkup(
+  createElement(HandoverPrintSheet, {
+    draft,
+    notesByBlock: noteForNine,
+    from: view.from,
+    to: view.to,
+    fromDept,
+    toDept,
+    generatedAt: view.handover.generated_at,
+    completedAt: view.handover.completed_at,
+    method: view.handover.ai_model ?? "rule-based/v1",
+    blockLead: () => createElement("p", null, "근거: 화면 장치"),
+    blockTail: () =>
+      createElement("form", null, createElement("textarea", null, "")),
+    noteExtras: () => createElement("button", null, "삭제"),
+  }),
+);
+const paper = stripPrintHidden(withDevices);
+ok(
+  "화면에는 장치가 실제로 그려진다",
+  /<form\b/.test(withDevices) && /<button\b/.test(withDevices) && withDevices.includes("근거: 화면 장치"),
+);
+ok(
+  "근거 줄(lead)은 사람이 보탠 글보다 앞에 선다",
+  withDevices.indexOf("근거: 화면 장치") < withDevices.indexOf(noteBody),
+);
+ok("걷어낸 종이에 근거 줄이 없다", !paper.includes("근거: 화면 장치"));
+const paperControls = [
+  ...paper.matchAll(/<(input|button|select|textarea|label|form)\b/gi),
+].map((m) => m[1].toLowerCase());
+ok(
+  "걷어낸 종이에는 누를 것이 없다",
+  paperControls.length === 0,
+  [...new Set(paperControls)].join(", "),
+);
+ok(
+  "걷어낸 종이의 뼈대가 [3]과 같다",
+  topChildren(paper).join(" ") === wantSkeleton.join(" "),
+  `[${topChildren(paper).join(" ")}]`,
+);
+const paperParas = [...paper.matchAll(/<p\b[^>]*>/g)].length;
+const plainParas = [
+  ...renderToStaticMarkup(sheet(noteForNine)).matchAll(/<p\b[^>]*>/g),
+].length;
+ok(
+  "걷어낸 종이의 문단 수가 장치 없는 서식과 같다",
+  paperParas === plainParas,
+  `${paperParas} / ${plainParas}`,
+);
+{
+  const { handoverBlockAnchor } = await import("@/lib/types.ts");
+  ok(
+    "항목마다 서식 안에 자리표(id)가 있다 — handoverBlockAnchor 와 글자까지 같다",
+    draft.blocks.every((b) => paper.includes(`<section id="${handoverBlockAnchor(b.key)}"`)),
+  );
+}
 
 console.log(
   `\n${fails.length === 0 ? "전부 통과" : "실패"} — ${pass}건 통과, ${fails.length}건 실패`,

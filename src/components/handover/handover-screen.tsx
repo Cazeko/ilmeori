@@ -3,7 +3,6 @@ import {
   CheckCircle2,
   Download,
   FileSignature,
-  PenLine,
   RotateCcw,
   Cog,
 } from "lucide-react";
@@ -18,7 +17,6 @@ import { DownloadLink } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Notice } from "@/components/ui/notice";
-import { Avatar } from "@/components/ui/avatar";
 import { HandoverRail } from "@/components/handover/handover-rail";
 import { HandoverTalk } from "@/components/handover/handover-talk";
 import { SheetFold } from "@/components/handover/sheet-fold";
@@ -26,7 +24,7 @@ import { PrintButton } from "@/components/handover/print-button";
 import { HandoverPrintSheet } from "@/components/handover/print-sheet";
 import { SheetCaption } from "@/components/handover/sheet-caption";
 import { SourceDrawer } from "@/components/handover/source-drawer";
-import { BlockNotes } from "@/components/handover/block-notes";
+import { BlockNoteForm, NoteDeleteForm } from "@/components/handover/block-notes";
 import { ScreeningPanel } from "@/components/handover/screening-panel";
 import { StatusBadge } from "@/components/status-badge";
 // 생성 시각을 화면에서 따로 찍던 자리가 사라졌다 — 서식 맨 아래 「출처」 문단이
@@ -41,14 +39,11 @@ import type { HandoverView } from "@/lib/data";
 import { byUrgency } from "@/lib/data/types";
 import {
   buildHandoverDraft,
-  draftBlockText,
   screeningTotal,
-  missedNotePrefill,
 } from "@/lib/handover-draft";
 import { canMutate, isSupabaseConfigured } from "@/lib/env";
 import { MAX_DEMO_MESSAGES } from "@/lib/demo-state";
 import {
-  handoverBlockAnchor,
   type HandoverBlockKey,
   type HandoverNoteWithAuthor,
 } from "@/lib/types";
@@ -84,20 +79,11 @@ export async function HandoverScreen({
   msg,
   /** 최신 인계가 아니라 지난 인계서를 보고 있는가. 참이면 쓰는 칸을 안 그린다. */
   archived = false,
-  /**
-   * 「보충으로 넣기」가 보낸 자리 — 어느 안 실린 기록(key)을 어느 칸(block)에.
-   *
-   * 주소(`?fill=…&block=…`)로 온다. 그래야 자바스크립트 없이도 동작하고,
-   * 저장하기 전까지는 아무것도 남지 않는다. 기록은 이 화면이 방금 만든
-   * 초안(draft.screening) 안에서 찾는다 — 주소의 글자를 그대로 칸에 넣지 않는다.
-   */
-  fill = null,
 }: {
   view: HandoverView;
   viewer: Profile;
   msg: string | string[] | undefined;
   archived?: boolean;
-  fill?: { key: string; block: HandoverBlockKey } | null;
 }) {
   const { handover, from, to, items } = view;
   const draft = await buildHandoverDraft(view);
@@ -134,20 +120,14 @@ export async function HandoverScreen({
   // 다시 찾기 때문이다(이 파일 머리말).
   const canWriteNotes = isSender && !done && canMutate && !archived;
 
-  // 「보충으로 넣기」로 왔으면, 그 기록의 원문을 그 칸의 입력란에 채워 둔다.
-  // 쓸 수 없는 사람(인수자·실행 뒤·데모)에게는 채울 칸 자체가 없다.
-  const fillRecord =
-    fill && canWriteNotes
-      ? [
-          ...draft.screening.comments.missed,
-          ...draft.screening.sections.missed,
-        ].find((m) => m.key === fill.key) ?? null
-      : null;
-  const prefillBlock: HandoverBlockKey | null = fillRecord ? fill!.block : null;
-  const prefillText = fillRecord ? missedNotePrefill(fillRecord) : undefined;
   const blockHeadings = Object.fromEntries(
     draft.blocks.map((b) => [b.key, b.heading]),
   ) as Partial<Record<HandoverBlockKey, string>>;
+  // 「보충으로 넣기」로 들어온 보충 — 어느 기록이었는지(source_ref)로 찾는다.
+  // 「규칙이 무엇을 걸렀나」가 그 줄을 「보충됨」으로 바꾼다.
+  const addedFromMissed = new Map(
+    notes.flatMap((n) => (n.source_ref ? [[n.source_ref, n] as const] : [])),
+  );
 
   // 지난 인계서에서 내려받는 파일은 **그 인계서**여야 한다. `/handover/export/hwpx`
   // 는 getHandoverFor 를 쓰므로 최신 것을 준다 — 화면과 파일이 다른 문서가 된다.
@@ -171,6 +151,17 @@ export async function HandoverScreen({
     (b) => b.needsHuman && (notesByBlock.get(b.key)?.length ?? 0) === 0,
   );
   const screened = screeningTotal(draft.screening);
+  // 오른쪽 기둥의 항목 차례. 「빈칸」은 위 toFill 과 같은 판단이다 — 두 벌로 적지
+  // 않는다. 끝난 인계는 서식이 접혀 있어 항목 id 가 화면에 없으므로 안 넘긴다.
+  const toFillKeys = new Set(toFill.map((b) => b.key));
+  const toc = done
+    ? []
+    : draft.blocks.map((b) => ({
+        key: b.key,
+        heading: b.heading,
+        notes: notesByBlock.get(b.key)?.length ?? 0,
+        empty: toFillKeys.has(b.key),
+      }));
 
   return (
     <PageContainer className="print:p-0">
@@ -350,6 +341,7 @@ export async function HandoverScreen({
                 canStartNew={canMutate}
                 exportHref={exportHref}
                 archived={archived}
+                toc={toc}
               />
             </div>
 
@@ -574,6 +566,60 @@ export async function HandoverScreen({
               generatedAt={handover.generated_at}
               completedAt={handover.completed_at}
               method={handover.ai_model ?? "rule-based/v1"}
+
+              blockLead={(block, notes) => (
+                <>
+                  {/* 사람 칸의 상태 — 종이의 「직접 적어야 하는 칸입니다」는 적어 넣으면
+                      사라지지만, 화면에서는 「적었다」는 말도 필요하다. */}
+                  {block.needsHuman ? (
+                    <p className="mt-1 text-body-sm font-bold text-gray-90">
+                      {notes.length > 0
+                        ? "인계자가 직접 적었습니다."
+                        : "사람이 직접 적어야 합니다."}
+                    </p>
+                  ) : null}
+                  {/* 「근거:」 줄 — 이 칸이 몇 갈래에서 나왔는지. 출처 층을 켜야 보인다
+                      (globals.css). 규칙이 뽑은 문단만 가리키므로 보충 **위**에 선다. */}
+                  {block.sources.length > 0 ? (
+                    <p className="block-sources mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-xs text-gray-60">
+                      근거:
+                      {block.sources.map((s, i) => (
+                        <span key={s} className="inline-flex items-center gap-2">
+                          {i > 0 ? (
+                            <span aria-hidden className="text-gray-40">
+                              ·
+                            </span>
+                          ) : null}
+                          <span className="font-bold text-accent-text">{s}</span>
+                        </span>
+                      ))}
+                    </p>
+                  ) : null}
+                </>
+              )}
+              blockTail={
+                canWriteNotes
+                  ? (block, notes) => (
+                      <BlockNoteForm
+                        handoverId={handover.id}
+                        blockKey={block.key}
+                        heading={block.heading}
+                        hasNotes={notes.length > 0}
+                        needsHuman={block.needsHuman}
+                      />
+                    )
+                  : undefined
+              }
+              noteExtras={
+                canWriteNotes
+                  ? (n) => (
+                      <NoteDeleteForm
+                        note={n}
+                        heading={blockHeadings[n.block_key] ?? n.block_key}
+                      />
+                    )
+                  : undefined
+              }
             />
           </SourceDrawer>
         </div>
@@ -614,8 +660,9 @@ export async function HandoverScreen({
                     비워 둡니다.
                   </p>
                   {/* 「칸을 뒀습니다」는 그 칸이 실제로 보이는 사람에게만 하는 말이다.
-                      인수자가 볼 때·실행이 끝난 뒤·데모 모드에서는 BlockNotes가
-                      입력칸을 그리지 않으므로, 없는 칸을 있다고 적으면 안 된다. */}
+                      인수자가 볼 때·실행이 끝난 뒤·데모 모드에서는 서식 안에
+                      「보충 적기」(BlockNoteForm)가 안 그려지므로, 없는 칸을
+                      있다고 적으면 안 된다. */}
                   {canWriteNotes ? (
                     <p>
                       규칙이 뽑은 문단은 고쳐 쓰지 못하게 두었습니다. 덮어쓰면 그
@@ -682,17 +729,18 @@ export async function HandoverScreen({
                   서식을 다시 보여 주는 것이 아니라 **항목마다 근거가 맞는지
                   확인하고 빈 칸을 채우는 작업대**다. 제목을 그렇게 고친다.
                   (등급도 문서가 아니라 판이다 — 화면의 문서는 위 하나뿐이다) */}
+              {screened.seen > 0 ? (
               <Card>
                 <CardHeader
-                  title="항목별 근거와 보충"
+                  title="규칙이 무엇을 걸렀나"
                   // 끝난 뒤에는 적을 수 없다(정책이 그렇게 두었다). 그런데도
                   // 「직접 적습니다」가 그대로 남아 있으면, 화면이 할 수 없는
                   // 일을 시키는 셈이다. 그때 이 판이 하는 일은 **왜 이렇게
                   // 적혔는지 되짚는 것**이라 그렇게 적는다.
                   description={
                     done
-                      ? "서식의 각 항목이 어느 기록에서 나왔는지, 규칙이 무엇을 안 실었는지 되짚어 볼 수 있습니다. 실행이 끝난 인계서는 더 고칠 수 없습니다."
-                      : "위 서식의 각 항목이 어느 기록에서 나왔는지 확인하고, 근거가 없어 비워 둔 칸을 직접 적습니다."
+                      ? "규칙이 안 실은 기록을 되짚어 볼 수 있습니다. 실행이 끝난 인계서는 더 고칠 수 없습니다."
+                      : "규칙이 안 실은 기록입니다. 필요한 것은 「보충으로 넣기」로 서식에 옮깁니다. 보충은 위 서식의 각 항목 아래에서 적습니다."
                   }
                   action={
                     <FileSignature aria-hidden className="size-5 text-gray-30" />
@@ -708,168 +756,15 @@ export async function HandoverScreen({
                       이 판은 서식이 아니므로 종이에는 나가지 않는다. */}
                   <ScreeningPanel
                     screening={draft.screening}
+                    handoverId={handover.id}
                     canWrite={canWriteNotes}
                     headings={blockHeadings}
+                    added={addedFromMissed}
                   />
 
-                  {draft.blocks.map((block) => {
-                    const blockNotes = notesByBlock.get(block.key) ?? [];
-                    // 원래 비어 있던 칸에 사람이 적어 넣었으면, 화면도 그 사실을
-                    // 말해야 한다. 다 적은 뒤에도 「사람이 직접 적어야 합니다」라는
-                    // 노란 경고가 그대로 남아 있으면 아직 할 일이 남은 것으로 읽힌다.
-                    const filledByHand =
-                      block.needsHuman && blockNotes.length > 0;
-
-                    return (
-                    <section
-                      key={block.key}
-                      // 보충을 적고 나면 이 자리로 돌아온다(handoverBlockAnchor).
-                      // 붙박이 머리줄에 가리지 않게 여백을 둔다.
-                      id={handoverBlockAnchor(block.key)}
-                      className="scroll-mt-20"
-                    >
-                      <h3 className="text-body font-bold text-gray-90">
-                        {block.heading}
-                      </h3>
-
-                      {block.needsHuman ? (
-                        <p
-                          className={cn(
-                            "mt-2 flex items-start gap-2 rounded-sm border px-4 py-3 text-body-sm break-keep text-gray-70",
-                            // 「사람이 채워야 하는 칸」은 주황 경고였다. 두 가지가
-                            // 틀어져 있었다. ① 이 화면은 이미 색 갈래 셋을 쓰고
-                            // 있었다(DESIGN.md §2 는 최대 둘). ② 비어 있는 칸은
-                            // 사고가 아니라 **설계**다 — 규칙이 채울 수 없는 칸을
-                            // 지어내지 않고 비워 둔 것이고, 그건 경고가 아니라
-                            // 서식이 원래 사람 손을 기다리는 자리라는 뜻이다.
-                            //
-                            // 그래서 먹색 파선이다. 종이의 손으로 적는 빈칸
-                            // (print-sheet.tsx 의 border border-black)과 같은
-                            // 어휘이고, 색 갈래를 한 개도 안 쓴다.
-                            filledByHand
-                              ? "border-rule-frame bg-gray-5"
-                              : "border-dashed border-rule-head",
-                          )}
-                        >
-                          <PenLine
-                            aria-hidden
-                            className={cn(
-                              "mt-1 size-4 shrink-0",
-                              filledByHand ? "text-gray-40" : "text-gray-90",
-                            )}
-                          />
-                          <span>
-                            <strong className="font-bold text-gray-90">
-                              {filledByHand
-                                ? "인계자가 직접 적었습니다. "
-                                : "사람이 직접 적어야 합니다. "}
-                            </strong>
-                            {/* 이 문단에는 지시가 들어 있지 않다(handover-draft.ts).
-                                앞의 굵은 한 줄만 상태에 따라 갈린다. */}
-                            {draftBlockText(block.paragraphs)}
-                          </span>
-                        </p>
-                      ) : null}
-
-                      {/* ── 여기 본문이 한 벌 더 있었다 ──────────────────────────
-                          같은 인계서가 한 화면에 **두 번** 그려지고 있었다 —
-                          위의 별지 제12호서식 약 4,500px, 여기 다시 약 4,500px,
-                          합쳐 8,965px. 2분 30초짜리 시연에서 첫 사본을 스크롤로
-                          지나야 두 번째 사본의 누를 수 있는 근거에 닿았다.
-
-                          그때는 그럴 이유가 있었다 — 서식에는 링크가 없었으므로
-                          **근거를 누를 수 있는 자리가 여기뿐**이었다. 이제 서식
-                          자신이 문장마다 출처를 달고 있으므로(print-sheet.tsx 의
-                          <DraftLines>), 이 판이 본문을 다시 그릴 이유가 없다.
-
-                          지우는 것은 **본문 한 가지뿐**이다. 위의 needsHuman 설명
-                          박스는 서식의 파선 빈칸이 못 하는 말을 하고, 아래
-                          BlockNotes 는 사람이 타이핑하는 유일한 자리다. 둘 다 남는다.
-                          이 판은 서식의 사본이 아니라 **확인하고 채우는 작업대**다.
-
-                          ⚠ 순서가 중요했다. 서식에 출처 층을 붙이기 **전에** 이걸
-                          지웠으면, 그 사이 배포본에는 근거를 누를 자리가 아예
-                          없었을 것이다. */}
-
-                      {/* 근거 꼬리표는 **규칙이 뽑은 문단만** 가리킨다. 그래서
-                          사람이 보탠 글보다 앞에 둔다. 아래로 내리면 인계자가
-                          손으로 적은 문장까지 "이 기록에서 나왔다"고 말하는 꼴이
-                          된다. */}
-                      {block.sources.length > 0 ? (
-                        <p className="mt-2 flex flex-wrap items-center gap-2 text-body-xs text-gray-60">
-                          <Cog
-                            aria-hidden
-                            className="size-3 text-accent-text"
-                          />
-                          근거:
-                          {/* 예전에는 칩 사이가 8px 공백 하나뿐이라 「업무 4건의
-                              기본 정보와 참여자 목록 업무 이력 중 결재 상신·서명…」
-                              처럼 **한 문장으로 읽혔다.** 이 줄은 이 제품이 파는
-                              증거이므로, 몇 갈래에서 나왔는지가 먼저 보여야 한다.
-                              새 색이나 채움을 더하지 않고 가운뎃점 하나로 가른다 —
-                              이 저장소가 메타 줄에서 이미 쓰는 구분자다. */}
-                          {block.sources.map((s, i) => (
-                            <span key={s} className="inline-flex items-center gap-2">
-                              {i > 0 ? (
-                                <span aria-hidden className="text-gray-40">
-                                  ·
-                                </span>
-                              ) : null}
-                              <span className="font-bold text-accent-text">{s}</span>
-                            </span>
-                          ))}
-                        </p>
-                      ) : null}
-
-                      <BlockNotes
-                        handoverId={handover.id}
-                        blockKey={block.key}
-                        heading={block.heading}
-                        notes={blockNotes}
-                        canWrite={canWriteNotes}
-                        needsHuman={block.needsHuman}
-                        prefill={
-                          block.key === prefillBlock ? prefillText : undefined
-                        }
-                      />
-                    </section>
-                    );
-                  })}
-
-                  {/* 서식의 마지막 — 서명란 */}
-                  <section className="border-t border-rule-hair pt-5">
-                    <h3 className="text-body font-bold text-gray-90">확인</h3>
-                    <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-                      {[
-                        { label: "인계자", person: from, dept: fromDept },
-                        { label: "인수자", person: to, dept: toDept },
-                      ].map(({ label, person, dept }) => (
-                        <li
-                          key={label}
-                          className="flex items-center gap-3 rounded-sm border border-rule-frame px-4 py-3"
-                        >
-                          <Avatar profile={person} size="lg" />
-                          <div className="min-w-0">
-                            <p className="text-body-xs font-bold text-gray-60">
-                              {label}
-                            </p>
-                            <p className="text-body-sm font-bold text-gray-90">
-                              {person.name} {person.position}
-                              <span className="ml-1 block text-body-xs font-normal text-gray-60">
-                                {dept?.name}
-                              </span>
-                            </p>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="mt-3 text-body-xs break-keep text-gray-60">
-                      실제 서식에는 입회자 서명란이 함께 있습니다. 시제품에서는
-                      전자서명 연계를 구현하지 않았습니다.
-                    </p>
-                  </section>
                 </CardBody>
               </Card>
+              ) : null}
             </div>
         </div>
       </div>

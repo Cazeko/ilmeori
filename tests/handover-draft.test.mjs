@@ -34,7 +34,9 @@ const {
   readDoc,
   screeningTotal,
   missedTargetBlock,
-  missedNotePrefill,
+  missedNoteBody,
+  missedSourceRef,
+  missedAnchor,
   sheetSourceText,
 } = await import("@/lib/handover-draft.ts");
 const { workDocHref, workHref, workTalkHref } = await import("@/lib/types.ts");
@@ -773,7 +775,7 @@ ok(
     ),
 );
 
-// ── 안 실린 기록 → 보충 칸 (missedTargetBlock · missedNotePrefill) ──────────
+// ── 안 실린 기록 → 보충 칸 (missedTargetBlock · missedNoteBody) ──────────
 //
 // 「규칙이 무엇을 걸렀나」의 「보충으로 넣기」가 기대는 것 셋 — 원문 전체가
 // 남아 있는가, 아는 칸으로 보내는가, 채워 넣는 글이 보충 상한을 안 넘는가.
@@ -801,17 +803,36 @@ ok(
   );
   ok(
     "채워 넣는 글이 보충 상한을 넘지 않는다",
-    all.every((m) => missedNotePrefill(m).length <= HANDOVER_NOTE_MAX),
+    all.every((m) => missedNoteBody(m).length <= HANDOVER_NOTE_MAX),
   );
   ok(
     "채워 넣는 글에 출처(업무 제목)와 원문이 함께 있다",
     all.every((m) => {
-      const s = missedNotePrefill(m);
+      const s = missedNoteBody(m);
       return s.includes(m.workTitle) && s.includes(m.full.trim().slice(0, 20));
     }),
   );
+  ok(
+    "어느 기록이었는지는 DB 제약(0024)이 요구하는 모양이다",
+    all.every((m) => /^(comment|section):.+$/.test(missedSourceRef(m))) &&
+      new Set(all.map(missedSourceRef)).size === all.length,
+  );
+  // 문서 항목의 키는 문서 안에서만 유일한 블록 id 다. 업무 둘이 같은 블록 id 를
+  // 가져도 식별자는 갈라져야 한다 — 그래서 업무 id 가 앞에 붙는다.
+  {
+    const s = sc.sections.missed[0];
+    const twin = { ...s, workId: "00000000-0000-4000-8000-00000000ffff" };
+    ok(
+      "같은 블록 id 라도 업무가 다르면 식별자가 다르다",
+      Boolean(s) && missedSourceRef(s) !== missedSourceRef(twin) && missedAnchor(s) !== missedAnchor(twin),
+    );
+  }
+  ok(
+    "줄의 id 는 HTML id 로 쓸 수 있는 글자뿐이다",
+    all.every((m) => /^missed-[A-Za-z0-9_-]+$/.test(missedAnchor(m))),
+  );
   const long = { ...all[0], full: "가".repeat(3000) };
-  const cut = missedNotePrefill(long);
+  const cut = missedNoteBody(long);
   ok(
     "긴 원문은 자르되 잘랐다고 적는다",
     cut.length <= HANDOVER_NOTE_MAX && cut.includes("잘렸습니다"),

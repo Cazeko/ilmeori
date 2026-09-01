@@ -297,14 +297,14 @@ export function missedTargetBlock(m: MissedRecord): HandoverBlockKey {
 }
 
 /**
- * 「보충으로 넣기」가 보충 칸에 채워 두는 글.
+ * 「보충으로 넣기」가 보충으로 저장하는 글.
  *
- * 원문을 그대로 옮기고 어디서 왔는지를 첫 줄에 적는다. 인계자가 읽고 고쳐서
- * 저장하는 것이 전제라 요약하지 않는다. 보충 한 줄의 상한(HANDOVER_NOTE_MAX)을
- * 넘기면 저장이 막히므로 넘치는 원문은 자르되 **잘랐다고 적는다** — 잘린
- * 사실을 숨기면 이 판이 스스로 어기는 규칙이 된다.
+ * 원문을 그대로 옮기고 어디서 왔는지를 첫 줄에 적는다. 요약하지 않는다 —
+ * 사람의 말은 그대로 인용한다. 보충 한 줄의 상한(HANDOVER_NOTE_MAX)을 넘기면
+ * 저장이 막히므로 넘치는 원문은 자르되 **잘랐다고 적는다** — 잘린 사실을
+ * 숨기면 이 판이 스스로 어기는 규칙이 된다.
  */
-export function missedNotePrefill(m: MissedRecord): string {
+export function missedNoteBody(m: MissedRecord): string {
   const head =
     m.ref.kind === "comment"
       ? `[대화 — ${m.label}${m.at ? `, ${formatDate(m.at)}` : ""} · 「${m.workTitle}」]`
@@ -318,6 +318,24 @@ export function missedNotePrefill(m: MissedRecord): string {
       ? body
       : `${body.slice(0, Math.max(0, room - cut.length))}${cut}`;
   return `${head}\n“${text}”`;
+}
+
+/**
+ * 보충에 남기는 「어느 기록이었나」 — handover_note.source_ref 의 값.
+ * DB 제약(0024)이 같은 모양을 요구한다: `comment:<id>` · `section:<키>`.
+ */
+export function missedSourceRef(m: MissedRecord): string {
+  // 대화 id 는 uuid 라 그 자체로 유일하다. 문서 항목의 키는 **문서 안에서만**
+  // 유일한 블록 id 라(editor/model.ts 의 parseRichDoc) 업무 id 를 앞에 붙인다 —
+  // 한 인계에 문서가 둘이면 같은 블록 id 가 두 번 나올 수 있다.
+  return m.ref.kind === "comment"
+    ? `comment:${m.key}`
+    : `section:${m.workId}:${m.key}`;
+}
+
+/** 「규칙이 무엇을 걸렀나」 줄의 id. 넣고 나서 이 자리로 돌아온다. */
+export function missedAnchor(m: MissedRecord): string {
+  return `missed-${missedSourceRef(m).replace(/[^A-Za-z0-9_-]/g, "_")}`;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,14 +1,17 @@
+import type { ReactNode } from "react";
 import type {
   Department,
   HandoverNoteWithAuthor,
   Profile,
 } from "@/lib/types";
+import { handoverBlockAnchor } from "@/lib/types";
 import {
   chunkParagraphs,
   draftBlockText,
   sheetSourceText,
   type DraftParagraph,
   type HandoverDraft,
+  type DraftBlock,
 } from "@/lib/handover-draft";
 import { DraftLines } from "@/components/handover/draft-lines";
 import { formatDate, formatFullDateTime, todayKST } from "@/lib/format";
@@ -105,6 +108,9 @@ export function HandoverPrintSheet({
   generatedAt,
   completedAt,
   method,
+  blockLead,
+  blockTail,
+  noteExtras,
 }: {
   draft: HandoverDraft;
   /**
@@ -122,6 +128,22 @@ export function HandoverPrintSheet({
   /** 인계가 실제로 실행된 시각. 없으면 아직 실행 전이다. */
   completedAt: string | null;
   method: string;
+  /**
+   * 항목마다 화면에서만 덧붙이는 것 — 서식 **안**에 서지만 종이에는 안 나간다
+   * (`print:hidden`). 종이 시험은 그 층을 걷어낸 뒤 「누를 것이 없다」를 본다
+   * (tests/handover-sheet.test.mjs [9]). 적는 자리가 곧 실리는 자리여야 해서
+   * 여기 둔다 — 서식 아래 다른 카드에서 적게 하면 사람이 화면 한 벌 만큼
+   * 위아래를 오간다.
+   *
+   * 둘로 나뉜다. `blockLead` 는 규칙이 뽑은 문단 **바로 아래, 사람이 보탠 글
+   * 위**에 선다 — 근거 줄이 여기다. 근거 줄은 규칙이 뽑은 문단만 가리키므로
+   * 사람이 적은 보충 아래로 내리면 그 글까지 「이 기록에서 나왔다」고 말하는
+   * 꼴이 된다. `blockTail` 은 보충 아래 — 새로 적는 칸이 여기다.
+   */
+  blockLead?: (block: DraftBlock, notes: HandoverNoteWithAuthor[]) => ReactNode;
+  blockTail?: (block: DraftBlock, notes: HandoverNoteWithAuthor[]) => ReactNode;
+  /** 보충 한 줄 옆에 화면에서만 붙는 것 — 지우기. 역시 종이에는 안 나간다. */
+  noteExtras?: (note: HandoverNoteWithAuthor) => ReactNode;
 }) {
   const people = [
     { label: "인계자", person: from, dept: fromDept },
@@ -193,8 +215,16 @@ export function HandoverPrintSheet({
 
       {draft.blocks.map((block) => {
         const notes = notesByBlock.get(block.key) ?? [];
+        const lead = blockLead?.(block, notes);
+        const tail = blockTail?.(block, notes);
         return (
-          <section key={block.key} className="mt-5">
+          // 보충을 적고 나면 이 자리로 돌아온다(handoverBlockAnchor). 오른쪽
+          // 기둥의 항목 차례도 여기로 온다. 붙박이 머리줄에 가리지 않게 여백을 둔다.
+          <section
+            key={block.key}
+            id={handoverBlockAnchor(block.key)}
+            className="mt-5 scroll-mt-20"
+          >
             <h2 className="font-bold">{block.heading}</h2>
             {block.needsHuman ? (
               <>
@@ -244,14 +274,19 @@ export function HandoverPrintSheet({
               )
             )}
 
+            {lead ? <div className="print:hidden">{lead}</div> : null}
             {notes.map((n) => (
               <div key={n.id} className="note">
                 <p className="note-label">
                   인계자 보충: {who(n.author)}, {formatDate(n.created_at)}
                 </p>
                 <p className="whitespace-pre-line">{n.body}</p>
+                {noteExtras ? (
+                  <div className="print:hidden">{noteExtras(n)}</div>
+                ) : null}
               </div>
             ))}
+            {tail ? <div className="print:hidden">{tail}</div> : null}
           </section>
         );
       })}
