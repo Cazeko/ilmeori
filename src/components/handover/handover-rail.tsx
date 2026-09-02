@@ -10,6 +10,7 @@ import {
 import { confirmHandover, executeHandover } from "@/lib/actions/handover";
 import { ButtonLink, DownloadLink } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { AnchorLink } from "@/components/handover/anchor-link";
 import { ProgressSteps } from "@/components/handover/progress-steps";
 import { josa } from "@/lib/format";
 import { HANDOVER_SCREENING_ANCHOR, handoverBlockAnchor } from "@/lib/types";
@@ -130,12 +131,12 @@ export function HandoverRail({
               key={t.key}
               className="flex items-baseline justify-between gap-2 text-body-xs"
             >
-              <Link
+              <AnchorLink
                 href={`#${handoverBlockAnchor(t.key)}`}
                 className="min-w-0 truncate font-bold text-primary"
               >
                 {t.heading}
-              </Link>
+              </AnchorLink>
               <span className="shrink-0 tabular-nums text-gray-60">
                 {t.empty ? "빈칸" : t.notes > 0 ? `보충 ${t.notes}` : ""}
               </span>
@@ -143,12 +144,12 @@ export function HandoverRail({
           ))}
           {notUsed > 0 ? (
             <li className="flex items-baseline justify-between gap-2 border-t border-rule-hair pt-1 text-body-xs">
-              <Link
+              <AnchorLink
                 href={`#${HANDOVER_SCREENING_ANCHOR}`}
                 className="min-w-0 truncate font-bold text-primary"
               >
                 규칙이 안 실은 것
-              </Link>
+              </AnchorLink>
               <span className="shrink-0 tabular-nums text-gray-60">{notUsed}건</span>
             </li>
           ) : null}

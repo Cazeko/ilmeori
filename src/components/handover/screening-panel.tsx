@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { CheckCircle2, ChevronRight, Cog, PenLine } from "lucide-react";
+import { ChevronRight, Cog } from "lucide-react";
 import { draftRefHref } from "@/components/handover/draft-lines";
-import { SubmitButton } from "@/components/ui/submit-button";
-import { moveMissedToNote } from "@/lib/actions/handover";
+import {
+  MoveMissedButton,
+  MovedLabel,
+} from "@/components/handover/move-missed-button";
 import {
   missedAnchor,
   missedSourceRef,
@@ -54,7 +56,8 @@ import {
  * 이 제품에서 보충을 고치는 길은 원래 그것뿐이다.
  *
  * 알림(토스트)이 아니라 **줄의 상태**로 말한다. 새로고침해도 남고, 스크립트가
- * 없어도 되고, 두 번 누르는 실수를 막는다.
+ * 없어도 되고, 두 번 누르는 실수를 막는다. 스크립트가 있으면 화면은 그 자리에
+ * 머물고 단추만 바뀐다(move-missed-button.tsx).
  *
  * ── 서식이 아니다 · 모양 ───────────────────────────────────────────────────
  *
@@ -300,33 +303,16 @@ function MissedRow({
         ) : null}
       </p>
       {note ? (
-        // 단추가 아니라 글줄이다. 눌린 것처럼 칠한 단추는 다시 누르게 만든다.
-        <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-xs font-bold text-gray-90">
-          <CheckCircle2 aria-hidden className="size-4 shrink-0 text-success" />
-          보충됨
-          <span className="font-normal text-gray-60">·</span>
-          <Link
-            href={`#${handoverBlockAnchor(note.block_key)}`}
-            className="text-primary transition-colors duration-150 hover:text-primary-hover"
-          >
-            「{headings[note.block_key] ?? note.block_key}」의 인계자 보충으로
-          </Link>
-        </p>
+        <MovedLabel
+          heading={headings[note.block_key] ?? note.block_key}
+          anchor={handoverBlockAnchor(note.block_key)}
+        />
       ) : canWrite ? (
-        <form
-          action={moveMissedToNote}
-          className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1"
-        >
-          <input type="hidden" name="handoverId" value={handoverId} />
-          <input type="hidden" name="src" value={missedSourceRef(m)} />
-          <SubmitButton variant="secondary" size="sm">
-            <PenLine aria-hidden className="size-4" />
-            보충으로 넣기
-          </SubmitButton>
-          <span className="text-body-xs break-keep text-gray-60">
-            → 「{headings[target] ?? target}」에 원문 그대로
-          </span>
-        </form>
+        <MoveMissedButton
+          handoverId={handoverId}
+          src={missedSourceRef(m)}
+          targetHeading={headings[target] ?? target}
+        />
       ) : null}
     </li>
   );

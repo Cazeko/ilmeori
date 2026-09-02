@@ -646,6 +646,27 @@
      바꾸는 사건**으로 보기에도 수가 적다 — 토글이 값하는 것은 빗살의 양이 아니라
      「이 문장이 어디서 왔는지 물을 수 있다」는 사실이고, 그 사실을 말하는 것은
      발표자의 한 문장이다. 화면이 대신 외치게 만들지 않는다. */
+  /* 오른쪽 붙박이 기둥의 스크롤바 — 늘 보이면 판 하나가 더 있는 것처럼 읽힌다.
+     자리는 그대로 두고(레이아웃이 안 튄다) 색만 지웠다가, 기둥 위에 손이 올라오면
+     얇게 보인다. 표준 속성(scrollbar-*)이 먼저고, 옛 WebKit 은 아래 가짜 요소가 맡는다. */
+  .rail-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  .rail-scroll:hover,
+  .rail-scroll:focus-within {
+    scrollbar-color: var(--color-gray-30) transparent;
+  }
+  .rail-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .rail-scroll::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+  .rail-scroll:hover::-webkit-scrollbar-thumb {
+    background: var(--color-gray-30);
+  }
+
   /* 항목 머리의 「근거:」 줄(print-sheet 의 blockLead) — 출처 층과 함께 켜진다.
      표시 방식(flex)은 요소의 유틸리티가 갖고, 여기서는 **꺼진 동안 가리기만**
      한다. 그래야 나중에 클래스를 고쳐도 토글이 조용히 죽지 않는다. */

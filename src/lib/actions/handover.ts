@@ -30,7 +30,7 @@ import {
   type HandoverBlockKey,
   HANDOVER_SCREENING_ANCHOR,
 } from "@/lib/types";
-import { classifyError } from "./feedback";
+import { classifyError, readFeedback, type FeedbackCode } from "./feedback";
 import { changed, finish, openSession, holdFloor } from "./guard";
 
 /**
@@ -288,6 +288,7 @@ function blockPath(key: HandoverBlockKey): string {
 }
 
 type NoteSession = Awaited<ReturnType<typeof openSession>>;
+type NoteView = NonNullable<Awaited<ReturnType<typeof getHandoverFor>>>;
 
 /**
  * 보충을 적을 수 있는 인계 건 — 「보충 적기」와 「보충으로 넣기」가 같은 규칙을 쓴다.
@@ -296,47 +297,47 @@ type NoteSession = Awaited<ReturnType<typeof openSession>>;
  * 새로 시작됐다는 뜻이다. 인계서는 넘기는 사람이 쓰고 서명하는 문서라 인수자는
  * 못 넣는다(denied). 실행된 뒤에는 잠긴다(locked). 정책(handover_note_insert)도
  * 같은 셋을 본다 — 여기서는 사람 말로 먼저 막을 뿐이다.
+ *
+ * 되돌려 보내지 않고 **결과로 돌려준다.** 폼으로 온 요청은 finish() 로 옮기고,
+ * 화면 안에서 온 요청(useActionState)은 그 자리에 글자로 보여 준다.
  */
-async function writableNoteTarget(
+async function noteTarget(
   viewer: NoteSession["viewer"],
   rawId: FormDataEntryValue | null,
-) {
+): Promise<{ view: NoteView; code?: undefined } | { view?: undefined; code: FeedbackCode }> {
   const view = await getHandoverFor(viewer);
-  if (!view) finish("/handover", "invalid");
-  if (rawId !== view.handover.id) finish("/handover", "stale");
-  if (view.from.id !== viewer.id) finish("/handover", "denied");
-  if (view.handover.status === "completed") {
-    finish("/handover", "handover.note.locked");
-  }
-  return view;
+  if (!view) return { code: "invalid" };
+  if (rawId !== view.handover.id) return { code: "stale" };
+  if (view.from.id !== viewer.id) return { code: "denied" };
+  if (view.handover.status === "completed") return { code: "handover.note.locked" };
+  return { view };
 }
 
 /**
  * 보충 한 줄 저장. 상한(30개)은 DB 트리거(trg_handover_note_limit)가 막고
  * classifyError 가 그 말을 옮긴다 — 앱에서 미리 세지 않는다. 미리 세면 두 창에서
  * 동시에 적을 때 어긋나고, 같은 셈이 두 액션에 두 벌 생긴다.
+ * 성공이면 null, 실패면 사람에게 보여 줄 코드.
  */
 async function insertHandoverNote(
   session: NoteSession,
   handoverId: string,
   row: { block_key: HandoverBlockKey; body: string; source_ref?: string },
-  back: string,
-) {
+): Promise<FeedbackCode | null> {
   const { error } = await session.supabase.from("handover_note").insert({
     handover_id: handoverId,
     ...row,
     // author_id를 폼에서 받지 않는다. 남의 이름으로 인계서에 문장을 넣는 경로를 없앤다.
     author_id: session.viewer.id,
   });
-  if (error) {
-    const code = classifyError(error);
-    if (code === "handover.note.pending") {
-      console.error(
-        "[handover_note] source_ref 칸이 없습니다. supabase/migrations/0024_handover_note_source.sql 을 실행해야 「보충으로 넣기」가 동작합니다.",
-      );
-    }
-    finish(back, code);
+  if (!error) return null;
+  const code = classifyError(error);
+  if (code === "handover.note.pending") {
+    console.error(
+      "[handover_note] source_ref 칸이 없습니다. supabase/migrations/0024_handover_note_source.sql 을 실행해야 「보충으로 넣기」가 동작합니다.",
+    );
   }
+  return code;
 }
 
 export async function addHandoverNote(formData: FormData) {
@@ -349,7 +350,8 @@ export async function addHandoverNote(formData: FormData) {
   // (DB의 handover_note_block_key_check도 같은 목록을 요구한다)
   if (!isHandoverBlockKey(rawKey)) finish("/handover", "invalid");
 
-  const view = await writableNoteTarget(session.viewer, formData.get("handoverId"));
+  const gate = await noteTarget(session.viewer, formData.get("handoverId"));
+  if (gate.code) finish("/handover", gate.code);
 
   if (typeof rawBody !== "string") finish("/handover", "invalid");
   const body = rawBody.trim();
@@ -362,33 +364,73 @@ export async function addHandoverNote(formData: FormData) {
 
   // 실패는 항목이 아니라 화면 맨 위로 돌려보낸다. 알림 판이 거기 있고,
   // 항목으로 튀면 무엇이 잘못됐는지 적힌 줄을 지나치게 된다.
-  await insertHandoverNote(session, view.handover.id, { block_key: rawKey, body }, "/handover");
+  const failed = await insertHandoverNote(session, gate.view.handover.id, {
+    block_key: rawKey,
+    body,
+  });
+  if (failed) finish("/handover", failed);
 
   revalidatePath("/handover");
   finish(blockPath(rawKey), "handover.note.added");
 }
 
+/** 「보충으로 넣기」가 화면에 돌려주는 결과(useActionState). */
+export type MoveMissedState =
+  | { ok: true; heading: string; anchor: string; text: string }
+  | { ok: false; text: string };
+
 /**
  * 「보충으로 넣기」 — 규칙이 안 실은 기록을 원문 그대로 보충으로.
  *
- * 폼은 기록의 키만 보낸다. **글은 폼에서 받지 않는다.** 서버가 초안을 다시
- * 만들어 그 키의 기록을 찾고, 그 원문으로 보충을 만든다 — 그래야 「원문
+ * 폼은 기록의 식별자(src)만 보낸다. **글은 폼에서 받지 않는다.** 서버가 초안을
+ * 다시 만들어 그 기록을 찾고, 그 원문으로 보충을 만든다 — 그래야 「원문
  * 그대로」가 주장이 아니라 구조가 된다. 어느 칸으로 가는지도 여기서 정한다
  * (missedTargetBlock). 같은 기록은 한 번만 — DB 의 부분 유일 인덱스(0024)가
- * 막고, 여기서는 그 실패를 사람 말로 옮긴다.
+ * 막고, classifyError 가 그 실패를 사람 말로 옮긴다.
  *
- * 저장 규칙(누가·언제·몇 개)은 addHandoverNote 와 같다. 정책도 같은 것을 본다.
+ * ── 두 길 ──────────────────────────────────────────────────────────────────
+ *
+ * `inline` 표식이 있으면(스크립트가 붙은 화면, move-missed-button.tsx) 되돌려
+ * 보내지 않고 결과를 돌려준다 — 화면은 그 자리에 머물고 단추만 「보충됨」으로
+ * 바뀐다. 표식이 없으면(스크립트 없는 폼 제출) 저장한 뒤 그 줄로 되돌려 보낸다.
+ * 한 액션이 두 길을 다 맡는 이유는, 두 벌로 두면 저장 규칙이 갈라지는 날이
+ * 오기 때문이다.
  */
-export async function moveMissedToNote(formData: FormData) {
+export async function moveMissedToNote(
+  _prev: MoveMissedState | null,
+  formData: FormData,
+): Promise<MoveMissedState> {
+  const inline = formData.get("inline") === "1";
   const session = await openSession();
+  const result = await moveMissed(session, formData);
 
-  // 폼은 「어느 기록이었나」(missedSourceRef)만 보낸다. 글은 서버가 초안에서 찾는다.
+  if (!inline) {
+    if (!result.ok) finish(result.back, result.code);
+    revalidatePath("/handover");
+    finish(result.back, "handover.note.moved");
+  }
+  if (result.ok) revalidatePath("/handover");
+  const text = readFeedback(result.ok ? "handover.note.moved" : result.code)?.text ?? "";
+  return result.ok
+    ? { ok: true, heading: result.heading, anchor: result.anchor, text }
+    : { ok: false, text };
+}
+
+async function moveMissed(
+  session: NoteSession,
+  formData: FormData,
+): Promise<
+  | { ok: true; heading: string; anchor: string; back: string }
+  | { ok: false; code: FeedbackCode; back: string }
+> {
   const rawSrc = formData.get("src");
   if (typeof rawSrc !== "string" || !/^(comment|section):.+$/.test(rawSrc)) {
-    finish("/handover", "invalid");
+    return { ok: false, code: "invalid", back: "/handover" };
   }
 
-  const view = await writableNoteTarget(session.viewer, formData.get("handoverId"));
+  const gate = await noteTarget(session.viewer, formData.get("handoverId"));
+  if (gate.code) return { ok: false, code: gate.code, back: "/handover" };
+  const view = gate.view;
 
   // 화면이 보여 준 것과 같은 초안에서 찾는다. 식별자만 맞고 기록이 없으면 그 사이
   // 대화가 지워졌거나 업무가 빠진 것이다 — 없는 글을 지어 넣지 않는다.
@@ -397,22 +439,21 @@ export async function moveMissedToNote(formData: FormData) {
     ...draft.screening.comments.missed,
     ...draft.screening.sections.missed,
   ].find((m) => missedSourceRef(m) === rawSrc);
-  if (!record) finish(`/handover#${HANDOVER_SCREENING_ANCHOR}`, "invalid");
+  if (!record) {
+    return { ok: false, code: "invalid", back: `/handover#${HANDOVER_SCREENING_ANCHOR}` };
+  }
 
   const back = `/handover#${missedAnchor(record)}`;
-  await insertHandoverNote(
-    session,
-    view.handover.id,
-    {
-      block_key: missedTargetBlock(record),
-      body: missedNoteBody(record),
-      source_ref: rawSrc,
-    },
-    back,
-  );
+  const block = missedTargetBlock(record);
+  const failed = await insertHandoverNote(session, view.handover.id, {
+    block_key: block,
+    body: missedNoteBody(record),
+    source_ref: rawSrc,
+  });
+  if (failed) return { ok: false, code: failed, back };
 
-  revalidatePath("/handover");
-  finish(back, "handover.note.moved");
+  const heading = draft.blocks.find((b) => b.key === block)?.heading ?? block;
+  return { ok: true, heading, anchor: handoverBlockAnchor(block), back };
 }
 
 /**

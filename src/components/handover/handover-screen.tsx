@@ -310,7 +310,7 @@ export async function HandoverScreen({
             "flex flex-col gap-4 xl:col-start-2 xl:row-start-1 print:hidden",
             done
               ? ""
-              : "xl:sticky xl:top-[calc(var(--spacing-header)+1rem)] xl:max-h-[calc(100dvh-var(--spacing-header)-2rem)] xl:self-start xl:overflow-y-auto",
+              : "xl:sticky xl:top-[calc(var(--spacing-header)+1rem)] xl:max-h-[calc(100dvh-var(--spacing-header)-2rem)] xl:self-start xl:overflow-y-auto rail-scroll",
           )}
         >
             {/* ── 붙박이 기둥 ────────────────────────────────────────────────
