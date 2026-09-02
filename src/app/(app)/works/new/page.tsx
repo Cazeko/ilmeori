@@ -59,11 +59,18 @@ export default async function NewWorkPage({
 
       <ActionFeedback msg={sp.msg} className="mb-4" />
 
+      {/* ── 읽기 전용은 화면을 감추는 것이 아니다 ─────────────────────────
+          한동안 이 안내가 폼을 **대신**했다. 그러면서 「화면과 동선은 그대로
+          볼 수 있습니다」라고 적었는데, 그 화면에는 제목 한 줄과 이 상자밖에
+          없었다 — 화면이 자기가 하는 일과 정반대를 말하고 있었다
+          (DESIGN.md §18.5). 폼을 그리고 못 쓰게만 만든다. */}
       {!canMutate ? (
-        <Notice tone="info" title="지금은 읽기 전용입니다">
-          화면과 동선은 그대로 볼 수 있습니다.
+        <Notice tone="info" title="지금은 읽기 전용입니다" className="mb-4">
+          아래 칸은 실제 화면 그대로이며, 저장만 되지 않습니다.
         </Notice>
-      ) : !departmentName ? (
+      ) : null}
+
+      {!departmentName ? (
         <Notice tone="danger" title="소속 부서가 없어 업무를 만들 수 없습니다">
           계정에 소속 부서가 없으면 어느 부서의 일인지 정할 수 없습니다. 인사
           담당자에게 소속 등록을 요청해 주세요.
@@ -75,6 +82,9 @@ export default async function NewWorkPage({
             description="제목만 필수입니다."
           />
           <CardBody>
+            {/* min-w-0 — fieldset 의 UA 기본값은 `min-inline-size: min-content`
+                라, 없으면 안쪽이 내용만큼 부풀어 좁은 화면에서 넘친다. */}
+            <fieldset disabled={!canMutate} className="min-w-0">
             <WorkForm
               viewer={viewer}
               action={createWork}
@@ -104,6 +114,7 @@ export default async function NewWorkPage({
                 )}
               </Field>
             </WorkForm>
+            </fieldset>
           </CardBody>
         </Card>
       )}

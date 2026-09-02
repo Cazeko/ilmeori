@@ -17,7 +17,10 @@ import { DownloadLink } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { ActionFeedback } from "@/components/ui/feedback";
 import { Notice } from "@/components/ui/notice";
-import { HandoverRail } from "@/components/handover/handover-rail";
+import {
+  HandoverRail,
+  HandoverRailBrief,
+} from "@/components/handover/handover-rail";
 import { HandoverTalk } from "@/components/handover/handover-talk";
 import { SheetFold } from "@/components/handover/sheet-fold";
 import { PrintButton } from "@/components/handover/print-button";
@@ -163,6 +166,24 @@ export async function HandoverScreen({
         empty: toFillKeys.has(b.key),
       }));
 
+  /**
+   * 기둥에 **실제로 누를 것이 있는가.**
+   *
+   * 좁은 화면의 요약 줄이 「누를 것은 서식 아래에 있습니다」라고 말할지를 정한다.
+   * 한동안 `isSender && !done && !archived` 였는데, 그건 「누를 것이 있는가」가
+   * 아니라 「내가 넘기는 쪽인가」였다 — 두 갈래에서 어긋난다.
+   *   · `draft` 에서 기둥은 「넘길 업무를 고르는 중입니다」 한 줄뿐인데 요약은
+   *     누를 것이 있다고 말한다.
+   *   · 끝난 화면의 기둥에는 단추가 셋(한/글·첫 화면·새 인계) 있는데 요약은
+   *     아무 말도 안 한다.
+   * 그래서 `Action`(handover-rail.tsx)이 조작기를 그리는 조건을 그대로 옮겨
+   * 적는다. 둘이 갈라지면 요약이 없는 단추를 가리키게 된다.
+   */
+  const railHasAction =
+    done ||
+    (isSender &&
+      (handover.status === "generated" || handover.status === "confirmed"));
+
   return (
     <PageContainer className="print:p-0">
       <div className="print:hidden">
@@ -275,21 +296,312 @@ export async function HandoverScreen({
           인쇄하면 격자를 푼다(`print:block`). 오른쪽 칸과 작업대는 각자
           `print:hidden` 이라, 종이에는 서식 한 벌만 남는다. */}
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] print:block">
+        {/* ── 좁은 화면에서 서식 위에 남는 것 ───────────────────────────
+            xl 미만에서는 격자가 풀린다. 그때 아래 기둥은 서식 **뒤**에 서고,
+            문서에 들어가기 전에 알아야 하는 둘만 여기 남는다 — 지금 몇
+            단계인가, 어느 항목이 있는가(handover-rail.tsx 의 Brief). */}
+        <HandoverRailBrief
+          status={handover.status}
+          toc={toc}
+          notUsed={screened.notUsed}
+          hasAction={railHasAction}
+        />
+
+        <div className="min-w-0 xl:col-start-1 xl:row-start-1">
+        {/* ── 이 화면의 「문서」 — 별지 제12호서식 그 자체 ──────────────────────
+            한동안 이 서식에는 `hidden print:block` 이 붙어 있었다. 이 제품에서
+            가장 강한 물건이 **Ctrl+P 를 눌러야만 보였다**는 뜻이고, 화면에서
+            사람이 보던 것은 아래의 회색 말풍선 초안이었다.
+
+            문서 등급으로 화면에 세운다 — 흰 종이, 각진 모서리, 위쪽 2px 먹선.
+            안의 표는 `.sheet` 가 먹색 괘선으로 그린다. 인쇄하면 같은 클래스가
+            pt 로 다시 그려지므로 화면과 종이가 어긋날 수 없다.
+
+            이 판만 print:hidden 밖에 있다 — 인쇄하면 이 한 벌만 나온다.
+            바깥 테두리와 여백은 종이에서 지운다(종이가 곧 테두리다).
+
+            한동안 여기 「항목마다 붙는 근거 꼬리표는 여기 없다」고 적혀 있었다.
+            지금은 있다 — 문장마다 어디서 왔는지가 서식 안에 붙고, 위 캡션의
+            토글이 그것을 비춘다. 다만 **종이에는 여전히 없다**(globals.css 의
+            @media print). 결재에 올라가는 장에서 꼬리표는 서식을 어지럽힌다. */}
+        <div
+          data-rank="doc"
+          className={cn(
+            CARD_SURFACE.doc,
+            "mb-6 p-6 sm:p-10",
+            "print:border-0 print:bg-white print:p-0",
+          )}
+        >
+          {/* ── 접는 손잡이 — 끝난 화면에서만 ─────────────────────────────
+              실행 전의 이 화면이 하러 온 일은 서식을 읽고 확인하는 것이다.
+              그 문서를 기본으로 접어 두면 화면이 자기가 시키는 일을 자기가
+              가린다. 끝난 뒤에는 반대다 — 확인은 끝났고 사람이 하는 일은
+              문답과 파일 내려받기인데, 약 4,500px 짜리 서식이 펼쳐져 있으면
+              그 둘이 늘 스크롤 저 아래에 있다.
+
+              접힌 채로 인쇄해도 종이에는 서식이 나온다(globals.css 의
+              @media print). 화면 상태가 종이를 정하면 안 된다는 규칙은
+              출처 층에서 이미 정한 것이고, 접기도 그 아래 있다. */}
+          {done ? <SheetFold blocks={draft.blocks.length} /> : null}
+          {/* 서식의 캡션 — 이 문서가 무엇으로 만들어졌는지 한 줄.
+              래퍼 **안**이어야 한다(sheet-caption.tsx 의 「자리」 주석). */}
+          <SheetCaption screening={draft.screening} />
+          {/* 좁은 화면에서 서식의 표는 굴림칸에 들어간다(print-sheet.tsx 의
+              TableScroll). 그 사실을 말해 주지 않으면 잘린 칸을 보고 화면이
+              고장 난 줄 안다. 서식 **안**에는 못 둔다 — 거기 넣으면 종이에도
+              실린다. sm 이상에서는 굴림칸 자체가 없으므로 이 줄도 없다.
+
+              끝난 화면에서는 안 그린다. 그 화면의 서식은 기본이 접힘이고
+              (`#handover-fold:not(:checked) ~ .sheet`), 이 줄은 서식의 **형제**라
+              접기 규칙이 안 닿는다. 그대로 두면 표가 한 장도 없는 화면에서
+              「표는 옆으로 밀어 볼 수 있습니다」가 홀로 서 있게 된다 — 이 판이
+              고치고 있는 바로 그 잘못(화면이 자기가 하는 일과 다른 말을 하는
+              것)을 새로 만드는 셈이다. */}
+          {done ? null : (
+            <p className="sheet-scroll-hint">표는 옆으로 밀어 볼 수 있습니다.</p>
+          )}
+          {/* 인용 꼬리표를 누르면 원문이 옆에 열린다 — **문서를 떠나지 않는다.**
+              서버 컴포넌트인 서식을 자식으로 받는다(RSC 에서 정상적인 모양이고,
+              서식은 여전히 서버에서 그려진다). 조각으로 감싸므로 DOM 모양은 한
+              겹도 안 는다 — `#handover-prov:checked ~ .sheet` 가 형제를 찾는다.
+              자바스크립트가 없으면 아무 일도 안 하고 꼬리표는 예전처럼 업무
+              화면으로 간다. */}
+          <SourceDrawer>
+            <HandoverPrintSheet
+              draft={draft}
+              notesByBlock={notesByBlock}
+              from={from}
+              to={to}
+              fromDept={fromDept}
+              toDept={toDept}
+              generatedAt={handover.generated_at}
+              completedAt={handover.completed_at}
+              method={handover.ai_model ?? "rule-based/v1"}
+
+              blockLead={(block, notes) => (
+                <>
+                  {/* 사람 칸의 상태 — 종이의 「직접 적어야 하는 칸입니다」는 적어 넣으면
+                      사라지지만, 화면에서는 「적었다」는 말도 필요하다. */}
+                  {block.needsHuman ? (
+                    <p className="mt-1 text-body-sm font-bold text-gray-90">
+                      {notes.length > 0
+                        ? "인계자가 직접 적었습니다."
+                        : "사람이 직접 적어야 합니다."}
+                    </p>
+                  ) : null}
+                  {/* 「근거:」 줄 — 이 칸이 몇 갈래에서 나왔는지. 출처 층을 켜야 보인다
+                      (globals.css). 규칙이 뽑은 문단만 가리키므로 보충 **위**에 선다. */}
+                  {block.sources.length > 0 ? (
+                    <p className="block-sources mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-xs text-gray-60">
+                      근거:
+                      {block.sources.map((s, i) => (
+                        <span key={s} className="inline-flex items-center gap-2">
+                          {i > 0 ? (
+                            <span aria-hidden className="text-gray-40">
+                              ·
+                            </span>
+                          ) : null}
+                          <span className="font-bold text-accent-text">{s}</span>
+                        </span>
+                      ))}
+                    </p>
+                  ) : null}
+                </>
+              )}
+              blockTail={
+                canWriteNotes
+                  ? (block, notes) => (
+                      <BlockNoteForm
+                        handoverId={handover.id}
+                        blockKey={block.key}
+                        heading={block.heading}
+                        hasNotes={notes.length > 0}
+                        needsHuman={block.needsHuman}
+                      />
+                    )
+                  : undefined
+              }
+              noteExtras={
+                canWriteNotes
+                  ? (n) => (
+                      <NoteDeleteForm
+                        note={n}
+                        heading={blockHeadings[n.block_key] ?? n.block_key}
+                      />
+                    )
+                  : undefined
+              }
+            />
+          </SourceDrawer>
+        </div>
+
+            {/* ── 항목별 근거 ────────────────────────────────────────────────── */}
+            <div className="print:hidden">
+              {/* 이 문구는 실제로 도는 방식과 정확히 같아야 한다.
+                buildHandoverDraft()는 쌓인 기록을 서식 순서대로 조립하는 규칙 기반
+                코드이고 어떤 모델도 부르지 않는다. "AI가 썼습니다"라고 적어 두면
+                심사에서 모델 이름을 묻는 한 마디에 무너진다. 자동으로 뽑았다는 것은
+                그 자체로 충분히 설득력 있는 사실이고, 근거를 붙일 수 있다는 점에서
+                오히려 더 강한 주장이다. */}
+              {/* ── 왜 대화까지 보는가 ────────────────────────────────────────
+                한동안 이 자리가 **주황 채움 판**이었고 제목이 「이 초안은 사람이
+                쓰지 않았습니다」였다. 화면에서 가장 강한 색이 증명이 아니라
+                **주장 문장**에 쓰이고 있었다는 뜻이다. 그리고 이 화면은 파랑·
+                주황·빨강 세 갈래로 이미 색 예산을 넘겨 있었다(DESIGN.md §2 —
+                무채색 + 최대 둘). 주장에 쓰던 예산을 회수한다.
+
+                그 판이 하던 말의 절반은 **서식 맨 아래 「출처」 문단이 이미
+                하고 있었다** — 쌓인 기록의 수, 생성 방식과 생성 시각, 「그대로
+                제출하는 문서가 아니다」. 서식이 인쇄 뒤에 숨어 있던 시절에는
+                그것이 되풀이가 아니었지만, 지금은 같은 화면에서 같은 말을 두 번
+                하는 것이다. 되풀이는 지우고 **여기서만 할 수 있는 말**만 남긴다.
+
+                등급은 여백이다 — 채움도 네 변도 없이 왼쪽 선 하나
+                (미포착 판·대기 화면이 이미 쓰는 모양, DESIGN.md §17.3). */}
+              <section className="mb-4 flex gap-2 border-l border-l-rule-hair py-2 pl-3">
+                <Cog aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
+                <div className="flex flex-col gap-2 text-body-sm leading-relaxed break-keep text-gray-60">
+                  <p>
+                    <strong className="font-bold text-gray-90">
+                      「현안사항」은 문서만이 아니라 대화에서도 가져옵니다.
+                    </strong>{" "}
+                    아직 답이 없는 질문이나 서로 어긋난 일정은 문서에 정리되기
+                    전이라 대화에만 남아 있고, 인계 때 가장 먼저 사라지는 것이
+                    그것이기 때문입니다. 근거를 붙일 수 없는 항목은 채우지 않고
+                    비워 둡니다.
+                  </p>
+                  {/* 「칸을 뒀습니다」는 그 칸이 실제로 보이는 사람에게만 하는 말이다.
+                      인수자가 볼 때·실행이 끝난 뒤·데모 모드에서는 서식 안에
+                      「보충 적기」(BlockNoteForm)가 안 그려지므로, 없는 칸을
+                      있다고 적으면 안 된다. */}
+                  {canWriteNotes ? (
+                    <p>
+                      규칙이 뽑은 문단은 고쳐 쓰지 못하게 두었습니다. 덮어쓰면 그
+                      문장이 근거를 잃고, 옆에 붙은 근거 표시가 거짓이 되기
+                      때문입니다. 보탠 글은 누가 언제 적었는지와 함께 「인계자
+                      보충」으로 따로 표시하며, 인쇄본에도 그렇게 나옵니다.
+                    </p>
+                  ) : (
+                    <p>
+                      인계자가 보탠 글이 있으면 규칙이 뽑은 문단과 섞지 않고
+                      「인계자 보충」으로 따로 표시합니다. 누가 언제 적었는지가
+                      함께 남고, 인쇄본에도 그렇게 나옵니다.
+                    </p>
+                  )}
+                </div>
+              </section>
+
+              {/* ── 내보내기 ────────────────────────────────────────────────────
+                "형식이 hwp냐"보다 "이걸 그대로 결재에 올릴 수 있느냐"가 먼저다.
+                그 질문에 이제 **두 가지로** 답한다.
+
+                  · 한/글 파일  — 온나라에 그대로 올리는 형식
+                  · 인쇄(A4)    — 그 자리에 한/글이 없어도 종이는 나온다
+
+                한/글이 먼저다. 인쇄만 있던 동안 인수자가 이 문서를 다음 걸음으로
+                가져가는 길은 **손으로 다시 치는 것**뿐이었고, 그 순간 문장마다
+                붙여 둔 근거도 놓친 것을 센 수도 전부 사라진다. 이 제품이 파는
+                것이 정확히 그 둘이다.
+
+                내려받기는 링크다 — 스크립트가 없어도 눌린다. 인쇄 버튼만
+                스크립트가 있을 때 나타나고, 그래서 안내 문장은 늘 남는다.
+
+                ── 끝난 인계에서는 이 판이 안 뜬다 ───────────────────────────
+                인계가 끝나면 같은 내려받기 링크가 오른쪽 붙박이 기둥에도 선다.
+                기둥은 스크롤을 따라오므로 **둘이 한 화면에 함께 보인다** —
+                같은 이름 같은 주소의 단추가 둘이면 사람은 그 둘이 다른 일을
+                한다고 읽는다. 끝난 뒤에 문서를 챙기는 자리는 기둥 하나다. */}
+              {done ? null : (
+              <div className="mb-4 rounded-sm border border-rule-frame bg-surface px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <DownloadLink href={exportHref} size="sm">
+                    <Download aria-hidden className="size-4" />
+                    한/글 파일(.hwpx)
+                  </DownloadLink>
+                  <PrintButton />
+                </div>
+                <p className="mt-3 text-body-sm leading-relaxed break-keep text-gray-60">
+                  {/* 「Ctrl+P」를 빼면 안 된다. 스크립트가 없는 브라우저에서는
+                      옆의 인쇄 버튼이 아예 안 그려지고, 이 문장이 인쇄하는 법을
+                      알려 주는 유일한 자리가 된다(tests/browser.test.mjs [2]). */}
+                  한/글 파일에는 위 서식이 그대로 담깁니다.{" "}
+                  <kbd className="font-sans font-bold">Ctrl+P</kbd>로도{" "}
+                  <strong className="font-bold text-gray-90">
+                    별지 제12호서식 모양의 A4
+                  </strong>
+                  가 나옵니다. 근거 꼬리표는 화면의 장치라 파일에도 종이에도 담기지
+                  않고, 대신 맨 아래 「출처」 한 문단이 무엇을 몇 건 실었는지
+                  밝힙니다.
+                </p>
+              </div>
+              )}
+
+              {/* 위 서식이 「문서」가 된 뒤로 이 판이 하는 일이 분명해졌다 —
+                  서식을 다시 보여 주는 것이 아니라 **항목마다 근거가 맞는지
+                  확인하고 빈 칸을 채우는 작업대**다. 제목을 그렇게 고친다.
+                  (등급도 문서가 아니라 판이다 — 화면의 문서는 위 하나뿐이다) */}
+              {screened.seen > 0 ? (
+              <Card>
+                <CardHeader
+                  title="규칙이 무엇을 걸렀나"
+                  // 끝난 뒤에는 적을 수 없다(정책이 그렇게 두었다). 그런데도
+                  // 「직접 적습니다」가 그대로 남아 있으면, 화면이 할 수 없는
+                  // 일을 시키는 셈이다. 그때 이 판이 하는 일은 **왜 이렇게
+                  // 적혔는지 되짚는 것**이라 그렇게 적는다.
+                  description={
+                    done
+                      ? "규칙이 안 실은 기록을 되짚어 볼 수 있습니다. 실행이 끝난 인계서는 더 고칠 수 없습니다."
+                      : "규칙이 안 실은 기록입니다. 필요한 것은 「보충으로 넣기」로 서식에 옮깁니다. 보충은 위 서식의 각 항목 아래에서 적습니다."
+                  }
+                  action={
+                    <FileSignature aria-hidden className="size-5 text-gray-30" />
+                  }
+                />
+                <CardBody className="flex flex-col gap-6">
+                  {/* 서식 항목을 읽기 전에, 그 칸을 채운 규칙이 무엇을 놓쳤는지
+                      먼저 밝힌다. 세는 범위는 **대화와 문서 항목 둘**이다 —
+                      한동안 대화뿐이었고 이 주석도 그렇게 적혀 있었지만, 문서
+                      항목을 같은 규칙으로 세게 되면서 판 제목도 「규칙이 무엇을
+                      걸렀나」로 넓어졌다(screening-panel.tsx 의 경위 주석).
+                      서식 위 캡션이 세는 수와 같은 수다.
+                      이 판은 서식이 아니므로 종이에는 나가지 않는다. */}
+                  <ScreeningPanel
+                    screening={draft.screening}
+                    handoverId={handover.id}
+                    canWrite={canWriteNotes}
+                    headings={blockHeadings}
+                    added={addedFromMissed}
+                  />
+
+                </CardBody>
+              </Card>
+              ) : null}
+            </div>
+        </div>
+
         {/* ── 오른쪽 여백 ───────────────────────────────────────────────────
-            **이 칸이 문서보다 먼저 온다 — 화면에서는 오른쪽이지만 코드에서는
-            앞이다.** 자리는 `xl:col-start-2` 가 정한다.
+            **이 칸은 문서보다 뒤에 온다 — 화면에서는 오른쪽이고, 코드에서도
+            뒤다.** 자리는 `xl:col-start-2 xl:row-start-1` 이 정하므로, 코드
+            차례를 바꿔도 넓은 화면의 그림은 한 픽셀도 안 바뀐다.
 
-            차례를 CSS 의 `order` 로 뒤집었다가 되돌린 자리다. `order` 는 눈에
-            보이는 자리만 바꾸고 **탭 차례와 화면 낭독기의 차례는 코드 그대로**
-            둔다. 좁은 화면에서 기둥을 눈으로만 맨 위로 올리면, 키보드로 오는
-            사람은 여전히 서식 4,500px 안의 근거 꼬리표를 전부 지나야
-            「내용을 확인했습니다」에 닿는다(WCAG 2.4.3). 눈에 보이는 차례를
-            고치려고 만든 장치가 그 사람에게는 아무것도 안 고친 셈이다.
+            ── 한동안 앞에 있었고, 그것이 틀렸다 ────────────────────────────
+            처음에는 이 칸이 문서보다 **앞**이었다. `order` 로 눈만 속이지
+            않으려던 것이라 이유는 맞았다 — `order` 는 보이는 자리만 바꾸고
+            **탭 차례와 낭독기 차례는 코드 그대로** 두므로(WCAG 2.4.3), 눈에만
+            듣는 장치는 키보드로 오는 사람에게 아무것도 안 고친다.
 
-            코드 차례를 바꾸면 둘이 어긋날 일이 없다. 대신 좁은 화면에서는
-            곁칸(대상 목록·취소)도 문서 앞에 선다 — 「지금 어디까지 왔고
-            무엇이 넘어가는가」라 문서로 들어가기 전에 읽을 만한 것이고,
-            어긋난 차례를 남기는 것보다 낫다고 봤다.
+            틀린 것은 그다음 판단이었다. 「좁은 화면에서는 곁칸이 문서 앞에
+            서지만 읽을 만한 것이라 낫다」고 적어 두고 **그 높이를 재지
+            않았다.** 재 보니 390px 에서 서식 윗변이 **1911px** 이었다 —
+            뷰포트 844px 의 2.3배이고, 그 안에 「내용을 확인했습니다」가 들어
+            있었다. **되돌릴 수 없는 확인이 확인 대상보다 두 화면 먼저 있었다**
+            (DESIGN.md §18.1).
+
+            그래서 `order` 가 아니라 **코드 차례 자체**를 뒤집었다. 눈과 탭이
+            여전히 같은 차례이고, 좁은 화면에서 사람이 만나는 순서는 이렇게
+            된다 — 요약 한 줄 → 서식 → 지금 누를 것. 문서에 들어가기 전에
+            알아야 하는 둘(지금 몇 단계인가·어느 항목이 있는가)은 위의
+            `HandoverRailBrief` 가 약 110px 로 말한다.
 
             ── 붙박이는 **칸 전체**에 건다 ───────────────────────────────────
             기둥에만 걸었다가 고쳤다. `sticky` 는 흐름에 남은 채로 옮겨 붙으므로,
@@ -508,264 +820,6 @@ export async function HandoverScreen({
             {/* 「새 인계 시작」 카드도 여기 있었다. 끝난 인계 화면에서 할 수
                 있는 일은 문서를 챙기는 것과 다음 인계를 여는 것 둘뿐이고,
                 그 둘은 이제 붙박이 기둥 안에 나란히 있다. */}
-        </div>
-
-        <div className="min-w-0 xl:col-start-1 xl:row-start-1">
-        {/* ── 이 화면의 「문서」 — 별지 제12호서식 그 자체 ──────────────────────
-            한동안 이 서식에는 `hidden print:block` 이 붙어 있었다. 이 제품에서
-            가장 강한 물건이 **Ctrl+P 를 눌러야만 보였다**는 뜻이고, 화면에서
-            사람이 보던 것은 아래의 회색 말풍선 초안이었다.
-
-            문서 등급으로 화면에 세운다 — 흰 종이, 각진 모서리, 위쪽 2px 먹선.
-            안의 표는 `.sheet` 가 먹색 괘선으로 그린다. 인쇄하면 같은 클래스가
-            pt 로 다시 그려지므로 화면과 종이가 어긋날 수 없다.
-
-            이 판만 print:hidden 밖에 있다 — 인쇄하면 이 한 벌만 나온다.
-            바깥 테두리와 여백은 종이에서 지운다(종이가 곧 테두리다).
-
-            한동안 여기 「항목마다 붙는 근거 꼬리표는 여기 없다」고 적혀 있었다.
-            지금은 있다 — 문장마다 어디서 왔는지가 서식 안에 붙고, 위 캡션의
-            토글이 그것을 비춘다. 다만 **종이에는 여전히 없다**(globals.css 의
-            @media print). 결재에 올라가는 장에서 꼬리표는 서식을 어지럽힌다. */}
-        <div
-          data-rank="doc"
-          className={cn(
-            CARD_SURFACE.doc,
-            "mb-6 p-6 sm:p-10",
-            "print:border-0 print:bg-white print:p-0",
-          )}
-        >
-          {/* ── 접는 손잡이 — 끝난 화면에서만 ─────────────────────────────
-              실행 전의 이 화면이 하러 온 일은 서식을 읽고 확인하는 것이다.
-              그 문서를 기본으로 접어 두면 화면이 자기가 시키는 일을 자기가
-              가린다. 끝난 뒤에는 반대다 — 확인은 끝났고 사람이 하는 일은
-              문답과 파일 내려받기인데, 약 4,500px 짜리 서식이 펼쳐져 있으면
-              그 둘이 늘 스크롤 저 아래에 있다.
-
-              접힌 채로 인쇄해도 종이에는 서식이 나온다(globals.css 의
-              @media print). 화면 상태가 종이를 정하면 안 된다는 규칙은
-              출처 층에서 이미 정한 것이고, 접기도 그 아래 있다. */}
-          {done ? <SheetFold blocks={draft.blocks.length} /> : null}
-          {/* 서식의 캡션 — 이 문서가 무엇으로 만들어졌는지 한 줄.
-              래퍼 **안**이어야 한다(sheet-caption.tsx 의 「자리」 주석). */}
-          <SheetCaption screening={draft.screening} />
-          {/* 인용 꼬리표를 누르면 원문이 옆에 열린다 — **문서를 떠나지 않는다.**
-              서버 컴포넌트인 서식을 자식으로 받는다(RSC 에서 정상적인 모양이고,
-              서식은 여전히 서버에서 그려진다). 조각으로 감싸므로 DOM 모양은 한
-              겹도 안 는다 — `#handover-prov:checked ~ .sheet` 가 형제를 찾는다.
-              자바스크립트가 없으면 아무 일도 안 하고 꼬리표는 예전처럼 업무
-              화면으로 간다. */}
-          <SourceDrawer>
-            <HandoverPrintSheet
-              draft={draft}
-              notesByBlock={notesByBlock}
-              from={from}
-              to={to}
-              fromDept={fromDept}
-              toDept={toDept}
-              generatedAt={handover.generated_at}
-              completedAt={handover.completed_at}
-              method={handover.ai_model ?? "rule-based/v1"}
-
-              blockLead={(block, notes) => (
-                <>
-                  {/* 사람 칸의 상태 — 종이의 「직접 적어야 하는 칸입니다」는 적어 넣으면
-                      사라지지만, 화면에서는 「적었다」는 말도 필요하다. */}
-                  {block.needsHuman ? (
-                    <p className="mt-1 text-body-sm font-bold text-gray-90">
-                      {notes.length > 0
-                        ? "인계자가 직접 적었습니다."
-                        : "사람이 직접 적어야 합니다."}
-                    </p>
-                  ) : null}
-                  {/* 「근거:」 줄 — 이 칸이 몇 갈래에서 나왔는지. 출처 층을 켜야 보인다
-                      (globals.css). 규칙이 뽑은 문단만 가리키므로 보충 **위**에 선다. */}
-                  {block.sources.length > 0 ? (
-                    <p className="block-sources mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-xs text-gray-60">
-                      근거:
-                      {block.sources.map((s, i) => (
-                        <span key={s} className="inline-flex items-center gap-2">
-                          {i > 0 ? (
-                            <span aria-hidden className="text-gray-40">
-                              ·
-                            </span>
-                          ) : null}
-                          <span className="font-bold text-accent-text">{s}</span>
-                        </span>
-                      ))}
-                    </p>
-                  ) : null}
-                </>
-              )}
-              blockTail={
-                canWriteNotes
-                  ? (block, notes) => (
-                      <BlockNoteForm
-                        handoverId={handover.id}
-                        blockKey={block.key}
-                        heading={block.heading}
-                        hasNotes={notes.length > 0}
-                        needsHuman={block.needsHuman}
-                      />
-                    )
-                  : undefined
-              }
-              noteExtras={
-                canWriteNotes
-                  ? (n) => (
-                      <NoteDeleteForm
-                        note={n}
-                        heading={blockHeadings[n.block_key] ?? n.block_key}
-                      />
-                    )
-                  : undefined
-              }
-            />
-          </SourceDrawer>
-        </div>
-
-            {/* ── 항목별 근거 ────────────────────────────────────────────────── */}
-            <div className="print:hidden">
-              {/* 이 문구는 실제로 도는 방식과 정확히 같아야 한다.
-                buildHandoverDraft()는 쌓인 기록을 서식 순서대로 조립하는 규칙 기반
-                코드이고 어떤 모델도 부르지 않는다. "AI가 썼습니다"라고 적어 두면
-                심사에서 모델 이름을 묻는 한 마디에 무너진다. 자동으로 뽑았다는 것은
-                그 자체로 충분히 설득력 있는 사실이고, 근거를 붙일 수 있다는 점에서
-                오히려 더 강한 주장이다. */}
-              {/* ── 왜 대화까지 보는가 ────────────────────────────────────────
-                한동안 이 자리가 **주황 채움 판**이었고 제목이 「이 초안은 사람이
-                쓰지 않았습니다」였다. 화면에서 가장 강한 색이 증명이 아니라
-                **주장 문장**에 쓰이고 있었다는 뜻이다. 그리고 이 화면은 파랑·
-                주황·빨강 세 갈래로 이미 색 예산을 넘겨 있었다(DESIGN.md §2 —
-                무채색 + 최대 둘). 주장에 쓰던 예산을 회수한다.
-
-                그 판이 하던 말의 절반은 **서식 맨 아래 「출처」 문단이 이미
-                하고 있었다** — 쌓인 기록의 수, 생성 방식과 생성 시각, 「그대로
-                제출하는 문서가 아니다」. 서식이 인쇄 뒤에 숨어 있던 시절에는
-                그것이 되풀이가 아니었지만, 지금은 같은 화면에서 같은 말을 두 번
-                하는 것이다. 되풀이는 지우고 **여기서만 할 수 있는 말**만 남긴다.
-
-                등급은 여백이다 — 채움도 네 변도 없이 왼쪽 선 하나
-                (미포착 판·대기 화면이 이미 쓰는 모양, DESIGN.md §17.3). */}
-              <section className="mb-4 flex gap-2 border-l border-l-rule-hair py-2 pl-3">
-                <Cog aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
-                <div className="flex flex-col gap-2 text-body-sm leading-relaxed break-keep text-gray-60">
-                  <p>
-                    <strong className="font-bold text-gray-90">
-                      「현안사항」은 문서만이 아니라 대화에서도 가져옵니다.
-                    </strong>{" "}
-                    아직 답이 없는 질문이나 서로 어긋난 일정은 문서에 정리되기
-                    전이라 대화에만 남아 있고, 인계 때 가장 먼저 사라지는 것이
-                    그것이기 때문입니다. 근거를 붙일 수 없는 항목은 채우지 않고
-                    비워 둡니다.
-                  </p>
-                  {/* 「칸을 뒀습니다」는 그 칸이 실제로 보이는 사람에게만 하는 말이다.
-                      인수자가 볼 때·실행이 끝난 뒤·데모 모드에서는 서식 안에
-                      「보충 적기」(BlockNoteForm)가 안 그려지므로, 없는 칸을
-                      있다고 적으면 안 된다. */}
-                  {canWriteNotes ? (
-                    <p>
-                      규칙이 뽑은 문단은 고쳐 쓰지 못하게 두었습니다. 덮어쓰면 그
-                      문장이 근거를 잃고, 옆에 붙은 근거 표시가 거짓이 되기
-                      때문입니다. 보탠 글은 누가 언제 적었는지와 함께 「인계자
-                      보충」으로 따로 표시하며, 인쇄본에도 그렇게 나옵니다.
-                    </p>
-                  ) : (
-                    <p>
-                      인계자가 보탠 글이 있으면 규칙이 뽑은 문단과 섞지 않고
-                      「인계자 보충」으로 따로 표시합니다. 누가 언제 적었는지가
-                      함께 남고, 인쇄본에도 그렇게 나옵니다.
-                    </p>
-                  )}
-                </div>
-              </section>
-
-              {/* ── 내보내기 ────────────────────────────────────────────────────
-                "형식이 hwp냐"보다 "이걸 그대로 결재에 올릴 수 있느냐"가 먼저다.
-                그 질문에 이제 **두 가지로** 답한다.
-
-                  · 한/글 파일  — 온나라에 그대로 올리는 형식
-                  · 인쇄(A4)    — 그 자리에 한/글이 없어도 종이는 나온다
-
-                한/글이 먼저다. 인쇄만 있던 동안 인수자가 이 문서를 다음 걸음으로
-                가져가는 길은 **손으로 다시 치는 것**뿐이었고, 그 순간 문장마다
-                붙여 둔 근거도 놓친 것을 센 수도 전부 사라진다. 이 제품이 파는
-                것이 정확히 그 둘이다.
-
-                내려받기는 링크다 — 스크립트가 없어도 눌린다. 인쇄 버튼만
-                스크립트가 있을 때 나타나고, 그래서 안내 문장은 늘 남는다.
-
-                ── 끝난 인계에서는 이 판이 안 뜬다 ───────────────────────────
-                인계가 끝나면 같은 내려받기 링크가 오른쪽 붙박이 기둥에도 선다.
-                기둥은 스크롤을 따라오므로 **둘이 한 화면에 함께 보인다** —
-                같은 이름 같은 주소의 단추가 둘이면 사람은 그 둘이 다른 일을
-                한다고 읽는다. 끝난 뒤에 문서를 챙기는 자리는 기둥 하나다. */}
-              {done ? null : (
-              <div className="mb-4 rounded-sm border border-rule-frame bg-surface px-4 py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <DownloadLink href={exportHref} size="sm">
-                    <Download aria-hidden className="size-4" />
-                    한/글 파일(.hwpx)
-                  </DownloadLink>
-                  <PrintButton />
-                </div>
-                <p className="mt-3 text-body-sm leading-relaxed break-keep text-gray-60">
-                  {/* 「Ctrl+P」를 빼면 안 된다. 스크립트가 없는 브라우저에서는
-                      옆의 인쇄 버튼이 아예 안 그려지고, 이 문장이 인쇄하는 법을
-                      알려 주는 유일한 자리가 된다(tests/browser.test.mjs [2]). */}
-                  한/글 파일에는 위 서식이 그대로 담깁니다.{" "}
-                  <kbd className="font-sans font-bold">Ctrl+P</kbd>로도{" "}
-                  <strong className="font-bold text-gray-90">
-                    별지 제12호서식 모양의 A4
-                  </strong>
-                  가 나옵니다. 근거 꼬리표는 화면의 장치라 파일에도 종이에도 담기지
-                  않고, 대신 맨 아래 「출처」 한 문단이 무엇을 몇 건 실었는지
-                  밝힙니다.
-                </p>
-              </div>
-              )}
-
-              {/* 위 서식이 「문서」가 된 뒤로 이 판이 하는 일이 분명해졌다 —
-                  서식을 다시 보여 주는 것이 아니라 **항목마다 근거가 맞는지
-                  확인하고 빈 칸을 채우는 작업대**다. 제목을 그렇게 고친다.
-                  (등급도 문서가 아니라 판이다 — 화면의 문서는 위 하나뿐이다) */}
-              {screened.seen > 0 ? (
-              <Card>
-                <CardHeader
-                  title="규칙이 무엇을 걸렀나"
-                  // 끝난 뒤에는 적을 수 없다(정책이 그렇게 두었다). 그런데도
-                  // 「직접 적습니다」가 그대로 남아 있으면, 화면이 할 수 없는
-                  // 일을 시키는 셈이다. 그때 이 판이 하는 일은 **왜 이렇게
-                  // 적혔는지 되짚는 것**이라 그렇게 적는다.
-                  description={
-                    done
-                      ? "규칙이 안 실은 기록을 되짚어 볼 수 있습니다. 실행이 끝난 인계서는 더 고칠 수 없습니다."
-                      : "규칙이 안 실은 기록입니다. 필요한 것은 「보충으로 넣기」로 서식에 옮깁니다. 보충은 위 서식의 각 항목 아래에서 적습니다."
-                  }
-                  action={
-                    <FileSignature aria-hidden className="size-5 text-gray-30" />
-                  }
-                />
-                <CardBody className="flex flex-col gap-6">
-                  {/* 서식 항목을 읽기 전에, 그 칸을 채운 규칙이 무엇을 놓쳤는지
-                      먼저 밝힌다. 세는 범위는 **대화와 문서 항목 둘**이다 —
-                      한동안 대화뿐이었고 이 주석도 그렇게 적혀 있었지만, 문서
-                      항목을 같은 규칙으로 세게 되면서 판 제목도 「규칙이 무엇을
-                      걸렀나」로 넓어졌다(screening-panel.tsx 의 경위 주석).
-                      서식 위 캡션이 세는 수와 같은 수다.
-                      이 판은 서식이 아니므로 종이에는 나가지 않는다. */}
-                  <ScreeningPanel
-                    screening={draft.screening}
-                    handoverId={handover.id}
-                    canWrite={canWriteNotes}
-                    headings={blockHeadings}
-                    added={addedFromMissed}
-                  />
-
-                </CardBody>
-              </Card>
-              ) : null}
-            </div>
         </div>
       </div>
     </PageContainer>

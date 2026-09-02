@@ -50,9 +50,15 @@ export default async function NewApprovalPage({
 
   // 결재를 올릴 수 있는 것은 내가 고칠 수 있는 업무다(approval_insert 정책도
   // app.can_edit_work 를 요구한다). 열람만 하는 업무는 목록에 넣지 않는다.
+  //
+  // 데모에서도 읽는다. 한동안 `canMutate ? … : []` 였는데, 그러면 읽기 전용일 때
+  // 목록이 비어 화면이 「결재를 올릴 업무가 없습니다」로 떨어졌다 — **업무는
+  // 멀쩡히 있는데 화면이 없다고 말하는 것**이라 사실과 다르다. 둘 다 데모에서
+  // 이미 도는 조회이고(보드·조직도가 같은 것을 쓴다), 못 하는 것은 읽기가
+  // 아니라 쓰기다. 쓰기는 아래 fieldset 이 막고, 서버 액션이 한 번 더 막는다.
   const [mine, people] = await Promise.all([
-    canMutate ? listWorks(viewer, { mine: true }) : [],
-    canMutate ? listProfiles() : [],
+    listWorks(viewer, { mine: true }),
+    listProfiles(),
   ]);
   const targets = mine.filter((w) => {
     const role = roleIn(w, viewer);
@@ -91,12 +97,25 @@ export default async function NewApprovalPage({
 
       <ActionFeedback msg={sp.msg} className="mb-4" />
 
+      {/* ── 읽기 전용은 화면을 감추는 것이 아니다 ─────────────────────────
+          한동안 이 안내가 폼을 **대신**했다. 그래서 데모에서 「결재 올리기」를
+          누르면 제목 한 줄과 이 상자만 있는 화면이 나왔고, 정작 이 제품에서
+          가장 자랑할 것 하나(기안자 위로 훑어 **미리 채운 결재선**)를 아무도
+          못 봤다. 못 하는 것은 저장이지 보기가 아니다(DESIGN.md §18.5).
+
+          이제 폼을 그대로 그리고 `fieldset disabled` 로 못 쓰게만 만든다.
+          칸은 회색으로 내려앉고(ui/field.tsx), 단추도 같은 회색으로 멈춘다
+          (ui/button.tsx 가 §17.1 에서 만든 그 모습이다) — 「지금은 못 누른다」는
+          한 가지 사실이라 모습도 하나다. */}
       {!canMutate ? (
-        <Notice tone="info" title="지금은 읽기 전용입니다">
-          데이터베이스에 연결되지 않은 상태에서는 결재를 올릴 수 없습니다.
-          결재함과 결재란은 시연용 문서로 그대로 볼 수 있습니다.
+        <Notice tone="info" title="지금은 읽기 전용입니다" className="mb-4">
+          데이터베이스에 연결되지 않은 상태에서는 결재를 올릴 수 없습니다. 아래
+          칸과 자동으로 채워진 결재선은 실제 화면 그대로이며, 저장만 되지
+          않습니다.
         </Notice>
-      ) : targets.length === 0 ? (
+      ) : null}
+
+      {targets.length === 0 ? (
         <Card>
           <CardBody>
             <EmptyState
@@ -112,8 +131,12 @@ export default async function NewApprovalPage({
           </CardBody>
         </Card>
       ) : (
-        <form action={createApproval} className="flex flex-col gap-5">
-          <Card>
+        <form action={createApproval}>
+          {/* min-w-0 — fieldset 의 UA 기본값은 `min-inline-size: min-content` 라,
+              이것을 안 적으면 안쪽 격자·flex 가 내용만큼 부풀어 좁은 화면에서
+              가로로 넘친다. Tailwind 의 preflight 도 이 값은 안 건드린다. */}
+          <fieldset disabled={!canMutate} className="flex min-w-0 flex-col gap-5">
+            <Card>
             <CardHeader
               title="문서"
               description="제목만 필수입니다."
@@ -221,10 +244,13 @@ export default async function NewApprovalPage({
                 그동안 화면이 아무 말도 안 하면 한 번 더 누르게 된다
                 (ui/form-waiting.tsx). */}
             <FormWaiting title="결재 문서를 만들고 있습니다" />
+            {/* 링크는 폼 조작기가 아니라 disabled 가 안 걸린다 — 읽기 전용에서도
+                나갈 길은 열려 있어야 하므로 그대로 둔다. */}
             <ButtonLink href="/approvals" variant="secondary">
               취소
             </ButtonLink>
           </div>
+          </fieldset>
         </form>
       )}
     </PageContainer>

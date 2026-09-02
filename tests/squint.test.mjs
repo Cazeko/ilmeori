@@ -185,7 +185,18 @@ const SCREENS = [
   { name: "works", path: "/works", label: "업무 보드", assert: false },
   { name: "approvals", path: "/approvals", label: "결재함", assert: false },
   { name: "notes", path: "/notes", label: "쪽지함", assert: false },
-  { name: "handover", path: "/handover", label: "인계·인수(대기)", assert: false },
+  {
+    name: "handover",
+    path: "/handover",
+    label: "인계·인수(대기)",
+    assert: false,
+    /* 좁은 폭의 자리 검사를 아직 안 건다. 이 화면은 문서(넘길 수 있는 업무
+       목록) 위에 이름표 + 설명 문단 + 「지금 넘긴다면」 통계 타일을 쌓고 있고,
+       390px 에서 그 크롬이 685px 다. 어느 길로 줄일지는 세 갈래가 있고 셋 다
+       사람의 결정을 필요로 한다(DESIGN.md §17.4 · §18.10 의 열린 항목).
+       **숫자는 아래 로그에 매번 찍힌다** — 안 재는 것과 안 거는 것은 다르다. */
+    narrowPlace: false,
+  },
   {
     name: "handover-draft",
     path: "/handover",
@@ -194,6 +205,34 @@ const SCREENS = [
     assert: false,
   },
   { name: "work", path: null, label: "업무 상세", as: DEFAULT_ACCOUNT, assert: false },
+];
+
+/**
+ * 어느 폭에서 재는가 — **두 폭이다.**
+ *
+ * ── 왜 하나로는 모자랐나 ───────────────────────────────────────────────────
+ *
+ * 이 파일은 자리 검사를 「화면의 모양에 흔들리지 않는 물음이라 모든 화면에
+ * 건다」고 적어 두었다. **폭에는 흔들린다.** 인계·인수(초안)가 1440 에서
+ * 통과하는 동안 390 에서는 서식 윗변이 1911px 이었다 — 뷰포트의 2.3배이고,
+ * 그 안에 「내용을 확인했습니다」가 들어 있었다. 되돌릴 수 없는 확인이 확인
+ * 대상보다 두 화면 먼저 있었다는 뜻이다(DESIGN.md §18.1).
+ *
+ * 재는 폭이 하나뿐이라 그 사실이 다섯 판 동안 안 보였다. 폭을 하나 더 넣는다.
+ *
+ * ── 좁은 폭에서는 **무게를 판정하지 않는다** ───────────────────────────────
+ *
+ * 지배도는 「바탕 위에 덩어리 하나가 놓였는가」를 묻는데, 390px 에서는 모든
+ * 화면이 한 칸짜리 세로 목록이라 그 물음이 성립하지 않는다. 문턱을 낮추거나
+ * 화면을 문턱에 맞추는 대신 **물음이 성립하는 곳에만 건다** — 이 파일이 이미
+ * 다섯 화면에 대해 내린 것과 같은 판단이다.
+ *
+ * 자리 검사는 반대다. 「가장 무거운 것이 문서보다 위에 있는가」는 폭이 좁을수록
+ * 더 잘 성립하는 물음이고, 실제로 이번에 결함을 잡아낸 것이 그쪽이다.
+ */
+const VIEWPORTS = [
+  { width: 1440, height: 1000, suffix: "", dominance: true },
+  { width: 390, height: 844, suffix: "-390", dominance: false },
 ];
 
 /** 이 아래로 떨어지면 히어로가 주변과 같은 무게가 된 것이다. */
@@ -215,6 +254,7 @@ function ok(name, cond, extra = "") {
 }
 
 const browser = await chromium.launch();
+// 폭은 아래 루프가 갈아 끼운다(VIEWPORTS). 여기 값은 첫 폭일 뿐이다.
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 const page = await ctx.newPage();
 
@@ -247,6 +287,9 @@ async function loginAs(name) {
 
 await mkdir(OUT, { recursive: true });
 
+for (const vp of VIEWPORTS) {
+  await page.setViewportSize({ width: vp.width, height: vp.height });
+  console.log(`\n── ${vp.width}×${vp.height} ──────────────────────────────`);
 for (const screen of SCREENS) {
   await loginAs(screen.as ?? DEFAULT_ACCOUNT);
   if (screen.path) {
@@ -279,7 +322,7 @@ for (const screen of SCREENS) {
   };
 
   await writeFile(
-    new URL(`squint-${screen.name}-sharp.png`, OUT),
+    new URL(`squint-${screen.name}${vp.suffix}-sharp.png`, OUT),
     await page.screenshot({ clip }),
   );
 
@@ -290,7 +333,10 @@ for (const screen of SCREENS) {
     if (el) el.style.filter = `blur(${px}px)`;
   }, BLUR_PX);
   const blurred = await page.screenshot({ clip });
-  await writeFile(new URL(`squint-${screen.name}-blur.png`, OUT), blurred);
+  await writeFile(
+    new URL(`squint-${screen.name}${vp.suffix}-blur.png`, OUT),
+    blurred,
+  );
 
   // 흐린 그림 한 장을 브라우저 안에서 한 번에 격자로 잰다.
   // (칸마다 스크린샷을 따로 찍으면 24번 왕복이고, 그만큼 느리다)
@@ -430,11 +476,19 @@ for (const screen of SCREENS) {
 
   const where =
     anchor.declared === 0 ? "문서 선언 없음" : anchor.hit ? "문서 위" : "문서 밖";
+  // 크롬 높이 — **첫 내용에 닿기까지 지나야 하는 픽셀.** DESIGN.md §17.4 가
+  // 손으로 한 번 재고 만 값이라, 다음 판에서 다시 재려면 계측기를 새로 짜야
+  // 했다. 판정하지는 않는다(화면마다 옳은 값이 다르다). 매번 찍어 두면 어느
+  // 판에서 늘었는지는 로그를 나란히 놓는 것만으로 보인다.
+  const chrome =
+    anchor.docTop === null
+      ? "—"
+      : `${Math.round(anchor.docTop)}px (${Math.round((anchor.docTop / vp.height) * 100)}%)`;
   console.log(
-    `  · ${screen.label} — 지배도 ${dominance.toFixed(2)} · 1등 칸 (${Math.round(topX)}, ${Math.round(topY)}) ${where}`,
+    `  · ${screen.label} — 지배도 ${dominance.toFixed(2)} · 1등 칸 (${Math.round(topX)}, ${Math.round(topY)}) ${where} · 크롬 ${chrome}`,
   );
 
-  if (screen.assert) {
+  if (screen.assert && vp.dominance) {
     ok(
       `${screen.label} — 흐리게 보면 덩어리 하나가 선다`,
       dominance >= MIN_DOMINANCE,
@@ -472,22 +526,33 @@ for (const screen of SCREENS) {
   // 닿지 않으면서 그보다 위에 있는가.** 한 칸(228px)어치 크롬이 문서 위에
   // 통째로 얹혔을 때만 걸린다. 거칠지만 정확히 그것이 막으려던 것이다:
   // 예전 업무 보드는 배너 + 조건 폼 + 칩 줄로 문서 위에 370px 을 쌓고 있었다.
-  if (anchor.declared > 0) {
+  const placeAsserted =
+    anchor.declared > 0 && (vp.dominance || screen.narrowPlace !== false);
+  if (placeAsserted) {
     ok(
-      `${screen.label} — 문서 위쪽에 한 칸짜리 크롬이 없다`,
+      `${screen.label}${vp.suffix ? ` ${vp.width}px` : ""} — 문서 위쪽에 한 칸짜리 크롬이 없다`,
       topBottom > anchor.docTop,
       `1등 칸 아랫변 y=${Math.round(topBottom)} · 문서 윗변 y=${Math.round(anchor.docTop)}`,
     );
-  } else if (screen.assert) {
+  } else if (screen.assert && anchor.declared === 0) {
+    // ⚠ `screen.assert` 만 보고 실패를 선언하면 안 된다. 폭 하나에서 자리 검사를
+    // 쉬는 화면(narrowPlace: false)이 그 조건에 걸리면, 문서를 **선언했는데도**
+    // 「data-rank="doc" 없음」이라는 **틀린 이유**로 빨간불이 뜬다. 지금은 그
+    // 조합을 쓰는 화면이 없지만, 다음에 쓰는 사람은 없는 결함을 쫓게 된다.
     ok(`${screen.label} — 화면이 「문서」를 선언했다`, false, 'data-rank="doc" 없음');
   } else {
-    console.log(`     문서 선언이 없다 — 자리 검사는 건너뛴다`);
+    console.log(
+      anchor.declared === 0
+        ? `     문서 선언이 없다 — 자리 검사는 건너뛴다`
+        : `     이 폭에서는 아직 안 건다 — 숫자만 적어 둔다(DESIGN.md §18.10)`,
+    );
   }
 
   await page.evaluate(() => {
     const el = document.querySelector("main");
     if (el) el.style.filter = "";
   });
+}
 }
 
 await browser.close();

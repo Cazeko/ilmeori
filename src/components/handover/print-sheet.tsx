@@ -44,6 +44,35 @@ import { formatDate, formatFullDateTime, todayKST } from "@/lib/format";
  * 서명란은 손으로 적는 빈칸으로 두고, 물품·예산 항목도 빈칸으로 둔다.
  */
 
+/**
+ * 좁은 화면에서 **표만** 옆으로 민다.
+ *
+ * 재 보니 390px 에서 이 서식의 표 여섯 개가 전부 300px 로 눌려 있었고, 부모의
+ * `overflow-x` 가 `visible` 이라 **넘치는 것이 아니라 넘칠 수 없게 눌려**
+ * 있었다. 「1-가. 담당 업무」의 왼쪽 칸이 약 100px 이 되어 업무 제목 한 줄이
+ * 여덟 줄로 접혔다 — 「시행규칙 별지 제12호서식을 **그대로** 따릅니다」가
+ * 화면에서 깨지는 유일한 자리였다(DESIGN.md §18.2).
+ *
+ * 접지 않고 민다. 이 화면의 주장은 **모양**이고, 표의 행을 세로 목록으로
+ * 접으면 그 주장이 화면에서만 사라진다. 옆으로 미는 것은 종이를 손으로
+ * 옮기는 것과 같은 일이다.
+ *
+ * **글줄은 안 민다.** 서식 전체를 한 통으로 감싸면 본문 문단까지 576px 이
+ * 되어 한 줄을 읽는 데도 가로로 밀어야 한다. 미는 것은 표뿐이다.
+ *
+ * **밀 수 있다는 안내는 이 서식 안에 두지 않는다.** 서식은 종이이고, 화면
+ * 장치를 그 안에 넣으면 종이에도 실린다 — tests/handover-sheet.test.mjs [2]·[3]
+ * 이 문단 수와 뼈대를 세어 그것을 막는다(실제로 여기 한 줄을 넣었다가 네 건이
+ * 빨간불이 됐다). 안내는 서식 **위**, 캡션 옆에 선다(handover-screen.tsx).
+ *
+ * 굴림칸은 sm 미만에서만 생긴다(globals.css 의 .sheet-table-scroll) —
+ * 넓은 화면에서는 평범한 `<div>` 라 아무것도 자르지 않는다. 인쇄에서도
+ * 풀린다. 출처 서랍은 `fixed` 라 굴림칸에 잘리지 않는다.
+ */
+function TableScroll({ children }: { children: ReactNode }) {
+  return <div className="sheet-table-scroll">{children}</div>;
+}
+
 function who(p: Pick<Profile, "name" | "position">) {
   return [p.name, p.position].filter(Boolean).join(" ");
 }
@@ -61,6 +90,7 @@ function who(p: Pick<Profile, "name" | "position">) {
  */
 function WorkTable({ rows }: { rows: DraftParagraph[] }) {
   return (
+    <TableScroll>
     <table className="mt-2">
       <caption className="sr-only">업무별 인계 사항</caption>
       <thead>
@@ -86,6 +116,7 @@ function WorkTable({ rows }: { rows: DraftParagraph[] }) {
         ))}
       </tbody>
     </table>
+    </TableScroll>
   );
 }
 
@@ -166,6 +197,7 @@ export function HandoverPrintSheet({
     <article id={HANDOVER_SHEET_ID} className="sheet">
       <h1 className="text-center font-bold tracking-[0.3em]">업무인계·인수서</h1>
 
+      <TableScroll>
       <table className="avoid-break mt-6">
         <caption className="sr-only">인계자와 인수자</caption>
         {/* 칸 이름을 적는다. 종이만 손에 든 사람에게 「자원순환과 · 주무관 · 박준호」는
@@ -212,6 +244,7 @@ export function HandoverPrintSheet({
           </tr>
         </tbody>
       </table>
+      </TableScroll>
 
       {draft.blocks.map((block) => {
         const notes = notesByBlock.get(block.key) ?? [];
@@ -298,6 +331,7 @@ export function HandoverPrintSheet({
         <p>
           위와 같이 업무를 인계·인수합니다.
         </p>
+        <TableScroll>
         <table className="mt-3">
           <caption className="sr-only">서명</caption>
           <tbody>
@@ -316,6 +350,7 @@ export function HandoverPrintSheet({
             ))}
           </tbody>
         </table>
+        </TableScroll>
       </section>
 
       {/* ── 출처 ──────────────────────────────────────────────────────────

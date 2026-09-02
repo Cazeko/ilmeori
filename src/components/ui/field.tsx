@@ -17,7 +17,12 @@ const controlBase = [
   "w-full rounded-sm border bg-surface text-body text-gray-90",
   "placeholder:text-gray-60",
   "transition-colors duration-150",
-  "disabled:cursor-not-allowed disabled:bg-gray-5 disabled:text-gray-50",
+  // gray-50 이었다. 바탕(gray-5) 위에서 **4.0:1** 로 본문 기준 4.5 에 미달인데,
+  // 데모에서 폼을 통째로 감추고 있어서 그 칸이 화면에 뜬 적이 없었다.
+  // 이제 감추지 않고 못 쓰게만 그리므로(DESIGN.md §18.5) 읽혀야 한다 —
+  // 단추가 §17.1 에서 고른 것과 같은 gray-60(5.57:1)으로 올린다.
+  // tests/contrast.test.mjs 의 「비활성 입력칸 글자」가 지킨다.
+  "disabled:cursor-not-allowed disabled:bg-gray-5 disabled:text-gray-60",
 ];
 
 /*

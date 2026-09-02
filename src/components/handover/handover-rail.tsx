@@ -11,9 +11,16 @@ import { confirmHandover, executeHandover } from "@/lib/actions/handover";
 import { ButtonLink, DownloadLink } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { HandoverToc } from "@/components/handover/handover-toc";
-import { ProgressSteps } from "@/components/handover/progress-steps";
+import {
+  HANDOVER_STEPS,
+  ProgressSteps,
+} from "@/components/handover/progress-steps";
 import { josa } from "@/lib/format";
-import { HANDOVER_SCREENING_ANCHOR, handoverBlockAnchor } from "@/lib/types";
+import {
+  HANDOVER_SCREENING_ANCHOR,
+  HANDOVER_STATUS_LABEL,
+  handoverBlockAnchor,
+} from "@/lib/types";
 import type { DraftBlock } from "@/lib/handover-draft";
 import type {
   HandoverBlockKey,
@@ -121,29 +128,17 @@ export function HandoverRail({
         <ProgressSteps current={status} />
       </div>
 
-      {/* 항목 차례. 링크는 서식 안의 그 항목(handoverBlockAnchor)으로 간다. */}
+      {/* 항목 차례. 링크는 서식 안의 그 항목(handoverBlockAnchor)으로 간다.
+          좁은 화면에서는 이 기둥이 **서식 아래**에 서므로 여기서는 접는다 —
+          이미 지나온 문서의 목차는 길잡이가 아니라 되풀이다. 그 폭에서 목차가
+          맡던 일은 서식 위의 요약 줄(HandoverRailBrief)이 한다. */}
       {toc.length > 0 ? (
-      <nav aria-label="서식 항목" className="border-t border-rule-hair px-4 py-3">
+      <nav
+        aria-label="서식 항목"
+        className="hidden border-t border-rule-hair px-4 py-3 xl:block"
+      >
         <p className="text-body-xs font-bold text-gray-60">항목으로 가기</p>
-        <HandoverToc
-          items={[
-            ...toc.map((t) => ({
-              anchor: handoverBlockAnchor(t.key),
-              heading: t.heading,
-              tail: t.empty ? "빈칸" : t.notes > 0 ? `보충 ${t.notes}` : undefined,
-            })),
-            ...(notUsed > 0
-              ? [
-                  {
-                    anchor: HANDOVER_SCREENING_ANCHOR,
-                    heading: "규칙이 안 실은 것",
-                    tail: `${notUsed}건`,
-                    divider: true,
-                  },
-                ]
-              : []),
-          ]}
-        />
+        <HandoverToc items={tocItems(toc, notUsed)} />
       </nav>
       ) : null}
 
@@ -412,5 +407,104 @@ function Action({
       <RotateCcw aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
       <span>넘길 업무를 고르는 중입니다.</span>
     </p>
+  );
+}
+
+/** 서식 항목 차례 — 기둥과 요약 줄이 **같은 목록**을 본다. */
+function tocItems(
+  toc: Parameters<typeof HandoverRail>[0]["toc"],
+  notUsed: number,
+) {
+  return [
+    ...toc.map((t) => ({
+      anchor: handoverBlockAnchor(t.key),
+      heading: t.heading,
+      tail: t.empty ? "빈칸" : t.notes > 0 ? `보충 ${t.notes}` : undefined,
+    })),
+    ...(notUsed > 0
+      ? [
+          {
+            anchor: HANDOVER_SCREENING_ANCHOR,
+            heading: "규칙이 안 실은 것",
+            tail: `${notUsed}건`,
+            divider: true,
+          },
+        ]
+      : []),
+  ];
+}
+
+/**
+ * 좁은 화면에서 **서식 위에** 서는 요약 한 줄.
+ *
+ * ── 왜 생겼나 ──────────────────────────────────────────────────────────────
+ *
+ * xl 미만에서는 격자가 풀려 기둥이 서식 **위로** 통째로 올라왔다. 재 보니
+ * 390px 에서 서식 윗변이 **1911px** — 뷰포트 844px 의 2.3배였다(DESIGN.md
+ * §18.1). 그 1911px 안에 「내용을 확인했습니다」가 들어 있었다. **되돌릴 수
+ * 없는 확인이 확인 대상보다 두 화면 먼저 있었다는 뜻이다.**
+ *
+ * 그래서 기둥을 서식 아래로 내렸다. 코드 차례를 바꾼 것이라 눈의 차례와 탭
+ * 차례가 여전히 같다(`order` 를 쓰지 않은 이유는 handover-screen.tsx 에).
+ * 대신 그 폭에서 사람이 문서에 들어가기 **전에** 알아야 하는 것 둘만 여기
+ * 남긴다 — **지금 몇 단계인가**, 그리고 **어느 항목이 있는가.**
+ *
+ * 단계표를 그대로 올리지 않는다. 세로 넉 줄이 약 270px 이고, 그러면 이 요약이
+ * 다시 크롬이 된다. 한 줄이면 「2/4 초안 생성」으로 충분하다 — 넉 단계 전부와
+ * 각 단계의 설명은 서식 아래 기둥이 그대로 갖고 있다.
+ */
+export function HandoverRailBrief({
+  status,
+  toc,
+  notUsed,
+  hasAction,
+}: {
+  status: HandoverStatus;
+  toc: Parameters<typeof HandoverRail>[0]["toc"];
+  notUsed: number;
+  /** 서식 아래에 누를 것이 있는가. 있으면 그것이 어디 있는지 말해 준다. */
+  hasAction: boolean;
+}) {
+  const index = HANDOVER_STEPS.indexOf(status);
+
+  return (
+    <section
+      aria-label="인계 진행 요약"
+      className="rounded-sm border border-rule-frame bg-surface print:hidden xl:hidden"
+    >
+      <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 px-4 py-3">
+        <span className="text-body-sm font-bold tabular-nums text-accent-text">
+          {index + 1}/{HANDOVER_STEPS.length}
+        </span>
+        <span className="text-body-sm font-bold text-gray-90">
+          {HANDOVER_STATUS_LABEL[status]}
+        </span>
+        {hasAction ? (
+          <span className="text-body-xs break-keep text-gray-60">
+            누를 것은 서식 아래에 있습니다
+          </span>
+        ) : null}
+      </p>
+
+      {/* 접어 둔다. 펼침은 브라우저가 하므로 스크립트가 없어도 열린다.
+          기본이 닫힘인 이유는 이 판이 있는 자리 때문이다 — 문서에 닿기까지의
+          높이를 줄이려고 만든 것이 스스로 그 높이를 도로 먹으면 안 된다. */}
+      {toc.length > 0 ? (
+        <details className="border-t border-rule-hair">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 text-body-sm font-bold text-gray-60 [&::-webkit-details-marker]:hidden">
+            항목으로 가기
+            <span className="ml-auto text-body-xs font-normal tabular-nums">
+              {toc.length}개 항목
+            </span>
+          </summary>
+          <nav
+            aria-label="서식 항목"
+            className="border-t border-rule-hair px-4 py-3"
+          >
+            <HandoverToc items={tocItems(toc, notUsed)} />
+          </nav>
+        </details>
+      ) : null}
+    </section>
   );
 }

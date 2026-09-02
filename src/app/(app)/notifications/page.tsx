@@ -126,7 +126,7 @@ export default async function NotificationsPage() {
           <EmptyState
             icon={Bell}
             title="새 알림이 없습니다"
-            description="누가 회원님을 대화에서 부르거나, 쪽지를 보내거나, 참여 중인 업무가 움직이면 여기에 쌓입니다."
+            description="누가 대화에서 나를 부르거나, 쪽지를 보내거나, 참여 중인 업무가 움직이면 여기에 쌓입니다."
           />
         </div>
       )}

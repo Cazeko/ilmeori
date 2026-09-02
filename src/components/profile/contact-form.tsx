@@ -1,3 +1,4 @@
+import { Info } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -20,7 +21,19 @@ import type { ProfileView } from "@/lib/types";
  * 그대로라 브라우저가 알아서 처리하고, 제출은 303 + Location 으로 끝난다.
  * 결과는 주소의 ?msg= 가 나르고 화면 위 ActionFeedback 이 읽는다.
  */
-export function ContactForm({ view }: { view: ProfileView }) {
+export function ContactForm({
+  view,
+  canEdit,
+}: {
+  view: ProfileView;
+  /**
+   * 데모(읽기 전용)에서는 저장이 안 된다. 그때 **판을 통째로 안 그리던** 것을
+   * 고쳤다 — 이 화면은 세 덩어리(신원·연락처·부서 이동)라고 스스로 적어 두고
+   * 정작 가운데 하나가 말없이 사라지고 있었다(DESIGN.md §18.5).
+   * 이제 그리고, 못 쓰게만 만든다.
+   */
+  canEdit: boolean;
+}) {
   const { phone_ext: phoneExt, contact } = view;
 
   return (
@@ -30,7 +43,23 @@ export function ContactForm({ view }: { view: ProfileView }) {
         description="여기 두 칸만 본인이 고칠 수 있습니다."
       />
       <CardBody>
-        <form action={updateContact} className="flex flex-col gap-6">
+        <form action={updateContact}>
+          {!canEdit ? (
+            <p className="mb-5 flex items-start gap-2 border-l border-l-rule-hair py-2 pl-3 text-body-sm break-keep text-gray-60">
+              <Info aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
+              <span>
+                지금은{" "}
+                <strong className="font-bold text-gray-90">읽기 전용</strong>
+                입니다. 아래 칸은 실제 화면 그대로이며, 저장만 되지 않습니다.
+              </span>
+            </p>
+          ) : null}
+          {/* min-w-0 — fieldset 의 UA 기본값(min-inline-size: min-content)이
+              안쪽 flex 를 내용만큼 부풀린다. */}
+          <fieldset
+            disabled={!canEdit}
+            className="flex min-w-0 flex-col gap-6"
+          >
           <Field
             id="phone-ext"
             label="내선번호"
@@ -97,6 +126,7 @@ export function ContactForm({ view }: { view: ProfileView }) {
           <div className="flex justify-end">
             <SubmitButton pendingLabel="저장하는 중…">저장</SubmitButton>
           </div>
+          </fieldset>
         </form>
       </CardBody>
     </Card>

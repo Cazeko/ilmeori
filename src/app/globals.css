@@ -645,6 +645,44 @@
     font-weight: 400;
   }
 
+  /* ── 좁은 화면에서 표만 옆으로 민다 ──────────────────────────────────
+     390px 에서 이 표들이 전부 300px 로 눌려 있었다. 부모의 overflow-x 가
+     visible 이라 **넘치는 것이 아니라 넘칠 수 없게** 눌린 것이고, 그래서
+     「1-가. 담당 업무」의 왼쪽 칸이 약 100px 이 되어 제목 한 줄이 여덟 줄로
+     접혔다(DESIGN.md §18.2).
+
+     굴림칸은 sm(640px) 미만에서만 만든다. 넓은 화면에서 overflow 를 걸어 두면
+     아무것도 굴리지 않으면서 자르기만 하는 상자가 하나 늘어난다.
+
+     36rem(576px) 인 이유: sm 바로 아래(639px)에서 서식 안쪽 폭이 약 559px 이라
+     그보다 커야 「밀 수 있습니다」가 언제나 참이 된다. 안내가 참이 아닌 폭이
+     한 구간이라도 있으면 그 안내는 거짓말을 한 번 한 것이다. */
+  @media screen and (max-width: 639px) {
+    .sheet-table-scroll {
+      overflow-x: auto;
+      /* 굴림칸의 가장자리가 표의 먹색 괘선과 붙어 보이지 않게 한 칸 띄운다. */
+      padding-bottom: 4px;
+    }
+    .sheet-table-scroll > table {
+      min-width: 36rem;
+    }
+  }
+
+  /* 굴림칸이 있다는 것을 말하는 한 줄. 넓은 화면에서는 굴림칸이 없으므로
+     이 줄도 없다 — 없는 것을 설명하지 않는다. */
+  .sheet-scroll-hint {
+    display: none;
+  }
+  @media screen and (max-width: 639px) {
+    .sheet-scroll-hint {
+      display: block;
+      margin-top: 8px;
+      font-size: var(--text-body-xs);
+      color: var(--color-gray-60);
+      text-align: center;
+    }
+  }
+
   .sheet caption {
     margin-top: 12px;
     margin-bottom: 4px;

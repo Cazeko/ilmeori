@@ -292,7 +292,15 @@ function topChildren(markup) {
 const skeleton = topChildren(html);
 const wantSkeleton = [
   "h1",
-  "table",
+  // 사람 표(인계자·인수자)를 감싼 굴림칸이다. 표 자체가 아니라 `div` 인 이유는
+  // 좁은 화면에서 표만 옆으로 밀기 위해서다 — 390px 에서 이 표들이 300px 로
+  // 눌려 있었고, 부모의 overflow-x 가 visible 이라 **넘칠 수조차 없었다**
+  // (DESIGN.md §18.2 · print-sheet.tsx 의 TableScroll).
+  //
+  // 뼈대에 `div` 가 하나 늘어난 것이므로 여기서 못박고, 바로 아래에서 그
+  // 굴림칸이 **표 하나만** 담고 있는지 따로 센다. 안 그러면 이 자리가 무엇이든
+  // 넣어도 되는 자루가 된다.
+  "div",
   ...draft.blocks.map(() => "section"),
   "section", // 서명란
   "footer", // 맨아래 안내
@@ -302,6 +310,54 @@ ok(
   skeleton.join(" ") === wantSkeleton.join(" "),
   `있어야 할 것 [${wantSkeleton.join(" ")}] / 그려진 것 [${skeleton.join(" ")}]`,
 );
+
+// 굴림칸은 **표 하나만** 담는다. 뼈대에서 `table` 을 `div` 로 바꿔 준 대가로
+// 이것을 센다 — 이 검사가 없으면 「굴림칸」이라는 이름 뒤에 무엇이든 넣을 수 있다.
+//
+// ⚠ `/<div class="sheet-table-scroll">([\s\S]*?)<\/div>/` 로 짝을 지었다가 고쳤다.
+// 게으른 짝짓기는 **첫 `</div>` 에서 끊긴다.** 지금은 표 안에 `div` 가 없어서
+// 통과하지만, 칸 안에 화면 장치가 하나 들어오는 날 잘린 조각을 읽고 엉뚱한
+// 자식 목록을 찍는다 — 이 검사가 존재하는 이유가 바로 그 진단인데 말이다.
+// 위의 뼈대 검사와 같은 토크나이저로 깊이를 세어 진짜 자식만 본다.
+{
+  const wrappers = [];
+  let depth = null;
+  let kids = null;
+  for (const tk of tagTokens(html)) {
+    if (depth === null) {
+      if (!tk.close && tk.tag === "div" && /sheet-table-scroll/.test(tk.attrs)) {
+        depth = 0;
+        kids = [];
+      }
+      continue;
+    }
+    if (tk.close) {
+      depth -= 1;
+      if (depth < 0) {
+        wrappers.push(kids);
+        depth = null;
+        kids = null;
+      }
+      continue;
+    }
+    if (depth === 0) kids.push(tk.tag);
+    if (!tk.leaf) depth += 1;
+  }
+  ok(
+    "굴림칸은 표 하나만 담는다",
+    wrappers.length > 0 && wrappers.every((k) => k.join(" ") === "table"),
+    `굴림칸 ${wrappers.length}개 · [${wrappers.map((k) => k.join(" ")).join(" | ")}]`,
+  );
+  // 표가 굴림칸 밖에 남아 있지 않은지도 함께 센다. 하나라도 밖에 있으면 그
+  // 표만 좁은 화면에서 도로 눌린다.
+  const tables = [...html.matchAll(/<table\b/g)].length;
+  ok(
+    "서식의 표가 전부 굴림칸 안에 있다",
+    tables === wrappers.length,
+    `표 ${tables}개 · 굴림칸 ${wrappers.length}개`,
+  );
+}
+
 // 여기서도 아는 답을 먹여 본다. 깊이 세기가 어긋나면 위 항목이 **끼어든
 // 물건을 못 보고도** 통과할 수 있다. 특히 닫는 태그가 없는 `<input>` 이
 // 깊이를 어긋내는 것이 이 계산에서 제일 쉬운 실수다.

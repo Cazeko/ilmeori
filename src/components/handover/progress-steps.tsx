@@ -22,7 +22,17 @@ import { HANDOVER_STATUS_LABEL, type HandoverStatus } from "@/lib/types";
  * 색만으로 구분하지 않도록 지난 단계에는 체크 표시를, 현재 단계에는 글자를 굵게 둔다.
  */
 
-const ORDER: HandoverStatus[] = ["draft", "generated", "confirmed", "completed"];
+/**
+ * 네 단계의 차례. 좁은 화면의 요약 줄(handover-rail.tsx 의 HandoverRailBrief)도
+ * 이것을 본다 — 「2/4」의 두 숫자가 여기서 나온다. 차례를 두 곳에 적어 두면
+ * 단계가 하나 늘어나는 날 한쪽만 고친다.
+ */
+export const HANDOVER_STEPS: HandoverStatus[] = [
+  "draft",
+  "generated",
+  "confirmed",
+  "completed",
+];
 
 const DESC: Record<HandoverStatus, string> = {
   draft: "넘길 업무를 고릅니다",
@@ -32,14 +42,14 @@ const DESC: Record<HandoverStatus, string> = {
 };
 
 export function ProgressSteps({ current }: { current: HandoverStatus }) {
-  const index = ORDER.indexOf(current);
+  const index = HANDOVER_STEPS.indexOf(current);
 
   return (
     <ol className="flex flex-col">
-      {ORDER.map((step, i) => {
+      {HANDOVER_STEPS.map((step, i) => {
         const done = i < index;
         const now = i === index;
-        const last = i === ORDER.length - 1;
+        const last = i === HANDOVER_STEPS.length - 1;
         return (
           <li
             key={step}

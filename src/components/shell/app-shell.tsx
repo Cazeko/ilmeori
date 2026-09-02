@@ -167,6 +167,48 @@ function DemoNotice() {
   );
 }
 
+/**
+ * 검색 칸 한 벌 — 넓은 화면의 머리 줄과 좁은 화면의 펼침 칸이 같은 것을 쓴다.
+ *
+ * 두 벌로 적어 두면 한쪽만 고치는 날이 반드시 온다(위 NavList 와 같은 이유).
+ * `id` 만 다르다 — 한 문서에 같은 `id` 가 둘이면 `<label for>` 가 어느 칸을
+ * 가리키는지 정해지지 않고, 낭독기가 엉뚱한 칸의 이름을 읽는다.
+ */
+function SearchField({ id }: { id: string }) {
+  return (
+    <GetForm action="/works" role="search" className="w-full">
+      <label htmlFor={id} className="sr-only">
+        업무 검색
+      </label>
+      <div className="relative mx-auto w-full max-w-md">
+        <Search
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-40"
+        />
+        <input
+          id={id}
+          name="q"
+          type="search"
+          /* 문구를 「AI에게 물어보세요」로 바꾸지 않는다. 이 검색은 제목·설명에
+             낱말이 들어 있는지를 보는 것이고 어떤 모델도 부르지 않는다.
+             하지 않는 일을 칸에 적어 두면, 심사에서 한 번 눌러 보는 것으로
+             무너진다. 「인계서를 AI가 썼다」고 적지 않기로 한 것과 같은 규칙이다. */
+          /* 자리표시는 짧게 둔다. 예전 주석은 「131px 칸」을 전제로 그렇게
+             적었는데 그 전제가 틀렸었다 — 실제로는 56px 이었다. 지금 실측은
+             390px 에서 366px(펼친 줄) · 640px 에서 151px · 1440px 에서 448px
+             이다. 가장 좁은 자리가 151px 이고 「업무 찾기」는 거기서 안 잘린다.
+             짧은 쪽이 무엇을 넣는 칸인지 더 빨리 읽히기도 한다. */
+          placeholder="업무 찾기"
+          autoComplete="off"
+          /* text-body(17px) — iOS 는 16px 미만 입력칸을 탭하면 화면을 확대하고
+             되돌려 주지 않는다. 높이도 그에 맞춰 h-11(44px)로 올린다. */
+          className="h-11 w-full rounded-sm border border-gray-50 bg-gray-5 pr-3 pl-9 text-body text-gray-90 placeholder:text-gray-60 hover:border-gray-60 focus:bg-surface sm:text-body-sm"
+        />
+      </div>
+    </GetForm>
+  );
+}
+
 /* 옆줄 맨 아래에 시 표식이 하나 더 있었다(SidebarCityMark). 머리 줄에 이미
    「일머리 | 화성특례시」가 서 있어서, 옆줄에는 표식이 셋이었다 — 위의 것,
    아래의 것, 그리고 「시연용 가상 데이터」쪽지. 표식이 셋이면 어느 것도
@@ -210,6 +252,12 @@ export function AppShell({
    * Esc 를 눌렀을 때 닫는 데만 쓴다 — 없어도 서랍은 열리고 닫힌다.
    */
   const drawerRef = useRef<HTMLDetailsElement>(null);
+  /**
+   * 좁은 화면의 펼침 검색. 서랍과 같은 `<details>` 이고, 이 ref 도 서랍의 것과
+   * 같은 일만 한다 — **여는 데는 안 쓰고 닫는 데만 쓴다.** 스크립트가 없으면
+   * 열리기는 하되 저절로 닫히지 않을 뿐이고, 그때도 검색은 제 일을 다 한다.
+   */
+  const searchRef = useRef<HTMLDetailsElement>(null);
   // 서랍을 손으로 끌어 닫는다 — 이 앱에서 손짓이 개입하는 유일한 자리.
   // 닫는 길은 이 훅이 주는 closeDrawer 하나다(✕·덮개·Esc·화면 이동 전부).
   // ⚠ useNavPending 보다 **먼저** 불러야 한다. 둘 다 document 의 capture 단계에서
@@ -247,15 +295,26 @@ export function AppShell({
     navPending && !sameScreen && placeholderFor === navTarget;
 
   // 화면이 바뀌면 서랍을 접는다. 이동한 화면이 서랍에 가려지면 안 된다.
+  // 펼침 검색도 같이 접는다 — 찾으러 갔으면 그 결과를 봐야지, 방금 친 낱말이
+  // 결과 위를 덮고 있을 이유가 없다.
   useEffect(() => {
     closeDrawer();
+    if (searchRef.current) searchRef.current.open = false;
   }, [pathname, closeDrawer]);
 
   // Esc 로 닫는다. 브라우저가 <details> 에 대해 해 주지 않는 유일한 것이라
   // 여기서만 보탠다. 이게 없어도 서랍은 여닫힌다 — 닫는 단추가 안에 있다.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || !drawerRef.current?.open) return;
+      if (e.key !== "Escape") return;
+      // 펼침 검색이 열려 있으면 그것부터 닫는다. 둘이 동시에 열릴 일은 없지만
+      // 순서를 정해 두지 않으면 어느 날 둘 다 닫히거나 둘 다 안 닫힌다.
+      if (searchRef.current?.open) {
+        searchRef.current.open = false;
+        searchRef.current.querySelector("summary")?.focus();
+        return;
+      }
+      if (!drawerRef.current?.open) return;
       closeDrawer({ focus: true });
     };
     document.addEventListener("keydown", onKey);
@@ -271,7 +330,20 @@ export function AppShell({
       {/* ── 상단 바 ─────────────────────────────────────────────────────── */}
       {/* 상단 바와 왼쪽 메뉴는 종이에 나올 이유가 없다. 인쇄물은 결재에 올라가는
           문서 한 벌이지 화면의 사진이 아니다. */}
-      <header className="sticky top-0 z-20 flex h-header shrink-0 items-center gap-3 border-b border-rule-hair bg-surface px-3 sm:px-4 print:hidden">
+      {/* ── 좁은 화면에서 넘치지 않게 ──────────────────────────────────────
+          예전에는 검색이 `flex-1 min-w-0` 이라 남는 자리를 전부 흡수했다.
+          그래서 아무리 좁아져도 머리 줄은 안 넘쳤고, **대신 검색이 56px 이
+          되어 못 쓰는 칸이 됐다**(DESIGN.md §18.3). 검색을 44px 아이콘으로
+          붙박으면서 그 흡수재가 사라졌다 — 재 보니 360px 에서 12px 넘쳤다.
+
+          되돌리는 대신 자리를 낸다: 사이를 8px 로 좁히고(넓은 화면은 그대로),
+          표식의 글자를 줄일 수 있게 둔다.
+          문턱은 재서 정했다 — 글자를 단 채로 머리 줄이 필요로 하는 폭이
+          **367px** 이라, 375px(iPhone SE·8)에서는 그대로 서고 360px 에서만 접힌다. 마지막 수단으로 400px 미만에서는
+          글자를 접는다 — 그 폭에서 머리 줄이 답해야 하는 것은 「어느
+          제품인가」가 아니라 「어디로 가고 무엇을 찾나」이고, 표식 그림은
+          그대로 남는다(같은 이유로 시 표식이 이미 md 미만에서 접힌다). */}
+        <header className="sticky top-0 z-20 flex h-header shrink-0 items-center gap-2 border-b border-rule-hair bg-surface px-3 sm:gap-3 sm:px-4 print:hidden">
         {/* ── 좁은 화면의 서랍 ──────────────────────────────────────────
             <details> 라서 스크립트 없이 열린다. summary 가 곧 햄버거다. */}
         <details ref={drawerRef} data-drawer className="lg:hidden">
@@ -335,10 +407,10 @@ export function AppShell({
             한 선에 서고, 머리와 옆줄이 두 덩어리가 아니라 한 판으로 읽힌다. */}
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-2 pointer-coarse:min-h-11 lg:w-[calc(var(--spacing-sidebar)-1rem)]"
+          className="flex min-w-0 shrink items-center gap-2 pointer-coarse:min-h-11 sm:shrink-0 lg:w-[calc(var(--spacing-sidebar)-1rem)]"
         >
           <BrandMark className="size-8" />
-          <span className="text-body font-bold tracking-tight text-gray-90">
+          <span className="truncate text-body font-bold tracking-tight text-gray-90 max-[374px]:hidden">
             일머리
           </span>
           {/* 어느 조직을 위한 것인지. 세로선을 하나 세워 제품 이름과 갈라 둔다 —
@@ -355,44 +427,60 @@ export function AppShell({
             검색은 GET 폼이다. 자바스크립트 없이도 동작하고, 결과가 주소에 남는다.
             폭을 max-w-md 로 묶고 가운데에 세운다 — 남는 자리를 다 먹게 두면
             화면에서 가장 무거운 것이 검색칸이 되고, 정작 먼저 읽혀야 할
-            화면 제목과 보드가 그 뒤로 밀린다. */}
+            화면 제목과 보드가 그 뒤로 밀린다.
+
+            ── 좁은 화면에서는 접는다 ─────────────────────────────────────
+            한동안 이 칸이 좁은 화면에서도 `flex-1` 로 남는 자리를 받았다.
+            **재 보니 390px 에서 56px 이었다.** 이 주석 아래에 「131px 칸」을
+            전제로 자리표시를 「업무 찾기」로 줄여 놓았는데, 실제는 그 절반도
+            안 되어 자리표시가 「업」에서 잘렸다 — 남는 자리를 받는 쪽이라
+            머리 줄에 무엇이 붙을 때마다 조용히 줄어들고 있었다.
+
+            입력칸인데 못 쓰는 입력칸은 없느니만 못하다. sm 미만에서는 44px
+            아이콘 하나로 접고, 누르면 머리 줄 **아래로 한 줄이 펼쳐진다.**
+            서랍과 같은 `<details>` 라 여는 일을 브라우저가 한다 — 스크립트가
+            없어도 열리고, 없으면 저절로 닫히지 않을 뿐이다. */}
         {/* GetForm — 스크립트가 있으면 화면을 갈지 않고 옮긴다.
             평범한 GET 폼은 전체 페이지 로드였고, 그 뒤의 뒤로가기가 bfcache 를
             못 쓴다(응답에 no-store 가 붙는다). 자세한 이유는 get-form.tsx 에. */}
-        <GetForm
-          action="/works"
-          role="search"
-          className="flex min-w-0 flex-1 justify-center"
+        {/* `onSubmit` — 화면 이동만으로는 부족하다. 아래 pathname 효과는
+            `usePathname()` 을 보는데 그 값에는 물음표 뒤가 없어서, `/works` 에서
+            다시 검색하면 주소는 바뀌어도 효과가 안 돈다. 그러면 방금 친 낱말이
+            결과 첫 줄을 덮은 채로 남는다 — 다시 찾기가 오히려 흔한 쪽이다.
+            제출 사건은 안쪽 `<form>` 에서 여기까지 올라오므로 여기서 한 번
+            받으면 두 경우가 다 닫힌다. 스크립트가 없으면 문서를 새로 받으므로
+            애초에 닫힌 채로 온다. */}
+        <details
+          ref={searchRef}
+          onSubmit={() => {
+            if (searchRef.current) searchRef.current.open = false;
+          }}
+          className="sm:hidden"
         >
-          <label htmlFor="global-search" className="sr-only">
-            업무 검색
-          </label>
-          <div className="relative w-full max-w-md">
-            <Search
-              aria-hidden
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-40"
-            />
-            <input
-              id="global-search"
-              name="q"
-              type="search"
-              /* 문구를 「AI에게 물어보세요」로 바꾸지 않는다. 이 검색은 제목·설명에
-                 낱말이 들어 있는지를 보는 것이고 어떤 모델도 부르지 않는다.
-                 하지 않는 일을 칸에 적어 두면, 심사에서 한 번 눌러 보는 것으로
-                 무너진다. 「인계서를 AI가 썼다」고 적지 않기로 한 것과 같은 규칙이다. */
-              /* 좁은 화면에서는 짧게. 131px 칸에 「업무 제목으로 찾기」를 넣으면
-                 「업무 제목으」에서 잘려 무엇을 넣는 칸인지 못 읽는다. */
-              placeholder="업무 찾기"
-              autoComplete="off"
-              /* text-body(17px) — iOS 는 16px 미만 입력칸을 탭하면 화면을 확대하고
-                 되돌려 주지 않는다. 높이도 그에 맞춰 h-11(44px)로 올린다. */
-              className="h-11 w-full rounded-sm border border-gray-50 bg-gray-5 pr-3 pl-9 text-body text-gray-90 placeholder:text-gray-60 hover:border-gray-60 focus:bg-surface sm:text-body-sm"
-            />
+          <summary
+            aria-label="업무 검색"
+            className="flex size-11 shrink-0 cursor-pointer list-none items-center justify-center rounded-sm text-gray-60 transition-colors duration-150 hover:bg-gray-5 active:bg-gray-10 [&::-webkit-details-marker]:hidden"
+          >
+            <Search aria-hidden className="size-5" />
+          </summary>
+          {/* 머리 줄이 sticky 라 그 자체가 자리잡기 기준이다. 아래로 붙여 두면
+              펼쳐도 머리 줄 높이(56px)가 안 바뀌고, 본문이 밀리지 않는다. */}
+          <div className="absolute inset-x-0 top-full border-b border-rule-hair bg-surface px-3 py-2">
+            <SearchField id="global-search-narrow" />
           </div>
-        </GetForm>
+        </details>
 
-        {/* ── 오른쪽: 사람 ──────────────────────────────────────────────── */}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="hidden min-w-0 flex-1 justify-center sm:flex">
+          <SearchField id="global-search" />
+        </div>
+
+        {/* ── 오른쪽: 사람 ────────────────────────────────────────────────
+            `ml-auto` — sm 미만에서는 늘어나는 형제가 하나도 없다(검색이 아이콘
+            으로 접혔고 나머지는 전부 shrink-0). 그래서 이 무리가 왼쪽에 뭉쳐
+            600px 에서 오른쪽 221px 이 비어 있었다. sm 이상에서는 검색이
+            `flex-1` 로 남는 자리를 먼저 가져가므로 이 여백은 0 이 되어
+            아무 일도 하지 않는다. */}
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {bell}
           {/* 이름과 아바타를 **한 링크**로 묶어 내 프로필로 보낸다.
               둘을 각각 링크로 만들면 같은 곳으로 가는 링크가 나란히 둘이 되고,
@@ -406,7 +494,17 @@ export function AppShell({
           <Link
             href="/me"
             aria-current={pathname === "/me" ? "page" : undefined}
-            className="flex items-center gap-2 rounded-sm px-1 py-1 transition-colors duration-150 hover:bg-gray-5 active:bg-gray-10"
+            /* 손가락 환경에서 이 줄의 과녁은 40×40 이었다 — 머리 줄에서 44px 에
+               못 미치는 자리가 여기 하나뿐이었고, **바로 옆의 「계정 전환」은
+               같은 이유로 이미 44px 를 벌어 두었다.** 한 칸 건너뛴 것이다.
+
+               같은 수를 쓴다: 보이는 상자는 그대로 두고 ::after 로 닿는 넓이만
+               넓힌다. 다만 모양은 다르게 잡는다 — 옆엣것은 32px 정사각형이라
+               44×44 를 겹치면 되지만, 이 줄은 넓은 화면에서 이름·부서까지 안고
+               130px 이 넘는다. 그래서 가운데 44px 한 조각이 아니라 **줄 전체
+               폭으로 높이만 44px** 를 편다. 좁은 화면에서는 아바타 하나라
+               둘이 같은 결과가 되고, 넓은 화면에서는 이름 어디를 눌러도 같다. */
+            className="relative flex items-center gap-2 rounded-sm px-1 py-1 transition-colors duration-150 hover:bg-gray-5 active:bg-gray-10 pointer-coarse:after:absolute pointer-coarse:after:inset-x-0 pointer-coarse:after:top-1/2 pointer-coarse:after:h-11 pointer-coarse:after:-translate-y-1/2 pointer-coarse:after:content-['']"
           >
             <span className="hidden text-right sm:block">
               <span className="block text-body-sm font-bold text-gray-90">

@@ -1,7 +1,6 @@
-import { Clock } from "lucide-react";
+import { Clock, Info } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field, Select, Textarea } from "@/components/ui/field";
-import { Notice } from "@/components/ui/notice";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { cancelTransfer, requestTransfer } from "@/lib/actions/profile";
 import { formatDateTime } from "@/lib/format";
@@ -30,7 +29,7 @@ export function TransferSection({
   history: TransferRequestView[];
   /** 실·국 아래 과. 고르는 자리는 2단계까지만 편다. */
   tree: Array<Department & { children: Department[] }>;
-  /** 데모 모드에서는 쓰기가 없다. 그때는 폼 대신 사실을 적는다. */
+  /** 데모 모드에서는 쓰기가 없다. 그때도 폼은 그리고, 못 쓰게만 만든다. */
   canRequest: boolean;
 }) {
   return (
@@ -40,15 +39,14 @@ export function TransferSection({
         description="옮겨갈 부서의 상급자가 승인해야 소속이 바뀝니다."
       />
       <CardBody className="flex flex-col gap-6">
+        {/* 읽기 전용일 때 이 자리가 안내 상자 하나였다. 「화면과 동선은 그대로
+            보실 수 있습니다」라고 적어 놓고 정작 폼을 안 그렸다 —
+            화면이 자기가 하는 일과 반대를 말한 자리다(DESIGN.md §18.5).
+            폼을 그리고 못 쓰게만 만든다. 안내는 그 위에 한 줄로 남는다. */}
         {pending ? (
           <PendingRequest request={pending} canCancel={canRequest} />
-        ) : !canRequest ? (
-          <Notice tone="info" title="지금은 읽기 전용입니다">
-            데이터베이스에 연결하면 이 자리에서 이동을 신청할 수 있습니다. 화면과
-            동선은 그대로 보실 수 있습니다.
-          </Notice>
         ) : (
-          <RequestForm viewer={viewer} tree={tree} />
+          <RequestForm viewer={viewer} tree={tree} canRequest={canRequest} />
         )}
 
         {history.length > 0 ? <History items={history} /> : null}
@@ -114,12 +112,27 @@ function PendingRequest({
 function RequestForm({
   viewer,
   tree,
+  canRequest,
 }: {
   viewer: Profile;
   tree: Array<Department & { children: Department[] }>;
+  /** 데모(읽기 전용)에서는 신청이 안 된다. 감추지 않고 못 쓰게만 만든다. */
+  canRequest: boolean;
 }) {
   return (
-    <form action={requestTransfer} className="flex flex-col gap-6">
+    <form action={requestTransfer}>
+      {!canRequest ? (
+        <p className="mb-6 flex items-start gap-2 border-l border-l-rule-hair py-2 pl-3 text-body-sm break-keep text-gray-60">
+          <Info aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
+          <span>
+            지금은 <strong className="font-bold text-gray-90">읽기 전용</strong>
+            입니다. 데이터베이스에 연결하면 이 자리에서 이동을 신청할 수
+            있습니다.
+          </span>
+        </p>
+      ) : null}
+      {/* min-w-0 — fieldset 의 UA 기본값이 안쪽 flex 를 내용만큼 부풀린다. */}
+      <fieldset disabled={!canRequest} className="flex min-w-0 flex-col gap-6">
       <Field
         id="transfer-department"
         label="옮겨갈 부서"
@@ -166,6 +179,7 @@ function RequestForm({
       <div className="flex justify-end">
         <SubmitButton pendingLabel="신청하는 중…">이동 신청</SubmitButton>
       </div>
+      </fieldset>
     </form>
   );
 }

@@ -85,7 +85,7 @@ export default async function MyProfilePage({
         <>
           <TransferInbox items={inboxWithImpact} />
 
-          {canMutate ? <ContactForm view={view} /> : null}
+          <ContactForm view={view} canEdit={canMutate} />
 
           <TransferSection
             viewer={viewer}
