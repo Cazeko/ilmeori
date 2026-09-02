@@ -308,7 +308,9 @@ export function AppShell({
               <button
                 type="button"
                 aria-label="메뉴 닫기"
-                onClick={() => closeDrawer()}
+                // 이 단추는 닫히면서 사라진다. 초점을 햄버거로 돌려보내지
+                // 않으면 키보드 사용자의 초점이 허공에 남는다(Esc 와 같은 처리).
+                onClick={() => closeDrawer({ focus: true })}
                 className="flex size-11 cursor-pointer items-center justify-center rounded-sm text-gray-60 transition-colors duration-150 hover:bg-gray-5 active:bg-gray-10"
               >
                 <X aria-hidden className="size-5" />

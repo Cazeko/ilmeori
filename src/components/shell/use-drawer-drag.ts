@@ -106,6 +106,7 @@ export function useDrawerDrag(ref: RefObject<HTMLDetailsElement | null>) {
       panel.style.willChange = "";
       panel.style.userSelect = "";
       scrim.style.opacity = "";
+      scrim.style.pointerEvents = "";
       x = 0;
       velocity = 0;
     };
@@ -144,7 +145,12 @@ export function useDrawerDrag(ref: RefObject<HTMLDetailsElement | null>) {
      * 판은 left-0 fixed 라 사각형의 left 가 곧 지금의 이동량이다.
      */
     const takeOverPresentation = () => {
-      const running = panel.getAnimations();
+      // 자리를 옮기는 애니메이션(drawer-in)만 붙잡는다. 움직임을 줄인 환경의
+      // 크로스페이드는 자리가 그대로라 붙잡을 것이 없고, 붙잡았다고 치면
+      // 그 위의 첫 탭이 「멈춤」으로 오해되어 삼켜진다.
+      const running = panel
+        .getAnimations()
+        .filter((a) => (a as CSSAnimation).animationName === "ilm-drawer-in");
       if (running.length === 0) return false;
       const left = panel.getBoundingClientRect().left;
       for (const a of running) a.cancel();
@@ -170,6 +176,10 @@ export function useDrawerDrag(ref: RefObject<HTMLDetailsElement | null>) {
         done?.();
         return;
       }
+      // 닫히러 가는 동안 덮개는 손짓을 막지 않는다. 막으면 서랍이 사라지는
+      // 300ms 동안 화면에 한 탭이 죽는다 — 사용자는 이미 서랍을 치웠다고 알고
+      // 다음 것을 누른다. 판은 그대로 잡힌다(중단 가능).
+      scrim.style.pointerEvents = to < 0 ? "none" : "";
       const omega = (2 * Math.PI) / RESPONSE;
       const A = x - to;
       const B = velocity + omega * A;

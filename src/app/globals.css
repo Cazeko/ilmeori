@@ -487,10 +487,13 @@
     details[data-drawer][open] > [data-drawer-panel],
     details[data-drawer][open] > [data-drawer-scrim],
     details[open] > [data-jump-list],
+    [data-arrive],
     .animate-rise-in,
     .animate-scrim-in {
       animation: var(--animate-cross-fade) !important;
     }
+    /* 변형 클래스(sm:animate-* 같은)는 위 목록에 안 맞는다 — 그래서 화면 폭에
+       따라 달라지는 도착 표시는 클래스가 아니라 [data-arrive] 로 건다. */
   }
 
   /* ── 접히는 글은 밀려 내려온다 ──────────────────────────────────────────
@@ -546,6 +549,19 @@
      nav 라 클래스로 달면 첫 번에만 돈다 — [open] 이 붙을 때마다 새로 건다. */
   details[open] > [data-jump-list] {
     animation: var(--animate-rise-in);
+  }
+
+  /* 사람 카드(org/person-card.tsx). 좁은 화면의 시트는 스며 나오고, 넓은
+     화면의 창은 위에서 내려와 자리를 잡는다. 640px 을 창 크기로 넘나들면
+     애니메이션이 한 번 다시 도는데, 카드를 띄운 채 창을 그 폭으로 끄는 일이라
+     감수한다. */
+  [data-arrive="dialog"] {
+    animation: var(--animate-cross-fade);
+  }
+  @media (width >= 40rem) {
+    [data-arrive="dialog"] {
+      animation: var(--animate-rise-in);
+    }
   }
 }
 

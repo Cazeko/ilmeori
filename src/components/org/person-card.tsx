@@ -71,12 +71,15 @@ export function PersonCard({
         <section
           role="dialog"
           aria-labelledby={titleId}
-          // 넓은 화면의 창은 rise-in 으로 자리를 잡는다(덮개와 같은 프레임에).
-          // 좁은 화면의 시트에는 붙이지 않는다 — rise-in 은 위에서 내려오는
-          // 움직임인데 시트는 아래에서 온다. 출처와 다른 방향으로 나타나느니
-          // 덮개만 스며 나오는 편이 낫다. 움직임을 줄인 환경에서는 globals.css
-          // 가 둘 다 크로스페이드로 바꾼다.
-          className="pointer-events-auto flex max-h-full w-full flex-col overflow-y-auto rounded-sm border border-rule-frame bg-surface sm:max-w-md sm:animate-rise-in"
+          // 도착 표시는 globals.css 가 [data-arrive="dialog"] 로 건다: 넓은
+          // 화면의 창은 rise-in 으로 자리를 잡고(덮개와 같은 프레임에), 좁은
+          // 화면의 시트는 스며 나온다 — rise-in 은 위에서 내려오는 움직임인데
+          // 시트는 아래에서 오므로, 출처와 다른 방향으로 나타나느니 덮개처럼
+          // 스며 나오는 편이 낫다. 클래스(sm:animate-rise-in)로 달지 않는 이유는
+          // 움직임을 줄인 환경의 크로스페이드 규칙이 변형 클래스까지 맞히지
+          // 못해서다 — 속성 하나면 한 선택자로 덮인다.
+          data-arrive="dialog"
+          className="pointer-events-auto flex max-h-full w-full flex-col overflow-y-auto rounded-sm border border-rule-frame bg-surface sm:max-w-md"
         >
           {/* 스크립트가 있을 때만 얹히는 층 — Esc 로 닫고, 포커스를 옮기고,
               닫을 때 눌렀던 이름표로 되돌린다. 없으면 아래 ✕ 가 전부 한다. */}
