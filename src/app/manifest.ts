@@ -24,7 +24,10 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "일머리 — 부서 간 협업 업무공유 플랫폼",
+    // 지정과제 N7 의 공식 명칭(「부서 간 협업 업무공유 플랫폼」)은 README 부제·
+    // 로그인 화면 배지에 그대로 남아 있다 — 여기는 「홈 화면에 추가」 아이콘
+    // 아래 뜨는 이름이라, 무엇을 하는 도구인지가 더 급하다(layout.tsx 참조).
+    name: "일머리 — 인수인계 자동화 플랫폼",
     short_name: "일머리",
     description:
       "화성시 공무원이 팀 단위로 업무를 쌓고, 인사이동이 와도 그 기록을 끊김 없이 넘기는 내부 협업 플랫폼",

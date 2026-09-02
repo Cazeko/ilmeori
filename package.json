@@ -65,5 +65,5 @@
     "tailwindcss": "^4",
     "typescript": "^5"
   },
-  "description": "일머리 — 부서 간 협업 업무공유 플랫폼 (2026 화성시 AI·DATA 공모전 N7)"
+  "description": "일머리 — 인수인계 자동화 플랫폼 (2026 화성시 AI·DATA 공모전 지정과제 N7 「부서 간 협업 업무공유 플랫폼」)"
 }
