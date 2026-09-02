@@ -74,9 +74,14 @@ export function BureauJump({
         실·국으로 가기
         <ChevronDown aria-hidden className="size-4 text-gray-40" />
       </summary>
-      {/* 판 위에 뜨는 목록. 그림자 대신 frame 선 — 이 시스템의 위계 축은 선이다. */}
+      {/* 판 위에 뜨는 목록. 그림자 대신 frame 선 — 이 시스템의 위계 축은 선이다.
+          누른 단추 쪽(위)에서 내려와 자리를 잡는다(rise-in) — 목록이 어디서
+          나왔는지를 움직임이 답한다. 클래스가 아니라 globals.css 가
+          details[open] > [data-jump-list] 로 건다: 이 nav 는 닫혀도 DOM 에
+          남아 있어서, 클래스로 달면 첫 번에만 돌고 다시 열 때는 안 돈다. */}
       <nav
         aria-label="실·국 바로 가기"
+        data-jump-list
         className="absolute top-full right-0 z-10 mt-1 w-64 rounded-sm border border-rule-frame bg-surface py-1"
       >
         <ul className="max-h-[60dvh] overflow-y-auto rail-scroll">{items}</ul>

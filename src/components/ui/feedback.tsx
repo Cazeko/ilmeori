@@ -34,7 +34,9 @@ export function ActionFeedback({
       aria-live={quiet ? "polite" : "assertive"}
       // rise-in 이 답하는 질문은 「방금 뭔가 도착했나?」다. 이 상자는 방금
       // 누른 행동의 결과라 정확히 그 질문에 답한다(globals.css 의 움직임 셋).
-      className={cn("motion-safe:animate-rise-in", className)}
+      // motion-safe: 를 달지 않는다 — 움직임을 줄인 환경에서는 globals.css 가
+      // 한 번 도는 도착 표시를 전부 크로스페이드로 바꾼다.
+      className={cn("animate-rise-in", className)}
     >
       <Notice tone={feedback.tone}>{feedback.text}</Notice>
     </div>

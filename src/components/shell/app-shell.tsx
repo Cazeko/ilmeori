@@ -6,6 +6,7 @@ import { LinkPending } from "@/components/ui/link-pending";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { NavPlaceholder } from "@/components/shell/nav-placeholder";
 import { useNavPending } from "@/components/shell/use-nav-pending";
+import { useDrawerDrag } from "@/components/shell/use-drawer-drag";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
@@ -209,6 +210,12 @@ export function AppShell({
    * Esc 를 눌렀을 때 닫는 데만 쓴다 — 없어도 서랍은 열리고 닫힌다.
    */
   const drawerRef = useRef<HTMLDetailsElement>(null);
+  // 서랍을 손으로 끌어 닫는다 — 이 앱에서 손짓이 개입하는 유일한 자리.
+  // 닫는 길은 이 훅이 주는 closeDrawer 하나다(✕·덮개·Esc·화면 이동 전부).
+  // ⚠ useNavPending 보다 **먼저** 불러야 한다. 둘 다 document 의 capture 단계에서
+  // click 을 듣는데, 끌고 난 뒤의 click 을 이쪽이 먼저 막아야 저쪽이 그것을
+  // 「이동 시작」으로 오해하지 않는다(use-drawer-drag.ts 의 onClick).
+  const closeDrawer = useDrawerDrag(drawerRef);
 
   /**
    * 화면 이동이 진행 중인가 — 누른 그 순간부터.
@@ -241,21 +248,19 @@ export function AppShell({
 
   // 화면이 바뀌면 서랍을 접는다. 이동한 화면이 서랍에 가려지면 안 된다.
   useEffect(() => {
-    if (drawerRef.current) drawerRef.current.open = false;
-  }, [pathname]);
+    closeDrawer();
+  }, [pathname, closeDrawer]);
 
   // Esc 로 닫는다. 브라우저가 <details> 에 대해 해 주지 않는 유일한 것이라
   // 여기서만 보탠다. 이게 없어도 서랍은 여닫힌다 — 닫는 단추가 안에 있다.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const el = drawerRef.current;
-      if (e.key !== "Escape" || !el?.open) return;
-      el.open = false;
-      el.querySelector("summary")?.focus();
+      if (e.key !== "Escape" || !drawerRef.current?.open) return;
+      closeDrawer({ focus: true });
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  }, [closeDrawer]);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -288,23 +293,22 @@ export function AppShell({
             aria-hidden
             data-drawer-scrim
             className="fixed inset-0 z-30 block bg-gray-100/40"
-            onClick={() => {
-              if (drawerRef.current) drawerRef.current.open = false;
-            }}
+            onClick={() => closeDrawer()}
           />
 
           <div
             data-drawer-panel
-            className="fixed top-0 bottom-0 left-0 z-40 flex w-sidebar flex-col overflow-y-auto border-r border-rule-hair bg-surface"
+            // touch-pan-y pinch-zoom: 세로 손짓은 브라우저의 스크롤, 두 손가락은
+            // 확대이고, 한 손가락의 가로 손짓만 우리가 받는다(use-drawer-drag.ts).
+            // pan-y 만 두면 메뉴 위에서 확대가 안 된다.
+            className="fixed top-0 bottom-0 left-0 z-40 flex w-sidebar touch-pan-y touch-pinch-zoom flex-col overflow-y-auto border-r border-rule-hair bg-surface"
           >
             <div className="flex h-header shrink-0 items-center justify-between px-4">
               <span className="text-body font-bold text-gray-90">메뉴</span>
               <button
                 type="button"
                 aria-label="메뉴 닫기"
-                onClick={() => {
-                  if (drawerRef.current) drawerRef.current.open = false;
-                }}
+                onClick={() => closeDrawer()}
                 className="flex size-11 cursor-pointer items-center justify-center rounded-sm text-gray-60 transition-colors duration-150 hover:bg-gray-5 active:bg-gray-10"
               >
                 <X aria-hidden className="size-5" />

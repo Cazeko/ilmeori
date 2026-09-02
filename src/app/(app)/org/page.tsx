@@ -149,6 +149,9 @@ export default async function OrgPage({ searchParams }: PageProps<"/org">) {
           지나야 닫기 단추에 닿는다. */}
       {personId ? (
         <PersonCard
+          // 카드 안에서 다른 이름으로 건너뛰면(Tab → Enter, 앞으로·뒤로) 같은
+          // 자리의 같은 노드가 재사용되어 도착 표시가 안 돈다. 사람마다 새 카드다.
+          key={personId}
           view={view}
           closeHref={closeHref}
           triggerId={`p-${personId}`}

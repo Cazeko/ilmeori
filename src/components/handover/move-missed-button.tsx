@@ -100,7 +100,7 @@ export function MovedLabel({
     <p
       className={
         "mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-xs font-bold text-gray-90" +
-        (fresh ? " motion-safe:animate-rise-in" : "")
+        (fresh ? " animate-rise-in" : "")
       }
     >
       <CheckCircle2 aria-hidden className="size-4 shrink-0 text-success" />

@@ -347,17 +347,27 @@
 
      길이는 거리에 비례시킨다. 6px 움직이는 것과 260px 움직이는 것에 같은
      시간을 주면, 짧은 쪽은 느리고 긴 쪽은 급해 보인다.
-     (되돌아가는 길은 애니메이션하지 않는다 — 닫을 때 기다리게 하지 않는다)
+     (되돌아가는 길은 애니메이션하지 않는다 — 닫을 때 기다리게 하지 않는다.
+      단 하나, 서랍을 **손으로 끌어** 닫을 때는 손을 뗀 속도로 이어 간다 —
+      shell/use-drawer-drag.ts. 그건 장식이 아니라 손짓의 나머지다)
 
-     ※ prefers-reduced-motion: reduce 에서는 아래 @layer base 의 전역 규칙이
-       길이를 0.01ms 로 만든다. 아래 셋은 한 번만 돌고 마는 것이라 그것으로
-       충분하다 — 즉시 제자리에 놓인다.
-       **무한 반복인 것에는 통하지 않는다.** animate-spin 은 길이가 0 이 되면
-       멎는 게 아니라 뭉개진다. 그래서 도는 표시에는 motion-safe: 를 따로
-       붙인다(ui/link-pending.tsx, work/work-live.tsx, shell/nav-placeholder.tsx). */
+     ※ prefers-reduced-motion: reduce 에서의 규칙은 둘로 갈린다.
+       · 한 번 돌고 마는 도착 표시(위 셋)는 **없애지 않고 크로스페이드로 바꾼다**
+         — 아래 @layer base 의 reduce 블록이 .animate-rise-in · .animate-scrim-in ·
+         서랍 · 바로 가기 목록을 전부 --animate-cross-fade 로 덮는다. 움직임을
+         줄여 달라는 설정은 「흔들지 말라」지 「어디서 왔는지 말하지 말라」가
+         아니다(apple-design §14). 그래서 부르는 쪽은 motion-safe: 를 달지
+         않는다 — 달면 reduce 에서 아무것도 안 나와 하드컷이 된다.
+       · **무한 반복인 것에는 통하지 않는다.** animate-spin 은 길이가 0 이 되면
+         멎는 게 아니라 뭉개진다. 그래서 도는 표시에만 motion-safe: 를 따로
+         붙인다(ui/link-pending.tsx, work/work-live.tsx, shell/nav-placeholder.tsx). */
   --animate-rise-in: ilm-rise-in 180ms ease-out;
   --animate-drawer-in: ilm-drawer-in 220ms cubic-bezier(0.2, 0, 0, 1);
   --animate-scrim-in: ilm-scrim-in 220ms ease-out;
+  /* 움직임을 줄인 환경에서 위 셋을 대신하는 것. 자리는 안 옮기고 스며 나온다.
+     서랍과 덮개가 같은 값을 써야 한 판으로 도착한다 — 리터럴로 적어 두면
+     하나만 고쳐지고 하나는 남는다. */
+  --animate-cross-fade: ilm-scrim-in 160ms ease-out;
 
   /* ── 도는 지구본 ───────────────────────────────────────────────────────
      위 셋과 성질이 다르다. 셋은 **한 번 돌고 마는 것**이고 이것은 **무한
@@ -467,6 +477,20 @@
          길이만 0 으로 만들면 열리자마자 그 180ms 동안 포커스 테두리가 잘린다. */
       transition-delay: 0s !important;
     }
+    /* 한 번 돌고 마는 도착 표시는 밀려 들어오는 대신 **스며 나온다.** 움직임을
+       줄여 달라는 설정은 「없애 달라」가 아니라 「흔들지 말라」다 — 어디서
+       나왔는지는 여전히 답해야 하고, 짧은 불투명도 전이는 전정기관을
+       건드리지 않는다(apple-design §14: 슬라이드 대신 크로스페이드).
+       서랍과 덮개를 같은 값으로 묶는다 — 한쪽만 바꾸면 덮개가 먼저 덮이고
+       판이 뒤늦게 스며 나와 한 물건이 두 번 도착한다. 위 * 규칙보다 선택자가
+       구체적이라 !important 끼리 이쪽이 이긴다. */
+    details[data-drawer][open] > [data-drawer-panel],
+    details[data-drawer][open] > [data-drawer-scrim],
+    details[open] > [data-jump-list],
+    .animate-rise-in,
+    .animate-scrim-in {
+      animation: var(--animate-cross-fade) !important;
+    }
   }
 
   /* ── 접히는 글은 밀려 내려온다 ──────────────────────────────────────────
@@ -516,6 +540,12 @@
   }
   details[data-drawer][open] > [data-drawer-panel] {
     animation: var(--animate-drawer-in);
+  }
+
+  /* 조직도의 「실·국으로 가기」 목록(org/bureau-jump.tsx). 닫혀도 DOM 에 남는
+     nav 라 클래스로 달면 첫 번에만 돈다 — [open] 이 붙을 때마다 새로 건다. */
+  details[open] > [data-jump-list] {
+    animation: var(--animate-rise-in);
   }
 }
 
