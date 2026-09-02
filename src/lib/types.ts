@@ -330,7 +330,21 @@ export interface Handover {
   document_draft: string | null;
   ai_model: string | null;
   generated_at: string | null;
+  /** 인계자가 확인한 시각 */
   confirmed_at: string | null;
+  /** 인수자가 확인한 시각. 이 둘이 다 차야 결재 상신으로 넘어간다(0026). */
+  accepted_at: string | null;
+  /**
+   * 입회자 — 별지 제12호서식의 셋째 서명란.
+   *
+   * 인계자 쪽 부서의 최고서열자이고, 인계를 만들 때 DB 가 정해 박아 둔다.
+   * 없을 수 있다(인계자가 그 부서에서 가장 높은데 상위 부서에도 사람이 없는
+   * 경우). 그때는 인계자가 마지막 걸음을 밟는다 — 사람이 없다고 인사발령 난
+   * 업무가 안 넘어가면 안 된다.
+   */
+  witness_id: string | null;
+  /** 입회자가 승인하며 적은 근거 — 온나라 문서번호나 결재일 */
+  witness_note: string | null;
   completed_at: string | null;
   created_at: string;
 }
@@ -339,6 +353,29 @@ export interface HandoverItem {
   handover_id: string;
   work_id: string;
   transferred: boolean;
+}
+
+/**
+ * 별지 제12호서식 서명란의 세 줄에 찍을 시각.
+ *
+ * 화면·종이·파일 셋이 **같은 함수**를 부른다. 세 곳에서 각자 칸을 고르면
+ * 언젠가 한 곳만 다른 시각을 찍고, 그 어긋남은 결재에 올라간 뒤에 발견된다.
+ *
+ * 입회자의 시각이 `completed_at` 인 이유: 입회자가 누르는 단추가 곧 실행이다.
+ * 그 사람에게는 「확인」과 「완료」가 같은 한 번이라 칸을 따로 두지 않았다.
+ */
+export function handoverSignedAt(h: Handover): {
+  from: string | null;
+  to: string | null;
+  witness: string | null;
+} {
+  return {
+    from: h.confirmed_at,
+    to: h.accepted_at,
+    // 입회자가 없는 인계는 인계자가 마지막 걸음을 밟는다(0026). 그때 셋째 줄에
+    // 시각이 찍히면 서명하지 않은 사람이 서명한 것처럼 보인다.
+    witness: h.witness_id ? h.completed_at : null,
+  };
 }
 
 /**
@@ -736,10 +773,17 @@ export const VISIBILITY_HINT: Record<WorkVisibility, string> = {
   city: "시 전체 직원이 열람할 수 있습니다.",
 };
 
+/**
+ * 인계 단계의 이름.
+ *
+ * 상태값은 넷 그대로인데 뜻이 옮겨졌다(0026). `generated` 는 「초안이 나왔다」가
+ * 아니라 **둘이 확인하는 중**이고, `confirmed` 는 「인계자가 확인했다」가 아니라
+ * **결재를 받는 중**이다. 이름이 옛 뜻으로 남아 있으면 화면이 거짓말을 한다.
+ */
 export const HANDOVER_STATUS_LABEL: Record<HandoverStatus, string> = {
   draft: "대상 선정",
-  generated: "초안 생성",
-  confirmed: "인계자 확인",
+  generated: "확인 서명",
+  confirmed: "결재 상신",
   completed: "인수 완료",
 };
 

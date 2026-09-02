@@ -90,6 +90,8 @@ try {
         access_log: works.accessLogs.length,
         approval: works.approvals.length,
         approval_step: works.approvalSteps.length,
+        note: works.notes.length,
+        notification: works.notifications.length,
       },
       null,
       2,
@@ -131,6 +133,10 @@ function buildReset() {
     "access_log",
     "handover",
     "handover_item",
+    // 쪽지와 알림은 work 를 타고 cascade 로도 지워지지만, work_id 가 없는 알림은
+    // 안 지워진다. 남은 한 줄이 다음 시연의 종에 그대로 뜬다.
+    "note",
+    "notification",
   ];
   return [
     "-- =============================================================================",
@@ -228,6 +234,8 @@ function build(org, works) {
     accessLogs,
     approvals,
     approvalSteps,
+    notes,
+    notifications,
   } = works;
 
   const L = [];
@@ -558,14 +566,19 @@ function build(org, works) {
     "-- -----------------------------------------------------------------------------",
     "-- 9. 인계·인수 (박준호 → 이하람)",
     "-- -----------------------------------------------------------------------------",
+    // 입회자를 함께 넣는다. 안 넣으면 0026 의 트리거가 그 자리에서 골라 채우는데,
+    // 목업이 고른 사람과 그 함수가 고른 사람이 다르면 목업 데모와 붙인 데모가
+    // 서로 다른 계정에게 「당신 차례입니다」라고 말한다.
     "insert into handover (",
-    "  id, from_profile_id, to_profile_id, status, ai_model, generated_at, created_at",
+    "  id, from_profile_id, to_profile_id, status, ai_model, generated_at, created_at,",
+    "  confirmed_at, accepted_at, witness_id",
     ") values",
     rows(
       handovers.map(
         (h) =>
           `${q(h.id)}, ${q(h.from_profile_id)}, ${q(h.to_profile_id)}, ${q(h.status)}, ` +
-          `${q(h.ai_model)}, ${ts(h.generated_at)}, ${ts(h.created_at)}`,
+          `${q(h.ai_model)}, ${ts(h.generated_at)}, ${ts(h.created_at)}, ` +
+          `${ts(h.confirmed_at)}, ${ts(h.accepted_at)}, ${h.witness_id ? q(h.witness_id) : "NULL"}`,
       ),
     ) +
       // ai_model 만은 덮어쓴다. 「무엇으로 만들었는지」를 적는 감사용 칸이라
@@ -656,9 +669,89 @@ function build(org, works) {
     "",
   );
 
+  // --- note -----------------------------------------------------------------
   p(
     "-- -----------------------------------------------------------------------------",
-    "-- 12. 트리거를 다시 켠다",
+    "-- 12. 쪽지",
+    "--",
+    "-- 데모 계정의 쪽지함이 비어 있으면 「이 기능은 안 쓰나 보다」로 읽힌다.",
+    "-- 목업에는 있는데 DB 에는 없었던 표라, 붙여 놓은 데모와 목업 데모가 서로",
+    "-- 다른 화면을 보여 주고 있었다.",
+    "--",
+    "-- 트리거를 끄는 이유가 셋이다.",
+    "--   ① trg_note_activity 가 쪽지마다 이력을 남긴다 — 시각이 전부 지금으로",
+    "--      찍혀서 8번에서 공들여 만든 다섯 달치 이력 위에 오늘 것만 쌓인다.",
+    "--   ② trg_note_thread_guard 는 실의 뿌리를 표에서 찾는다. 뿌리와 답장이",
+    "--      **같은 insert 문 안에** 있어서 보이느냐가 실행 순서에 달린다.",
+    "--   ③ trg_note_notify 는 auth.uid() 가 없으면 스스로 빠지므로(app.notify)",
+    "--      끄나 마나지만, 그 사실에 기대지 않는다.",
+    "-- thread_id 는 목업이 이미 들고 있으므로 ① 이 꺼져도 비는 칸이 없다.",
+    "-- -----------------------------------------------------------------------------",
+    "alter table note disable trigger user;",
+    "alter table note disable row level security;",
+    "",
+    "insert into note (",
+    "  id, work_id, thread_id, author_id, recipient_id, body,",
+    "  read_at, deleted_at, created_at",
+    ") values",
+    rows(
+      [...notes]
+        .sort((a, b) => a.created_at.localeCompare(b.created_at))
+        .map(
+          (n) =>
+            `${q(n.id)}, ${q(n.work_id)}, ${q(n.thread_id)}, ${q(n.author_id)}, ${q(n.recipient_id)}, ` +
+            `${q(n.body)}, ${ts(n.read_at)}, ${ts(n.deleted_at)}, ${ts(n.created_at)}`,
+        ),
+    ) + "\non conflict (id) do nothing;",
+    "",
+    "alter table note enable row level security;",
+    "alter table note enable trigger user;",
+    "",
+  );
+
+  // --- notification ---------------------------------------------------------
+  p(
+    "-- -----------------------------------------------------------------------------",
+    "-- 13. 알림",
+    "--",
+    "-- 평소에는 app.notify 만이 이 표를 채운다. 그 함수는 auth.uid() 가 없으면",
+    "-- 아무것도 안 하므로(0021, 시드가 계정마다 수백 줄을 쌓지 않도록 한 판단)",
+    "-- 위에서 넣은 쪽지는 알림을 한 건도 만들지 않는다.",
+    "--",
+    "-- 그대로 두면 쪽지함에는 안 읽은 배지가 뜨는데 종은 비어 있다. 그 화면은",
+    "-- 「알림이 고장 났다」로 읽힌다. 그래서 안 읽은 쪽지에 딸린 알림만은 직접 넣는다.",
+    "-- 만드는 길을 여는 게 아니라 이력·열람기록과 같은 시드 예외다.",
+    "--",
+    "-- id 는 identity 열이라 값을 주지 않는다. 자연키가 없어 on conflict 를 못 거니",
+    "-- 표가 비어 있을 때만 넣는다(8·11 과 같은 짜임).",
+    "-- -----------------------------------------------------------------------------",
+    "alter table notification disable row level security;",
+    "",
+    "do $$ begin",
+    "if not exists (select 1 from notification) then",
+    "insert into notification (",
+    "  recipient_id, kind, work_id, target_id, actor_id, summary, count, read_at, created_at",
+    ") values",
+    rows(
+      [...notifications]
+        .sort((a, b) => a.created_at.localeCompare(b.created_at))
+        .map(
+          (n) =>
+            `${q(n.recipient_id)}, ${q(n.kind)}::notification_kind, ` +
+            `${n.work_id ? q(n.work_id) : "NULL"}, ${n.target_id ? q(n.target_id) : "NULL"}, ` +
+            `${q(n.actor_id)}, ${q(n.summary)}, ${n.count}, ${ts(n.read_at)}, ${ts(n.created_at)}`,
+        ),
+    ) + ";",
+    "end if;",
+    "end $$;",
+    "",
+    "alter table notification enable row level security;",
+    "",
+  );
+
+  p(
+    "-- -----------------------------------------------------------------------------",
+    "-- 14. 트리거를 다시 켠다",
     "--",
     "-- 여기서부터는 평소대로 동작한다. 사용자가 무언가 고치면 이력이 자동으로 쌓인다.",
     "-- -----------------------------------------------------------------------------",

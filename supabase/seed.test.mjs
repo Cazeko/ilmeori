@@ -131,6 +131,24 @@ const checks = [
     join handover h on h.id = i.handover_id
     join work w on w.id = i.work_id
     where w.owner_id <> h.from_profile_id`],
+  // 시드가 손으로 적은 입회자와 0026 의 함수가 고르는 사람이 같아야 한다.
+  // 어긋나면 목업 데모와 붙인 데모가 서로 다른 계정에게 「당신 차례입니다」라고
+  // 말하고, 그 사실은 시연 도중에야 드러난다.
+  ["입회자가 규칙대로 정해져 있다", `
+    select count(*)::int as n from handover h
+    where h.witness_id is distinct from app.pick_witness(h.from_profile_id)`],
+  ["쪽지가 가리키는 업무가 모두 존재한다", `
+    select count(*)::int as n from note n
+    where n.work_id not in (select id from work)`],
+  ["쪽지 실의 뿌리가 모두 있다", `
+    select count(*)::int as n from note n
+    where n.thread_id not in (select id from note)`],
+  ["안 읽은 쪽지에는 알림이 붙어 있다", `
+    select count(*)::int as n from note n
+    where n.read_at is null and not exists (
+      select 1 from notification t
+      where t.kind = 'note' and t.recipient_id = n.recipient_id
+        and t.target_id = n.thread_id)`],
 ];
 for (const [label, sql] of checks) {
   const { rows } = await db.query(sql);

@@ -24,6 +24,7 @@
     "icons": "node scripts/gen-icons.mjs",
     "fonts": "node scripts/build-font-css.mjs",
     "test:browser": "node tests/browser.test.mjs",
+    "test:handover-flow": "node tests/handover-flow.test.mjs",
     "test:realtime": "node tests/realtime.test.mjs",
     "db:realtime": "node supabase/realtime.probe.mjs",
     "check": "npm run typecheck && npm run test:safe-next && npm run test:feedback-url && npm run test:hwpx && npm run test:docx && npm run test:cues && npm run test:contrast && npm run test:design && npm run test:overdue && npm run test:crdt && npm run test:engine && npm run test:save && npm run test:data-contract && npm run test:handover-draft && npm run test:sheet && npm run test:handover-hwpx && npm run test:proof && npm run db:verify && npm run db:test && npm run db:seed:test",

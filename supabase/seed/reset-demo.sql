@@ -21,7 +21,9 @@ truncate
   activity,
   access_log,
   handover,
-  handover_item
+  handover_item,
+  note,
+  notification
 restart identity cascade;
 
 -- 이제 seed/demo.sql 을 다시 돌린다.

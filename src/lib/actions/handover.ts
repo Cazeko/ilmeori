@@ -56,35 +56,80 @@ import { changed, finish, openSession, holdFloor } from "./guard";
 /** 초안을 만든 방식. 모델 이름이 아니라 만든 방법을 적는 칸으로 쓴다. */
 const DRAFT_GENERATOR = "rule-based/v1";
 
-export async function confirmHandover() {
+/**
+ * 확인 서명 — 인계자와 인수자가 **각각** 누른다.
+ *
+ * 두 사람이 같은 단추를 쓴다. 어느 칸에 적을지는 부르는 사람이 정하는 것이
+ * 아니라 절차(public.sign_handover)가 auth.uid() 를 보고 정한다 — 칸을 인자로
+ * 받으면 남의 칸을 지목할 수 있다(0026).
+ *
+ * 둘 다 차면 절차가 상태를 `confirmed`(결재 상신)로 올린다. 한쪽만 차 있으면
+ * 그대로 기다린다. 「기다린다」가 곧 보완 요청이고, 왜 안 눌렀는지는 문답에 남는다.
+ */
+export async function signHandover() {
   const viewer = await requireViewer();
   const view = await getHandoverFor(viewer);
   if (!view) return;
-  if (view.from.id !== viewer.id) return; // 인계자만 확인할 수 있다
+
+  const isFrom = view.from.id === viewer.id;
+  const isTo = view.to.id === viewer.id;
+  if (!isFrom && !isTo) return; // 입회자는 여기서 서명하지 않는다
   if (view.handover.status !== "generated") return;
+  // 두 번 눌러도 아무 일도 안 일어난다. 절차도 같은 것을 막지만(0026),
+  // 여기서 먼저 돌려보내면 화면이 오류 대신 그냥 조용하다.
+  if (isFrom && view.handover.confirmed_at) return;
+  if (isTo && view.handover.accepted_at) return;
 
   if (isSupabaseConfigured) {
     const supabase = await createClient();
-    const { error } = await supabase
-      .from("handover")
-      .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
-      .eq("id", view.handover.id);
+    const { error } = await supabase.rpc("sign_handover", {
+      p_handover_id: view.handover.id,
+    });
     if (error) throw error;
   } else {
     const state = await getDemoState();
-    await setDemoState({ ...state, handoverStatus: "confirmed" });
+    const now = new Date().toISOString();
+    const confirmedAt = isFrom ? now : (state.confirmedAt ?? null);
+    const acceptedAt = isTo ? now : (state.acceptedAt ?? null);
+    await setDemoState({
+      ...state,
+      confirmedAt: confirmedAt ?? undefined,
+      acceptedAt: acceptedAt ?? undefined,
+      handoverStatus: confirmedAt && acceptedAt ? "confirmed" : "generated",
+    });
   }
 
   revalidatePath("/handover");
 }
 
-export async function executeHandover() {
+/**
+ * 예전 이름. 인계자만 눌렀고 그 한 번으로 확인이 끝나던 시절의 것이다.
+ * 폼 하나가 아직 이 이름을 부르고 있을 수 있어 남겨 둔다 — 하는 일은 같다.
+ */
+export const confirmHandover = signHandover;
+
+/**
+ * 마지막 걸음 — **입회자**가 밟는다(0026).
+ *
+ * 결재가 실제로 났는지는 시스템이 모른다. 온나라 연동이 없으므로 이 단추는
+ * 「결재가 났다」는 사실에 대한 사람의 진술이고, 그래서 근거를 함께 받는다.
+ * 비우면 절차가 거절한다 — 앱에서 미리 막지 않는 이유는 그 판정이 두 벌이
+ * 되면 반드시 어긋나기 때문이다(DB 가 유일한 판정자다).
+ */
+export async function executeHandover(formData?: FormData) {
   const viewer = await requireViewer();
   const view = await getHandoverFor(viewer);
   if (!view) return;
-  if (view.from.id !== viewer.id) return;
+
+  const witness = view.witness;
+  // 입회자가 있으면 그 사람만, 없으면 인계자가 밟는다(0026 §4 와 같은 판정).
+  if (witness ? witness.id !== viewer.id : view.from.id !== viewer.id) return;
   // 확인 단계를 건너뛴 실행은 받지 않는다. 되돌릴 수 없는 동작이다.
   if (view.handover.status !== "confirmed") return;
+
+  const rawNote = formData?.get("witnessNote");
+  const witnessNote = typeof rawNote === "string" ? rawNote.trim() : "";
+  if (witness && !witnessNote) finish("/handover", "handover.no_witness_note");
 
   if (isSupabaseConfigured) {
     const supabase = await createClient();
@@ -95,6 +140,7 @@ export async function executeHandover() {
     // 넘긴 줄 알고 떠나는 일이 생긴다.
     const { data: moved, error } = await supabase.rpc("execute_handover", {
       p_handover_id: view.handover.id,
+      p_witness_note: witnessNote || null,
     });
     if (error) throw error;
 
@@ -115,6 +161,7 @@ export async function executeHandover() {
     // 실행한 시각을 적어 둔다. 안 적으면 서식의 「인계일」이 「오늘 (예정)」으로
     // 남아, 바로 위에서 「인계가 끝났습니다」라고 말하는 화면과 어긋난다.
     completedAt: new Date().toISOString(),
+    witnessNote: witnessNote || undefined,
     transferred: view.items.map((i) => i.work.id),
   });
 
@@ -208,6 +255,12 @@ export async function startHandover(formData: FormData) {
     ai_model: DRAFT_GENERATOR,
     generated_at: now,
     confirmed_at: null,
+    accepted_at: null,
+    // 입회자는 DB 가 정한다(0026 의 trg_handover_witness). 앱이 골라 실어 보내면
+    // 남을 입회자로 적어 넣는 길이 열린다. 초안을 만드는 데는 안 쓰는 값이라
+    // 여기서는 비워 둔다 — 화면은 저장된 뒤 다시 읽은 값을 본다.
+    witness_id: null,
+    witness_note: null,
     completed_at: null,
     created_at: now,
   };
@@ -218,6 +271,9 @@ export async function startHandover(formData: FormData) {
     handover,
     from: viewer,
     to,
+    // 초안에는 입회자가 안 실린다. 서명란은 서식이 갖고 있고(print-sheet·
+    // handover-export), 초안은 본문 일곱 칸만 만든다.
+    witness: null,
     items: targets.map((work) => ({ work, transferred: false })),
   });
 

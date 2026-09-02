@@ -134,6 +134,8 @@ export function HandoverPrintSheet({
   notesByBlock,
   from,
   to,
+  witness,
+  signedAt,
   fromDept,
   toDept,
   generatedAt,
@@ -153,6 +155,10 @@ export function HandoverPrintSheet({
   notesByBlock: ReadonlyMap<string, HandoverNoteWithAuthor[]>;
   from: Profile;
   to: Profile;
+  /** 입회자 — 별지 제12호서식의 셋째 서명란(0026). 없는 인계도 있다. */
+  witness: Profile | null;
+  /** 세 사람의 확인 시각. 안 누른 줄은 빈칸으로 남는다. */
+  signedAt: { from: string | null; to: string | null; witness: string | null };
   fromDept: Department | null;
   toDept: Department | null;
   generatedAt: string | null;
@@ -325,8 +331,12 @@ export function HandoverPrintSheet({
       })}
 
       {/* ── 서명란 ─────────────────────────────────────────────────────────
-          별지 제12호서식에는 인계자·인수자·입회자 서명란이 있다.
-          전자서명 연계를 구현하지 않았으므로 빈칸으로 두고 손으로 받는다. */}
+          별지 제12호서식에는 인계자·인수자·입회자 서명란이 있다. 앞의 둘만
+          이름을 찍고 셋째 줄은 통째로 빈칸이었다 — 시스템이 입회자를 몰랐다.
+
+          이제 셋이 화면에서 확인을 누른다(0026). 전자서명은 여전히 아니므로
+          「(서명 또는 인)」은 그대로 두되 누가 언제 확인했는지를 찍고, **안 누른
+          줄은 빈칸으로 남긴다.** 이 종이는 결재에 올라간다. */}
       <section className="avoid-break mt-8">
         <p>
           위와 같이 업무를 인계·인수합니다.
@@ -335,17 +345,21 @@ export function HandoverPrintSheet({
         <table className="mt-3">
           <caption className="sr-only">서명</caption>
           <tbody>
-            {[
-              ["인계자", who(from)],
-              ["인수자", who(to)],
-              ["입회자", ""],
-            ].map(([label, name]) => (
+            {(
+              [
+                ["인계자", who(from), signedAt.from],
+                ["인수자", who(to), signedAt.to],
+                ["입회자", witness ? who(witness) : "", signedAt.witness],
+              ] as const
+            ).map(([label, name, at]) => (
               <tr key={label}>
                 <th scope="row" className="w-20 text-center">
                   {label}
                 </th>
                 <td className="w-1/2">{name}</td>
-                <td className="text-center">(서명 또는 인)</td>
+                <td className="text-center">
+                  {at ? `${formatDate(at)} 확인` : "(서명 또는 인)"}
+                </td>
               </tr>
             ))}
           </tbody>

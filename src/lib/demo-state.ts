@@ -46,6 +46,17 @@ export type DemoState = {
    * 20바이트 남짓이다(상한 3,600바이트).
    */
   completedAt?: string;
+  /**
+   * 확인 서명 두 칸(0026).
+   *
+   * 상태 하나로는 「인계자만 확인」을 표현할 수 없다. 데모에서 심사위원이
+   * 박준호로 확인을 누르고 이하람으로 갈아타는 것이 이 절차의 요점이므로,
+   * 그 중간 상태가 쿠키에 남아야 한다. ISO 문자열 둘이라 40바이트 남짓이다.
+   */
+  confirmedAt?: string;
+  acceptedAt?: string;
+  /** 입회자가 승인하며 적은 근거(온나라 문서번호·결재일) */
+  witnessNote?: string;
   /** 인계 실행으로 주인이 바뀐 업무 id */
   transferred: string[];
   /** 데모 중 남긴 대화. 쿠키 크기 때문에 최근 것만 남긴다. */
@@ -142,10 +153,16 @@ function parse(raw: string | undefined): DemoState {
 
     // 쿠키는 사용자가 고칠 수 있다. 날짜로 쓸 값이므로 **실제로 날짜인지**
     // 확인한다 — 아무 문자열이나 통과시키면 서식의 「인계일」에 그대로 찍힌다.
-    const completedAt =
-      typeof o.completedAt === "string" &&
-      !Number.isNaN(Date.parse(o.completedAt))
-        ? o.completedAt
+    const stamp = (v: unknown) =>
+      typeof v === "string" && !Number.isNaN(Date.parse(v)) ? v : undefined;
+    const completedAt = stamp(o.completedAt);
+    const confirmedAt = stamp(o.confirmedAt);
+    const acceptedAt = stamp(o.acceptedAt);
+    // 서식과 화면에 그대로 찍히는 글자다. 길이를 여기서 자른다 — 쿠키는 사용자가
+    // 고칠 수 있고, 상한 없는 문자열 하나가 쿠키 전체를 넘기면 데모가 통째로 죽는다.
+    const witnessNote =
+      typeof o.witnessNote === "string" && o.witnessNote.trim()
+        ? o.witnessNote.trim().slice(0, 120)
         : undefined;
 
     const handoverMessages = Array.isArray(o.handoverMessages)
@@ -166,6 +183,9 @@ function parse(raw: string | undefined): DemoState {
       workStatus,
       handoverStatus,
       completedAt,
+      confirmedAt,
+      acceptedAt,
+      witnessNote,
       transferred,
       comments,
       handoverMessages,

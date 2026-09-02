@@ -120,6 +120,18 @@ export type HandoverExportInput = {
   to: Profile;
   fromDept: Department | null;
   toDept: Department | null;
+  /**
+   * 입회자 — 별지 제12호서식의 셋째 서명란(0026).
+   *
+   * 없을 수 있다. 그때는 그 줄이 예전처럼 빈칸으로 나가고 손으로 받는다.
+   */
+  witness: Profile | null;
+  /** 세 사람의 확인 시각. 찍힌 이름 옆에 「무엇을 근거로」가 함께 있어야 한다. */
+  signedAt: {
+    from: string | null;
+    to: string | null;
+    witness: string | null;
+  };
   generatedAt: string | null;
   /** 인계가 실제로 실행된 시각. 없으면 아직 실행 전이다. */
   completedAt: string | null;
@@ -145,6 +157,8 @@ export function handoverToHwpxDoc(input: HandoverExportInput): HwpxDoc {
     to,
     fromDept,
     toDept,
+    witness,
+    signedAt,
     generatedAt,
     completedAt,
     method,
@@ -262,22 +276,32 @@ export function handoverToHwpxDoc(input: HandoverExportInput): HwpxDoc {
   }
 
   // ── 서명란 ────────────────────────────────────────────────────────────────
-  // 별지 제12호서식에는 인계자·인수자·입회자 서명란이 있다.
-  // 전자서명 연계를 구현하지 않았으므로 빈칸으로 두고 손으로 받는다.
+  //
+  // 별지 제12호서식에는 인계자·인수자·입회자 서명란이 있다. 오랫동안 앞의 둘만
+  // 이름을 찍고 셋째 줄은 통째로 빈칸이었다 — 「전자서명 연계를 구현하지
+  // 않았으므로 손으로 받는다」고 적어 두었다.
+  //
+  // 이제 셋이 **화면에서** 확인을 누른다(0026). 전자서명은 여전히 아니므로
+  // 「(서명 또는 인)」 칸은 그대로 두되, **누가 언제 확인했는지**를 찍는다.
+  // 서명하지 않은 줄은 빈칸으로 나간다 — 안 누른 사람 자리에 시각을 찍으면
+  // 그 문서가 거짓말이 되고, 이 서식은 결재에 올라간다.
   paragraphs.push({ kind: "body", text: "위와 같이 업무를 인계·인수합니다." });
   paragraphs.push({
     kind: "table",
     table: {
       widths: [1, 3, 2],
       rows: [
-        ["인계자", who(from)],
-        ["인수자", who(to)],
-        ["입회자", ""],
-      ].map(([label, name]) => ({
+        ["인계자", who(from), signedAt.from],
+        ["인수자", who(to), signedAt.to],
+        ["입회자", witness ? who(witness) : "", signedAt.witness],
+      ].map(([label, name, at]) => ({
         cells: [
-          { text: label, bold: true, align: "center" as const },
-          { text: name, align: "left" as const },
-          { text: "(서명 또는 인)", align: "center" as const },
+          { text: label as string, bold: true, align: "center" as const },
+          { text: name as string, align: "left" as const },
+          {
+            text: at ? `${formatDate(at as string)} 확인` : "(서명 또는 인)",
+            align: "center" as const,
+          },
         ],
       })),
     },

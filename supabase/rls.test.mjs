@@ -611,9 +611,40 @@ console.log("\n[9-1] 인계 건의 주인 — 넘겨받는 사람이 남의 인�
     );
   }
   {
+    // 0026 이 이 판정을 뒤집었다. 예전에는 「막은 것은 칸이지 흐름이 아니다」였는데,
+    // 그때 confirmed 는 인계자 혼자 밟는 걸음이었다. 이제 confirmed 는 **둘이
+    // 서명했다**는 뜻이라, 손으로 밀 수 있으면 인수자가 본 적 없는 서식이
+    // 「인수자 확인」을 달고 결재에 올라간다.
     const r = await as(kim, `update handover set status = 'confirmed' where id = $1 returning id`, [hg.id]);
-    check("인계자는 확인 단계로 넘길 수 있다 (막은 것은 칸이지 흐름이 아니다)",
-      r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+    check(
+      "인계자도 확인 단계를 손으로 못 민다 (확인은 서명 절차로만)",
+      !r.ok && /실행 절차로만/.test(r.error ?? ""),
+      r.ok ? "밀렸다" : r.error,
+    );
+  }
+  {
+    const r = await as(lee, `select public.sign_handover($1)`, [hg.id]);
+    check("당사자가 아니면 확인 서명을 못 한다", !r.ok, r.ok ? "서명됐다" : "");
+  }
+  {
+    const r = await as(kim, `select public.sign_handover($1) as s`, [hg.id]);
+    check(
+      "인계자가 서명해도 혼자서는 안 넘어간다 (인수자 확인이 남았다)",
+      r.ok && r.rows[0]?.s === "generated",
+      r.ok ? r.rows[0].s : r.error,
+    );
+  }
+  {
+    const r = await as(kim, `select public.sign_handover($1)`, [hg.id]);
+    check("같은 사람이 두 번 서명할 수 없다", !r.ok, r.ok ? "두 번 됐다" : "");
+  }
+  {
+    const r = await as(choi, `select public.sign_handover($1) as s`, [hg.id]);
+    check(
+      "★ 인수자가 서명하면 결재 상신으로 넘어간다",
+      r.ok && r.rows[0]?.s === "confirmed",
+      r.ok ? r.rows[0].s : r.error,
+    );
   }
   {
     // 「완료」는 권한이 실제로 옮겨 갔다는 뜻이다. 손으로 적을 수 있으면 업무가
@@ -631,6 +662,111 @@ console.log("\n[9-1] 인계 건의 주인 — 넘겨받는 사람이 남의 인�
     );
   }
   await admin(`delete from handover where id = $1`, [hg.id]);
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n[9-1-2] 입회자 — 별지 제12호서식의 셋째 서명란");
+// ---------------------------------------------------------------------------
+// 0026 이 세운 자리다. 인계자 쪽 부서의 최고서열자가 인계를 만드는 순간 정해지고,
+// 마지막 걸음(권한 이전)을 그 사람이 밟는다. 인사이동 당일에 인계자는 이미 다른
+// 과 사람이라, 그 걸음을 떠나는 사람에게 맡겨 두면 안 밟히는 날이 온다.
+{
+  const [deptC] = await admin(
+    `insert into department (name) values ('환경정책과') returning id`,
+  );
+  const mkRanked = async (name, rank, position) => {
+    const [u] = await admin(
+      `insert into auth.users (email) values ($1) returning id`,
+      [`${name}@korea.kr`],
+    );
+    await admin(
+      `insert into profile (id, name, department_id, email, position, rank)
+       values ($1, $2, $3, $4, $5, $6)`,
+      [u.id, name, deptC.id, `${name}@korea.kr`, position, rank],
+    );
+    return u.id;
+  };
+  const goPark = await mkRanked("고박", 50, "주무관"); // 떠나는 사람
+  const goLee = await mkRanked("고이", 50, "주무관"); // 받는 사람
+  const boss = await mkRanked("정과장", 30, "과장"); // 입회자
+
+  const [wC] = await admin(
+    `insert into work (title, department_id, owner_id, created_by, visibility)
+     values ('환경정책 업무', $1, $2, $2, 'department') returning id`,
+    [deptC.id, goPark],
+  );
+  // 주담당 참여자는 트리거가 붙인다(0003). 여기서 또 넣으면 키가 부딪힌다.
+
+  const [hw] = await admin(
+    `insert into handover (from_profile_id, to_profile_id, status)
+     values ($1, $2, 'generated') returning id, witness_id`,
+    [goPark, goLee],
+  );
+  await admin(`insert into handover_item (handover_id, work_id) values ($1, $2)`, [hw.id, wC.id]);
+
+  check(
+    "★ 입회자가 저절로 정해진다 (그 부서의 최고서열자)",
+    hw.witness_id === boss,
+    hw.witness_id === boss ? "정과장" : String(hw.witness_id),
+  );
+  check(
+    "★ 서열이 같은 동료는 입회자가 아니다",
+    hw.witness_id !== goLee,
+  );
+  {
+    const r = await as(boss, `select id from handover where id = $1`, [hw.id]);
+    check("입회자는 서명할 문서를 읽을 수 있다", r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+  }
+  {
+    const r = await as(boss, `select work_id from handover_item where handover_id = $1`, [hw.id]);
+    check("입회자는 무엇이 넘어가는지도 본다", r.ok && r.rows.length === 1, r.ok ? "" : r.error);
+  }
+  {
+    const r = await as(boss, `select public.sign_handover($1)`, [hw.id]);
+    check("입회자는 확인 서명 칸에 끼어들지 않는다", !r.ok, r.ok ? "서명됐다" : "");
+  }
+  await as(goPark, `select public.sign_handover($1)`, [hw.id]);
+  await as(goLee, `select public.sign_handover($1)`, [hw.id]);
+  {
+    const r = await as(goPark, `select public.execute_handover($1, '문서번호')`, [hw.id]);
+    check(
+      "★ 인계자는 더 이상 마지막 걸음을 밟지 않는다",
+      !r.ok && /입회자만/.test(r.error ?? ""),
+      r.ok ? "실행됐다" : r.error,
+    );
+  }
+  {
+    const r = await as(boss, `select public.execute_handover($1, '   ')`, [hw.id]);
+    check(
+      "★ 근거 없는 승인은 받지 않는다 (결재 문서번호가 있어야 한다)",
+      !r.ok && /문서번호|결재일/.test(r.error ?? ""),
+      r.ok ? "실행됐다" : r.error,
+    );
+  }
+  {
+    const r = await as(
+      boss,
+      `select public.execute_handover($1, '환경정책과-2026-0812') as n`,
+      [hw.id],
+    );
+    check("★ 입회자가 인계를 끝낸다", r.ok && r.rows[0]?.n === 1, r.ok ? "1건 이관" : r.error);
+  }
+  {
+    const rows = await admin(
+      `select owner_id from work where id = $1`, [wC.id],
+    );
+    check("권한이 실제로 넘어간다", rows[0].owner_id === goLee);
+  }
+  {
+    const rows = await admin(
+      `select witness_note from handover where id = $1`, [hw.id],
+    );
+    check(
+      "무엇을 보고 승인했는지가 남는다",
+      rows[0].witness_note === "환경정책과-2026-0812",
+      rows[0].witness_note ?? "(빈칸)",
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

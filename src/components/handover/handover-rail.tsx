@@ -7,8 +7,9 @@ import {
   PenLine,
   RotateCcw,
 } from "lucide-react";
-import { confirmHandover, executeHandover } from "@/lib/actions/handover";
+import { executeHandover, signHandover } from "@/lib/actions/handover";
 import { ButtonLink, DownloadLink } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { HandoverToc } from "@/components/handover/handover-toc";
 import {
@@ -59,6 +60,10 @@ import type {
 export function HandoverRail({
   status,
   isSender,
+  viewerRole,
+  signedFrom,
+  signedTo,
+  witness,
   done,
   from,
   to,
@@ -74,6 +79,19 @@ export function HandoverRail({
 }: {
   status: HandoverStatus;
   isSender: boolean;
+  /**
+   * 보는 사람이 이 인계에서 맡은 자리(0026).
+   *
+   * `isSender` 만으로는 셋을 못 가른다 — 넘겨받는 사람과 입회자와 지나가는
+   * 사람이 전부 「인계자가 아님」으로 뭉쳐서, 셋에게 같은 문장이 나갔다.
+   */
+  viewerRole: "from" | "to" | "witness" | "other";
+  /** 인계자가 확인 서명을 했는가 */
+  signedFrom: boolean;
+  /** 인수자가 확인 서명을 했는가 */
+  signedTo: boolean;
+  /** 입회자. 없는 인계도 있고, 그때는 인계자가 마지막 걸음을 밟는다. */
+  witness: Profile | null;
   done: boolean;
   from: Profile;
   to: Profile;
@@ -148,6 +166,10 @@ export function HandoverRail({
         <Action
           status={status}
           isSender={isSender}
+          viewerRole={viewerRole}
+          signedFrom={signedFrom}
+          signedTo={signedTo}
+          witness={witness}
           done={done}
           from={from}
           to={to}
@@ -168,6 +190,10 @@ export function HandoverRail({
 function Action({
   status,
   isSender,
+  viewerRole,
+  signedFrom,
+  signedTo,
+  witness,
   done,
   from,
   to,
@@ -246,14 +272,131 @@ function Action({
     );
   }
 
-  // 넘겨받는 쪽에는 누를 것이 없다. 없는 단추를 흐리게 그려 두지 않고,
-  // 누가 무엇을 하는 차례인지 한 줄로 적는다.
-  if (!isSender) {
+  // ── 결재 상신 단계 — 입회자의 차례 ────────────────────────────────────────
+  //
+  // 여기서 나가는 한/글이 결재에 올라간다. 그래서 이 단계에서만 파일이 나온다 —
+  // 확인 서명이 끝나기 전에 내려받을 수 있으면 서명란이 빈 문서가 결재를 돈다.
+  if (status === "confirmed") {
+    // 입회자가 없는 인계는 인계자가 마지막 걸음을 밟는다(0026 §2).
+    const mine = witness ? viewerRole === "witness" : viewerRole === "from";
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="text-body-sm leading-relaxed break-keep text-gray-60">
+          인계자와 인수자가 모두 확인했습니다. 아래 파일을 온나라에 올려 결재를
+          받은 뒤, {witness ? `${witness.name} ${witness.position}` : "인계자"}
+          {witness
+            ? josa(witness.position ?? witness.name, "이", "가")
+            : "가"}{" "}
+          결재 결과를 적고 인계를 끝냅니다.
+        </p>
+        <DownloadLink href={exportHref} variant="secondary" size="sm" block>
+          <Download aria-hidden className="size-4" />
+          한/글 파일(.hwpx)
+        </DownloadLink>
+        {mine ? (
+          <details className="rounded-sm border border-danger/30 bg-danger-bg">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center px-4 text-body-sm font-bold text-danger">
+              인계 완료 처리
+            </summary>
+            <div className="border-t border-danger/30 px-4 py-4">
+              <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-60">
+                업무 {items.length}건의 주담당이 {to.name} {to.position}
+                {josa(to.position ?? to.name, "으로", "로")} 바뀌고, {from.name}{" "}
+                {from.position}
+                {josa(from.position ?? from.name, "은", "는")} 열람 권한만
+                남습니다.{" "}
+                <strong className="font-bold text-danger">
+                  되돌릴 수 없습니다.
+                </strong>
+              </p>
+              <form action={executeHandover} className="flex flex-col gap-3">
+                {/* ── 근거를 함께 받는다 ────────────────────────────────────
+                    결재가 실제로 났는지 이 시스템은 모른다(온나라 연동이
+                    없다). 그러므로 이 단추는 「결재가 났다」는 **사람의
+                    진술**이고, 진술은 근거와 함께 받는다. 비면 절차가
+                    거절한다 — 판정은 DB 한 곳에만 둔다.
+
+                    입회자가 없는 인계에서는 결재를 도는 사람도 없으므로
+                    이 칸을 안 받는다. */}
+                {witness ? (
+                  <Field
+                    id="witness-note"
+                    label="결재 문서번호 또는 결재일"
+                    required
+                    hint="온나라에서 결재가 끝난 문서의 번호를 적습니다. 인계 기록에 그대로 남습니다."
+                  >
+                    {(p) => (
+                      <Input
+                        {...p}
+                        name="witnessNote"
+                        maxLength={120}
+                        placeholder="예: 자원순환과-12345 (2026. 8. 12.)"
+                      />
+                    )}
+                  </Field>
+                ) : null}
+                <SubmitButton variant="danger" block pendingLabel="처리하는 중…">
+                  결재를 확인했고, 인계를 완료합니다
+                </SubmitButton>
+              </form>
+            </div>
+          </details>
+        ) : (
+          <p className="text-body-sm leading-relaxed break-keep text-gray-60">
+            완료 처리는{" "}
+            <strong className="font-bold text-gray-90">
+              {witness ? `${witness.name} ${witness.position}` : `${from.name} ${from.position}`}
+            </strong>
+            의 차례입니다.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // ── 확인 서명 단계 — 인계자와 인수자가 **각각** 누른다 ────────────────────
+  //
+  // 예전에는 이 자리에 인계자의 단추 하나뿐이었고, 넘겨받는 사람에게는
+  // 「이 인계는 ○○이 확인하고 실행합니다」라는 문장만 있었다. 받는 사람이
+  // 받겠다고 말하는 자리가 어디에도 없었다는 뜻이다(0026).
+  if (status === "generated" && viewerRole === "to") {
+    return (
+      <>
+        <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-60">
+          넘겨받을 내용이 실제와 맞는지 확인해 주세요. 빠진 것이 있으면 아래
+          문답으로 {from.name} {from.position}
+          {josa(from.position ?? from.name, "에게", "에게")} 물어보시면 됩니다.
+        </p>
+        {signedTo ? (
+          <p className="flex items-start gap-2 text-body-sm break-keep text-gray-60">
+            <CheckCircle2 aria-hidden className="mt-1 size-4 shrink-0 text-success" />
+            <span>
+              확인하셨습니다. {from.name} {from.position}의 확인이 끝나면 결재로
+              넘어갑니다.
+            </span>
+          </p>
+        ) : (
+          <form action={signHandover}>
+            <SubmitButton block pendingLabel="확인하는 중…">
+              내용을 확인했습니다
+              <ArrowRight aria-hidden className="size-4" />
+            </SubmitButton>
+          </form>
+        )}
+      </>
+    );
+  }
+
+  // 당사자도 입회자도 아니거나, 입회자가 아직 할 일이 없는 단계다.
+  if (viewerRole !== "from") {
     return (
       <p className="text-body-sm leading-relaxed break-keep text-gray-60">
-        이 인계는 {from.name} {from.position}
-        {josa(from.position ?? from.name, "이", "가")} 확인하고 실행합니다.
-        넘겨받는 사람은 진행 상황과 초안을 볼 수 있습니다.
+        {from.name} {from.position}
+        {josa(from.position ?? from.name, "과", "와")} {to.name} {to.position}
+        {josa(to.position ?? to.name, "이", "가")} 내용을 확인하는 중입니다.
+        {witness
+          ? ` 두 사람의 확인이 끝나면 ${witness.name} ${witness.position}에게 결재 차례가 옵니다.`
+          : ""}
       </p>
     );
   }
@@ -338,64 +481,25 @@ function Action({
             데이터베이스에 연결하면 이 화면에서 그 칸에 직접 적을 수 있습니다.
           </p>
         ) : null}
-        <form action={confirmHandover}>
-          <SubmitButton block pendingLabel="확인하는 중…">
-            내용을 확인했습니다
-            <ArrowRight aria-hidden className="size-4" />
-          </SubmitButton>
-        </form>
-      </>
-    );
-  }
-
-  if (status === "confirmed") {
-    return (
-      <>
-        <p className="mb-4 text-body-sm leading-relaxed break-keep text-gray-60">
-          실행하면 업무 {items.length}건의 주담당이 {to.name} {to.position}
-          {josa(to.position ?? to.name, "으로", "로")} 바뀝니다.{" "}
-          <strong className="font-bold text-danger">되돌릴 수 없습니다.</strong>{" "}
-          인계서에 보탠 내용도 그때부터 더하거나 지울 수 없습니다.
-        </p>
-        {/* 확인 절차를 <details> 로 둔다.
-            예전에는 <dialog>+showModal() 로 물었는데, 그 컴포넌트는 "use client"
-            이고 여는 일이 onClick 에 걸려 있어 **스크립트가 없으면 이 단추가
-            아무 일도 하지 않았다.** 이 제품에서 가장 되돌릴 수 없는 동작이
-            무JS 에서 실행 불가였다는 뜻이다. 화면의 「인계를 잘못 시작했다면」이
-            이미 같은 이유로 <details> 를 쓰고 있었다 — 규약이 한 화면 안에서
-            갈려 있었다. 펼치는 손짓 한 번이 확인 절차를 대신한다. */}
-        <details className="rounded-sm border border-danger/30 bg-danger-bg">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center px-4 text-body-sm font-bold text-danger">
-            인계 실행
-          </summary>
-          <div className="border-t border-danger/30 px-4 py-4">
-            <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-60">
-              아래 업무의 주담당이 {to.name} {to.position}
-              {josa(to.position ?? to.name, "으로", "로")} 바뀌고, {from.name}{" "}
-              {from.position}
-              {josa(from.position ?? from.name, "은", "는")} 열람 권한만
-              남습니다. 실행한 기록은 각 업무의 이력에 남으며 지울 수 없습니다.
-            </p>
-            <ul className="mb-3 flex flex-col gap-2 rounded-sm border border-rule-frame bg-surface px-4 py-3">
-              {items.map(({ work }) => (
-                <li
-                  key={work.id}
-                  className="text-body-sm break-keep text-gray-90"
-                >
-                  · {work.title}
-                </li>
-              ))}
-            </ul>
-            <form action={executeHandover}>
-              {/* 이 앱에서 가장 무거운 단추다 — 주담당이 실제로 바뀌고 열람
-                  권한이 옮겨 간다. 되돌릴 수 없는 동작에는 무슨 일이 벌어지는
-                  중인지 글로 준다(ui/submit-button.tsx). */}
-              <SubmitButton variant="danger" block pendingLabel="실행하는 중…">
-                실행합니다
-              </SubmitButton>
-            </form>
-          </div>
-        </details>
+        {/* 인계자의 확인. 인수자도 같은 절차를 부르고, 어느 칸에 적힐지는
+            절차가 정한다(0026 의 sign_handover). */}
+        {signedFrom ? (
+          <p className="flex items-start gap-2 text-body-sm break-keep text-gray-60">
+            <CheckCircle2 aria-hidden className="mt-1 size-4 shrink-0 text-success" />
+            <span>
+              확인하셨습니다. {to.name} {to.position}
+              {josa(to.position ?? to.name, "이", "가")} 확인하면 결재로
+              넘어갑니다.
+            </span>
+          </p>
+        ) : (
+          <form action={signHandover}>
+            <SubmitButton block pendingLabel="확인하는 중…">
+              내용을 확인했습니다
+              <ArrowRight aria-hidden className="size-4" />
+            </SubmitButton>
+          </form>
+        )}
       </>
     );
   }

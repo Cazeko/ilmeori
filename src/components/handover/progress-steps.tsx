@@ -34,10 +34,17 @@ export const HANDOVER_STEPS: HandoverStatus[] = [
   "completed",
 ];
 
+/**
+ * 단계마다 「다음에 무슨 일이 벌어지나」.
+ *
+ * 0026 이 뜻을 옮겼다 — 둘째 칸은 초안을 **만드는** 자리가 아니라 인계자와
+ * 인수자가 **각각 확인하는** 자리이고, 셋째 칸은 입회자가 결재를 받는 자리다.
+ * 서식의 서명란이 셋인데 시스템이 하나만 알던 것을 여기서 맞춘다.
+ */
 const DESC: Record<HandoverStatus, string> = {
   draft: "넘길 업무를 고릅니다",
-  generated: "쌓인 기록에서 인계서 초안을 만듭니다",
-  confirmed: "인계자가 내용을 확인합니다",
+  generated: "인계자와 인수자가 각각 내용을 확인합니다",
+  confirmed: "입회자가 결재를 받습니다",
   completed: "권한이 인수자에게 넘어갑니다",
 };
 

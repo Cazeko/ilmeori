@@ -813,8 +813,13 @@ export async function getApproval(
 
 /** 내가 넘겨야 하거나 넘겨받는 인계 건 */
 export async function getHandoverFor(viewer: Profile): Promise<HandoverView | null> {
+  // 입회자도 찾아온다. 0026 의 handover_select 정책이 셋을 여는 것과 같은 집합이다 —
+  // 서명하는 사람이 서명할 문서를 못 읽으면 서명이 아니다.
   const h = handovers.find(
-    (x) => x.from_profile_id === viewer.id || x.to_profile_id === viewer.id,
+    (x) =>
+      x.from_profile_id === viewer.id ||
+      x.to_profile_id === viewer.id ||
+      x.witness_id === viewer.id,
   );
   return h ? buildHandover(h) : null;
 }
@@ -869,10 +874,20 @@ async function buildHandover(base: Handover): Promise<HandoverView> {
   const handover: Handover = {
     ...base,
     status,
+    // 확인 서명은 **각각** 눌린다. 상태에서 되짚으면 「인계자만 확인」을 표현할
+    // 길이 없어 화면이 둘 다 끝난 것처럼 그린다(0026 이 칸을 둘로 나눈 이유).
     confirmed_at:
-      status === "confirmed" || status === "completed"
+      state.confirmedAt ??
+      (status === "confirmed" || status === "completed"
         ? (base.confirmed_at ?? base.generated_at)
-        : null,
+        : null),
+    accepted_at:
+      state.acceptedAt ??
+      (status === "confirmed" || status === "completed"
+        ? (base.accepted_at ?? base.generated_at)
+        : null),
+    witness_note:
+      status === "completed" ? (state.witnessNote ?? base.witness_note) : null,
     // 데모에서 실행했으면 그때 적어 둔 시각을 쓴다. 없으면 null 이고, 서식은
     // 그때만 「오늘 (예정)」으로 찍는다(print-sheet.tsx) — 「끝났습니다」와
     // 「예정」이 한 화면에 같이 서지 않게 하는 것이 이 한 줄의 전부다.
@@ -886,6 +901,7 @@ async function buildHandover(base: Handover): Promise<HandoverView> {
     handover,
     from: requireProfile(base.from_profile_id),
     to: requireProfile(base.to_profile_id),
+    witness: base.witness_id ? requireProfile(base.witness_id) : null,
     items: handoverItems
       .filter((i) => i.handover_id === base.id)
       .map((i) => {

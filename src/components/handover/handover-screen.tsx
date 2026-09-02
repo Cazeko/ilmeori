@@ -47,6 +47,7 @@ import {
 import { canMutate, isSupabaseConfigured } from "@/lib/env";
 import { MAX_DEMO_MESSAGES } from "@/lib/demo-state";
 import {
+  handoverSignedAt,
   type HandoverBlockKey,
   type HandoverNoteWithAuthor,
 } from "@/lib/types";
@@ -88,10 +89,26 @@ export async function HandoverScreen({
   msg: string | string[] | undefined;
   archived?: boolean;
 }) {
-  const { handover, from, to, items } = view;
+  const { handover, from, to, witness, items } = view;
   const draft = await buildHandoverDraft(view);
   const isSender = from.id === viewer.id;
   const done = handover.status === "completed";
+
+  // ── 이 화면에는 사람이 셋 온다 ────────────────────────────────────────────
+  //
+  // 인계자·인수자·입회자다(0026). 예전에는 `isSender` 하나로 갈랐고, 그래서
+  // 넘겨받는 사람과 입회자와 지나가는 사람이 전부 「인계자가 아님」으로 뭉쳐
+  // 셋에게 같은 문장이 나갔다.
+  const viewerRole: "from" | "to" | "witness" | "other" = isSender
+    ? "from"
+    : to.id === viewer.id
+      ? "to"
+      : witness?.id === viewer.id
+        ? "witness"
+        : "other";
+  // 확인 서명 두 칸. 「둘 다 눌렸는가」는 상태가 아니라 이 둘이 안다.
+  const signedFrom = Boolean(handover.confirmed_at);
+  const signedTo = Boolean(handover.accepted_at);
 
   // 대상 수와 실제로 옮겨 간 수는 다를 수 있다. execute_handover는 인계서를 만든 뒤
   // 소유 권한이 바뀐 업무를 건너뛰기 때문이다. 결론을 말할 때는 옮겨 간 쪽을 쓴다.
@@ -181,8 +198,11 @@ export async function HandoverScreen({
    */
   const railHasAction =
     done ||
-    (isSender &&
-      (handover.status === "generated" || handover.status === "confirmed"));
+    (handover.status === "generated" &&
+      ((viewerRole === "from" && !signedFrom) ||
+        (viewerRole === "to" && !signedTo))) ||
+    (handover.status === "confirmed" &&
+      (witness ? viewerRole === "witness" : viewerRole === "from"));
 
   return (
     <PageContainer className="print:p-0">
@@ -372,6 +392,8 @@ export async function HandoverScreen({
               notesByBlock={notesByBlock}
               from={from}
               to={to}
+              witness={witness}
+              signedAt={handoverSignedAt(handover)}
               fromDept={fromDept}
               toDept={toDept}
               generatedAt={handover.generated_at}
@@ -511,20 +533,44 @@ export async function HandoverScreen({
                 기둥은 스크롤을 따라오므로 **둘이 한 화면에 함께 보인다** —
                 같은 이름 같은 주소의 단추가 둘이면 사람은 그 둘이 다른 일을
                 한다고 읽는다. 끝난 뒤에 문서를 챙기는 자리는 기둥 하나다. */}
+              {/* ── 결재용 파일과 인쇄는 다른 물건이다 ─────────────────────
+                  한/글 파일은 **결재에 올라가는 것**이라 확인 서명 둘이 다
+                  찬 뒤에만 나간다(0026 의 「결재 상신」 단계). 그전에 나가면
+                  서명란이 빈 문서가 결재를 돌고, 인수자가 본 적 없다는 사실이
+                  그 종이에 안 남는다.
+
+                  인쇄는 막지 않는다. 검토하는 사람이 종이로 펴 놓고 보는 것은
+                  결재와 아무 상관이 없고, 무엇보다 **Ctrl+P 안내가 여기 말고는
+                  없다** — 스크립트가 없는 브라우저에서는 옆의 인쇄 버튼조차
+                  안 그려지므로 이 문장이 인쇄하는 법을 알려 주는 유일한
+                  자리다(tests/browser.test.mjs [2]).
+
+                  끝난 뒤에는 이 판이 안 뜬다. 같은 내려받기가 오른쪽 붙박이
+                  기둥에 서고, 둘이 한 화면에 보이면 다른 일을 하는 줄 안다. */}
               {done ? null : (
               <div className="mb-4 rounded-sm border border-rule-frame bg-surface px-4 py-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <DownloadLink href={exportHref} size="sm">
-                    <Download aria-hidden className="size-4" />
-                    한/글 파일(.hwpx)
-                  </DownloadLink>
+                  {handover.status === "confirmed" ? (
+                    <DownloadLink href={exportHref} size="sm">
+                      <Download aria-hidden className="size-4" />
+                      한/글 파일(.hwpx)
+                    </DownloadLink>
+                  ) : null}
                   <PrintButton />
                 </div>
                 <p className="mt-3 text-body-sm leading-relaxed break-keep text-gray-60">
-                  {/* 「Ctrl+P」를 빼면 안 된다. 스크립트가 없는 브라우저에서는
-                      옆의 인쇄 버튼이 아예 안 그려지고, 이 문장이 인쇄하는 법을
-                      알려 주는 유일한 자리가 된다(tests/browser.test.mjs [2]). */}
-                  한/글 파일에는 위 서식이 그대로 담깁니다.{" "}
+                  {handover.status === "confirmed" ? (
+                    <>한/글 파일에는 위 서식이 그대로 담깁니다. </>
+                  ) : (
+                    <>
+                      결재에 올릴{" "}
+                      <strong className="font-bold text-gray-90">
+                        한/글 파일은 인계자와 인수자가 모두 확인한 뒤
+                      </strong>
+                      에 나옵니다. 서명란이 빈 문서가 결재를 돌지 않도록
+                      두었습니다.{" "}
+                    </>
+                  )}
                   <kbd className="font-sans font-bold">Ctrl+P</kbd>로도{" "}
                   <strong className="font-bold text-gray-90">
                     별지 제12호서식 모양의 A4
@@ -642,6 +688,10 @@ export async function HandoverScreen({
               <HandoverRail
                 status={handover.status}
                 isSender={isSender}
+                viewerRole={viewerRole}
+                signedFrom={signedFrom}
+                signedTo={signedTo}
+                witness={witness}
                 done={done}
                 from={from}
                 to={to}

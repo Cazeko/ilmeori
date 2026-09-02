@@ -4,6 +4,7 @@ import { buildHandoverDraft } from "@/lib/handover-draft";
 import { handoverToHwpxDoc } from "@/lib/handover-export";
 import { buildHwpx, hwpxFileName } from "@/lib/hwpx/pack";
 import { requireViewer } from "@/lib/session";
+import { handoverSignedAt } from "@/lib/types";
 import type { HandoverNoteWithAuthor } from "@/lib/types";
 
 /**
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const { handover, from, to } = view;
+  const { handover, from, to, witness } = view;
   const draft = await buildHandoverDraft(view);
   const [fromDept, toDept, notes] = await Promise.all([
     from.department_id ? getDepartment(from.department_id) : null,
@@ -91,6 +92,8 @@ export async function GET(request: NextRequest) {
       notesByBlock,
       from,
       to,
+      witness,
+      signedAt: handoverSignedAt(handover),
       fromDept,
       toDept,
       generatedAt: handover.generated_at,

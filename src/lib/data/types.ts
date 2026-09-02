@@ -111,6 +111,14 @@ export type HandoverView = {
   handover: Handover;
   from: Profile;
   to: Profile;
+  /**
+   * 입회자. 별지 제12호서식의 셋째 서명란이고 마지막 걸음을 밟는 사람이다(0026).
+   *
+   * null 일 수 있다 — 인계자가 그 부서에서 가장 높고 상위 부서에도 사람이 없는
+   * 경우다. 그때는 인계자가 마지막 걸음을 밟는다. 화면은 이 값이 null 인 갈래를
+   * 반드시 그려야 한다.
+   */
+  witness: Profile | null;
   items: Array<{ work: WorkListItem; transferred: boolean }>;
 };
 

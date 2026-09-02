@@ -65,6 +65,7 @@ const { HandoverPrintSheet } = await import(
 const { DraftLines } = await import("@/components/handover/draft-lines.tsx");
 const mock = await import("@/lib/data/mock.ts");
 const { profiles } = await import("@/lib/mock/org.ts");
+const { handoverSignedAt } = await import("@/lib/types.ts");
 
 let pass = 0;
 const fails = [];
@@ -115,6 +116,8 @@ function sheet(notesByBlock = new Map()) {
     notesByBlock,
     from: view.from,
     to: view.to,
+    witness: view.witness,
+    signedAt: handoverSignedAt(view.handover),
     fromDept,
     toDept,
     generatedAt: view.handover.generated_at,
@@ -800,6 +803,8 @@ const withDevices = renderToStaticMarkup(
     notesByBlock: noteForNine,
     from: view.from,
     to: view.to,
+    witness: view.witness,
+    signedAt: handoverSignedAt(view.handover),
     fromDept,
     toDept,
     generatedAt: view.handover.generated_at,

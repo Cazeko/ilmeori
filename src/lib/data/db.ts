@@ -1479,6 +1479,7 @@ const HANDOVER_SELECT = `
   *,
   from_profile:from_profile_id ( ${PROFILE_SELECT} ),
   to_profile:to_profile_id ( ${PROFILE_SELECT} ),
+  witness_profile:witness_id ( ${PROFILE_SELECT} ),
   items:handover_item ( work_id, transferred )
 `;
 
@@ -1497,6 +1498,8 @@ const HANDOVER_LIST_SELECT = `
 type RawHandover = Handover & {
   from_profile: Profile;
   to_profile: Profile;
+  /** 입회자가 없는 인계도 있다(0026). 조인 결과가 그대로 null 로 온다. */
+  witness_profile: Profile | null;
   items: Array<{ work_id: string; transferred: boolean }>;
 };
 
@@ -1524,6 +1527,7 @@ async function buildHandover(raw: RawHandover): Promise<HandoverView> {
     handover: raw,
     from: raw.from_profile,
     to: raw.to_profile,
+    witness: raw.witness_profile ?? null,
     items: raw.items
       .map((i) => ({ work: works.get(i.work_id), transferred: i.transferred }))
       // 인계 대상인데 못 보는 업무가 있으면 목록에서 뺀다.
