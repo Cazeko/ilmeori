@@ -159,15 +159,13 @@ function atMost(fg, bg, max, where) {
 
 console.log("\n판(surface) 위의 글자");
 contrast("gray-90", "surface", 4.5, "본문");
-contrast("gray-70", "surface", 4.5, "보조 본문");
-contrast("gray-60", "surface", 4.5, "메타·캡션");
+contrast("gray-60", "surface", 4.5, "보조 본문·메타");
 contrast("primary", "surface", 4.5, "링크·강조");
 contrast("accent-text", "surface", 4.5, "보조색 글자");
 
 console.log("\n바탕(gray-5) 위의 글자");
 contrast("gray-90", "gray-5", 4.5, "본문");
-contrast("gray-70", "gray-5", 4.5, "보조 본문");
-contrast("gray-60", "gray-5", 4.5, "메타·캡션");
+contrast("gray-60", "gray-5", 4.5, "보조 본문·메타");
 
 console.log("\n색 위에 얹는 흰 글자");
 contrast("gray-0", "primary", 4.5, "기본 단추");
@@ -191,8 +189,8 @@ console.log("\n상태 배지 — 채움이 없다. 판과 바탕 **양쪽** 위�
  */
 for (const on of ["surface", "gray-5"]) {
   contrast("gray-90", on, 4.5, `진행중 (${on})`);
-  contrast("gray-80", on, 4.5, `검토 (${on})`);
-  contrast("gray-70", on, 4.5, `대기 (${on})`);
+  contrast("gray-90", on, 4.5, `검토 (${on})`);
+  contrast("gray-60", on, 4.5, `대기 (${on})`);
   contrast("gray-60", on, 4.5, `완료 (${on})`);
   contrast("status-overdue-text", on, 4.5, `지연 (${on})`);
   // 채움이 사라지면서 판 위로 올라온 나머지 칩 글자들. 「인계 완료」가
@@ -219,8 +217,7 @@ contrast("gray-0", "gray-90", 4.5, "대외비 칩");
 contrast("gray-0", "gray-80", 4.5, "상태 바꾸기의 켜진 칸");
 
 console.log("\n아바타 — 사람 얼굴 자리는 화면에서 채도가 가장 높으면 안 된다");
-contrast("gray-70", "gray-10", 4.5, "아바타 글자");
-contrast("gray-60", "gray-10", 4.5, "아바타 겹침의 +N");
+contrast("gray-60", "gray-10", 4.5, "아바타 글자");
 // 색이 붙는 아바타는 「나」 하나뿐이다(avatar.tsx 의 MINE). 사람마다 색을 주지
 // 않는 이유는 그 파일 머리글에 있다 — 여기서는 그 하나가 읽히는지만 잰다.
 contrast("accent-text", "accent-bg", 4.5, "「나」 아바타 글자");
@@ -236,14 +233,10 @@ contrast("gray-60", "gray-5", 4.5, "그 줄의 꼬리말");
 
 console.log("\n열 머리의 점 — 색이 아니라 명도로 넷을 나눈다");
 // 칸반 열 이름 앞의 점(kanban-board.tsx 의 DOT). 글자가 아니라 표식이므로
-// 요구는 비문자 3:1 이다. 넷이 **서로 구별되는 순서**인지가 요점이고,
-// 그 순서는 status-badge.tsx 가 적어 둔 「진행중 > 검토 > 대기 > 완료」다.
-contrast("gray-50", "gray-10", 3, "완료 점 — 가장 옅다");
-orderedOn(
-  "gray-10",
-  ["gray-50", "gray-60", "gray-70", "gray-90"],
-  "완료 < 대기 < 검토 < 진행중",
-);
+// 요구는 비문자 3:1 이다. 배지(status-badge.tsx)와 같은 **두 단** —
+// 손에 없는 것(대기·완료)은 옅고, 손에 있는 것(진행중·검토)은 먹이다.
+contrast("gray-50", "gray-10", 3, "대기·완료 점 — 옅은 쪽");
+orderedOn("gray-10", ["gray-50", "gray-90"], "대기·완료 < 진행중·검토");
 
 console.log("\n선 굵기 네 단 — 이 시스템의 주력 위계 축");
 // 네 단이 **서로 구별되는지**가 요점이다. 값이 하나라도 이웃과 붙으면 축이
@@ -310,7 +303,7 @@ contrast("status-overdue-text", "surface", 3, "히어로의 「N일 지남」");
 // 있는 것」). 옅어진 파랑은 여전히 파랑이라 「눌린다」고 말한다. 그래서
 // 투명도가 아니라 **회색으로 바꾼다**(ui/button.tsx).
 console.log("\n누를 수 없는 단추 — 투명도가 아니라 색으로 말한다");
-contrast("gray-70", "gray-10", 4.5, "비활성 단추 글자");
+contrast("gray-60", "gray-10", 4.5, "비활성 단추 글자");
 
 console.log(
   `\n${fails.length === 0 ? "전부 통과" : "실패"} — ${pass}건 통과, ${fails.length}건 실패`,

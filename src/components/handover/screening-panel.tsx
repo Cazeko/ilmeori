@@ -131,7 +131,7 @@ export function ScreeningPanel({
         ))}
       </ul>
 
-      <p className="mt-3 text-body-sm leading-relaxed break-keep text-gray-70">
+      <p className="mt-3 text-body-sm leading-relaxed break-keep text-gray-60">
         <strong className="font-bold text-gray-90">
           안 실린 {total.notUsed}건은 서식에 저절로 들어가지 않습니다.
         </strong>{" "}
@@ -158,7 +158,7 @@ export function ScreeningPanel({
           </ul>
           {rest.length > 0 ? (
             <details className="mt-1">
-              <summary className="group flex min-h-11 cursor-pointer list-none items-center gap-1 py-2 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
+              <summary className="group flex min-h-11 cursor-pointer list-none items-center gap-1 py-2 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-90">
                 <ChevronRight
                   aria-hidden
                   className="size-4 shrink-0 transition-transform duration-150 group-open:rotate-90"
@@ -288,7 +288,7 @@ function MissedRow({
       </p>
       {/* 요약하지 않는다. 긴 글은 잘린다(220자) — 잘렸다는 사실을 숨기지 않고
           원문으로 가는 길을 함께 준다. 보충으로 넣을 때는 전문이 들어간다. */}
-      <p className="mt-1 text-body-sm leading-relaxed break-keep text-gray-80">
+      <p className="mt-1 text-body-sm leading-relaxed break-keep text-gray-90">
         “{m.body}”
         {m.truncated ? (
           <>

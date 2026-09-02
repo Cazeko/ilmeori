@@ -113,7 +113,7 @@ export default async function NotesPage({ searchParams }: PageProps<"/notes">) {
                       </time>
                     </p>
 
-                    <p className="mt-1 line-clamp-2 text-body-sm break-keep text-gray-70">
+                    <p className="mt-1 line-clamp-2 text-body-sm break-keep text-gray-60">
                       {last.body}
                     </p>
 

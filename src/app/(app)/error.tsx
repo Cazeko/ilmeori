@@ -54,7 +54,7 @@ export default function AppError({
         <h1 className="mt-4 text-h2 font-bold break-keep text-gray-90">
           이 화면을 그리지 못했습니다
         </h1>
-        <p className="mt-3 text-body leading-relaxed break-keep text-gray-70">
+        <p className="mt-3 text-body leading-relaxed break-keep text-gray-60">
           저장하신 내용은 그대로 있습니다. 왼쪽 메뉴로 다른 화면에는 갈 수
           있습니다.
         </p>

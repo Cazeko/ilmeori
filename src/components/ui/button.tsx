@@ -24,7 +24,7 @@ import { cn } from "@/lib/cn";
  *    공무원이 포함된다고 스스로 적어 둔 공공 시스템이다(globals.css 의 focus
  *    주석). 「왜 안 눌리는지」를 읽을 수 있어야 그 다음을 할 수 있다.
  *
- * 그래서 투명도가 아니라 **색을 바꾼다.** 회색 채움 + gray-70 글자 = **7.07:1**.
+ * 그래서 투명도가 아니라 **색을 바꾼다.** 회색 채움 + gray-60 글자 = **5.13:1**.
  * 네 가지 variant 를 한 줄로 덮으므로 파랑·빨강·테두리·민짜가 전부 같은 모습으로
  * 멈춘다 — 「지금은 못 누른다」는 한 가지 사실이라 모습도 하나여야 한다.
  *
@@ -37,10 +37,14 @@ const button = cva(
   [
     "inline-flex items-center justify-center gap-2 rounded-sm font-bold whitespace-nowrap",
     "transition-colors duration-150",
+    // 눌리는 순간 1px 내려앉는다 — 「눌렸나?」에 대한 답이다. 색만 바뀌면
+    // 손가락 아래에서는 안 보인다(손가락이 단추를 가린다). 되돌아올 때는
+    // 애니메이션하지 않고, 꺼진 단추는 내려앉지 않는다.
+    "motion-safe:not-disabled:not-aria-disabled:active:translate-y-px",
     // 글자를 그대로 두고 클래스를 손으로 다 적는다. 여기서 문자열을 조립하면
     // Tailwind 의 정적 훑기가 못 찾아 규칙 자체가 안 만들어진다.
-    "disabled:cursor-not-allowed disabled:border-transparent disabled:bg-gray-10 disabled:text-gray-70 disabled:brightness-100",
-    "aria-disabled:cursor-not-allowed aria-disabled:border-transparent aria-disabled:bg-gray-10 aria-disabled:text-gray-70 aria-disabled:brightness-100",
+    "disabled:cursor-not-allowed disabled:border-transparent disabled:bg-gray-10 disabled:text-gray-60 disabled:brightness-100",
+    "aria-disabled:cursor-not-allowed aria-disabled:border-transparent aria-disabled:bg-gray-10 aria-disabled:text-gray-60 aria-disabled:brightness-100",
   ],
   {
     variants: {
@@ -49,8 +53,8 @@ const button = cva(
           "bg-primary text-white hover:bg-primary-hover active:bg-primary-active",
         secondary:
           // gray-40 은 판 위 2.95:1 로 1.4.11(3:1)에 아슬하게 모자란다. gray-50 은 4.32:1.
-          "border border-gray-50 bg-surface text-gray-80 hover:bg-gray-5 active:bg-gray-10",
-        ghost: "text-gray-70 hover:bg-gray-5 active:bg-gray-10",
+          "border border-gray-50 bg-surface text-gray-90 hover:bg-gray-5 active:bg-gray-10",
+        ghost: "text-gray-60 hover:bg-gray-5 active:bg-gray-10",
         danger: "bg-danger text-white hover:brightness-90 active:brightness-75",
       },
       size: {

@@ -41,7 +41,7 @@ export default function NotFound() {
           </Link>
           <Link
             href="/"
-            className="inline-flex min-h-11 items-center text-body-sm font-bold text-gray-70"
+            className="inline-flex min-h-11 items-center text-body-sm font-bold text-gray-60"
           >
             홈으로 돌아가기
           </Link>

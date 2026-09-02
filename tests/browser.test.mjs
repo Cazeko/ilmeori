@@ -674,7 +674,7 @@ console.log("\n[8] 결재 — 결재함 · 결재란 · 업무 상세 탭");
     const choi = await login(ctx, "최민재");
     await choi.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
     const home = await allText(choi);
-    ok("홈이 내 차례인 결재를 알린다", /내 차례인 결재가\s*1\s*건 있습니다/.test(home));
+    ok("홈이 내 차례인 결재를 알린다", /내 차례인 결재\s*1건/.test(home));
 
     await choi.goto(`${BASE}/approvals`, { waitUntil: "domcontentloaded" });
     const inbox = await allText(choi);

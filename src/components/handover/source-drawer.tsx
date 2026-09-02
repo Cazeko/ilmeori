@@ -272,7 +272,7 @@ export function SourceDrawer({ children }: { children: React.ReactNode }) {
 
             {/* 요약하지 않는다. 규칙이 서식에 실은 그 글자 그대로다 —
                 왼쪽 빗살은 서식의 인용 표시와 같은 어휘다. */}
-            <blockquote className="border-l border-l-rule-head pl-3 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
+            <blockquote className="border-l border-l-rule-head pl-3 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-90">
               {source.body}
             </blockquote>
 

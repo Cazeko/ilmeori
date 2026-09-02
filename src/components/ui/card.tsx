@@ -94,7 +94,7 @@ const TITLE: Record<CardVariant, string> = {
   // 쓰고, approvals/[id] 가 그 계단을 빠뜨려 한 번 물렸다(DESIGN.md T7).
   // 이 가지는 아직 부르는 곳이 없다. 그래서 지금 적어 둔다 — 처음 쓰는 사람이
   // 같은 버그를 다시 만들지 않도록.
-  doc: "text-h2 font-bold tracking-tight break-keep text-gray-90 sm:text-h1",
+  doc: "text-h2 font-bold break-keep text-gray-90 sm:text-h1",
   panel: "text-h3 font-bold text-gray-90",
   quiet: "text-body-sm font-bold text-gray-60", // 물러난다
 };

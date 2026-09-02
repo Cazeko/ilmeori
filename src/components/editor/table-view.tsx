@@ -234,7 +234,7 @@ function TableTools({
   if (!inside || !where) return null;
 
   const btn =
-    "inline-flex min-h-8 items-center gap-1 rounded-xs px-2 text-body-xs font-bold text-gray-70 transition-colors duration-150 hover:bg-gray-10 pointer-coarse:min-h-11";
+    "inline-flex min-h-8 items-center gap-1 rounded-xs px-2 text-body-xs font-bold text-gray-60 transition-colors duration-150 hover:bg-gray-10 pointer-coarse:min-h-11";
 
   return (
     <div className="ilm-tabletools" contentEditable={false}>
@@ -265,7 +265,7 @@ function TableTools({
         <Trash2 aria-hidden className="size-3.5" />칸
       </button>
       <span className="ilm-tooldiv" aria-hidden />
-      <label className="inline-flex items-center gap-2 text-body-xs text-gray-70">
+      <label className="inline-flex items-center gap-2 text-body-xs text-gray-60">
         <input
           type="checkbox"
           checked={table.header}

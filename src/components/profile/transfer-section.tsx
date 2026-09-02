@@ -73,7 +73,7 @@ function PendingRequest({
           <p className="text-body-sm font-bold text-gray-90">
             승인을 기다리고 있습니다
           </p>
-          <p className="mt-1 text-body-sm text-gray-70">
+          <p className="mt-1 text-body-sm text-gray-60">
             아직 소속은 바뀌지 않았습니다. 지금 부서의 업무가 그대로 보입니다.
           </p>
         </div>
@@ -195,7 +195,7 @@ function History({ items }: { items: TransferRequestView[] }) {
               {r.approver.position ? ` ${r.approver.position}` : ""}
             </p>
             {r.decided_note ? (
-              <p className="mt-2 text-body-sm break-keep text-gray-70">
+              <p className="mt-2 text-body-sm break-keep text-gray-60">
                 {r.decided_note}
               </p>
             ) : null}

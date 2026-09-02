@@ -60,7 +60,7 @@ export function WorkNotFound({
 
           {editable ? (
             <>
-              <p className="mt-4 text-body leading-relaxed break-keep text-gray-80">
+              <p className="mt-4 text-body leading-relaxed break-keep text-gray-90">
                 이 업무를 <strong className="font-bold">볼 수는 있지만</strong>{" "}
                 고칠 권한이 없습니다. 참여자 권한이 「열람」이거나, 참여자가
                 아니고 공개 범위로만 보고 있는 경우입니다.
@@ -72,7 +72,7 @@ export function WorkNotFound({
             </>
           ) : (
             <>
-              <p className="mt-4 text-body leading-relaxed break-keep text-gray-80">
+              <p className="mt-4 text-body leading-relaxed break-keep text-gray-90">
                 이 주소의 업무가 <strong className="font-bold">없거나</strong>,
                 지금 계정에{" "}
                 <strong className="font-bold">보이지 않습니다.</strong> 이
@@ -83,7 +83,7 @@ export function WorkNotFound({
                   설계지만, 길을 잃은 사람 앞을 두 문단으로 막을 일은 아니다.
                   접어 두고, 궁금한 사람만 편다. */}
               <details className="mt-4">
-                <summary className="cursor-pointer text-body-sm font-bold text-gray-70">
+                <summary className="cursor-pointer text-body-sm font-bold text-gray-60">
                   왜 어느 쪽인지 알려 주지 않나요
                 </summary>
                 <div className="mt-2 flex flex-col gap-3 text-body-sm leading-relaxed break-keep text-gray-60">

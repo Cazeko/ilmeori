@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { LinkPending } from "@/components/ui/link-pending";
+import { BureauJump, type BureauJumpItem } from "@/components/org/bureau-jump";
 import { cn } from "@/lib/cn";
 import type { Department, Profile } from "@/lib/types";
 
@@ -93,6 +94,14 @@ export function OrgChart({
   /** 이름표가 갈 주소. 찾기 조건을 실어 보내는 일은 화면이 한다. */
   hrefFor: (personId: string) => string;
 }) {
+  // 바로 가기에 넘기는 얇은 목록. 조직도 전체(사람·이메일)를 클라이언트
+  // 컴포넌트에 넘기면 그대로 페이지 원본에 직렬화된다(work-live.tsx 의 같은
+  // 주석) — 필요한 셋만 추린다.
+  const jump: BureauJumpItem[] = bureaus.map(({ bureau, headcount }) => ({
+    id: bureau.id,
+    name: bureau.name,
+    headcount,
+  }));
   return (
     <div className="flex flex-col gap-8">
       {/* 머리글 줄. 카드 안쪽 여백(24px)을 넘어 좌우 끝까지 칠해야 스크롤한
@@ -100,18 +109,27 @@ export function OrgChart({
           안쪽 격자는 본문과 같은 폭을 유지한다. z-10 은 「고정 헤더 안쪽
           요소 = 표 머리글」 자리다(globals.css 의 다섯 층). */}
       <div className="sticky top-header z-10 -mx-6 hidden border-b border-rule-frame bg-gray-0 px-6 md:block">
-        <div className={cn(COLUMNS, "py-2")}>
+        <div className={cn(COLUMNS, "items-center py-2")}>
           <span className="text-body-xs font-bold text-gray-60">부서</span>
           <span className="text-body-xs font-bold text-gray-60">하는 일</span>
-          <span className="text-body-xs font-bold text-gray-60">재직자</span>
+          <div className="flex items-center justify-between gap-2 text-body-xs font-bold text-gray-60">
+            재직자
+            <BureauJump bureaus={jump} />
+          </div>
         </div>
       </div>
+      {/* 좁은 화면에는 붙박이 머리글 줄이 없다. 같은 차례를 찾기 아래에 펼쳐
+          둔다 — 붙박이는 아니지만, 6,000px 을 엄지로 내리는 것보다는 낫다. */}
+      <BureauJump bureaus={jump} inline />
 
       {bureaus.map(({ bureau, units, headcount }) => (
         <section key={bureau.id} aria-labelledby={`bureau-${bureau.id}`}>
           <h2
             id={`bureau-${bureau.id}`}
-            className="flex items-baseline justify-between gap-3 border-b border-rule-frame pb-2 text-h3 font-bold text-gray-90"
+            // 바로 가기로 왔을 때 머리 줄 뒤에 숨지 않게. md 이상에서는 붙박이
+            // 열 이름 줄(약 37px)까지 겹쳐 있어 한 칸 더 내린다. 높이는 토큰에서
+            // 읽는다(PersonTag 와 같은 이유).
+            className="flex scroll-mt-[calc(var(--spacing-header)+1rem)] items-baseline justify-between gap-3 border-b border-rule-frame pb-2 text-h3 font-bold text-gray-90 md:scroll-mt-[calc(var(--spacing-header)+3rem)]"
           >
             <span className="min-w-0 break-keep">{bureau.name}</span>
             {/* 수는 제목 안에 둔다. 화면을 보지 않는 사람은 제목만 훑어
@@ -205,7 +223,7 @@ function UnitRow({
       <p className="min-w-0 text-body-sm font-bold break-keep text-gray-90 md:py-1">
         {unit.dept.name}
         {unit.direct ? (
-          <span className="ml-2 rounded-xs bg-gray-10 px-chip-x py-chip-y align-middle text-body-xs font-bold text-gray-70">
+          <span className="ml-2 rounded-xs bg-gray-10 px-chip-x py-chip-y align-middle text-body-xs font-bold text-gray-60">
             직속
           </span>
         ) : null}
@@ -279,7 +297,7 @@ function PersonTag({
         // 한다. 위에는 붙박이 머리 줄(56px)과 붙박이 열 이름 줄이 겹쳐 있어서,
         // 그냥 두면 눌렀던 사람이 화면 밖 위쪽에 선다. 높이는 토큰에서 읽는다 —
         // 숫자로 적어 두면 머리 줄 높이를 고치는 날 조용히 어긋난다.
-        "scroll-mt-[calc(var(--spacing-header)+2rem)]",
+        "scroll-mt-[calc(var(--spacing-header)+1rem)] md:scroll-mt-[calc(var(--spacing-header)+3rem)]",
         // 지금 열려 있는 사람. 덮개 너머로도 어느 줄을 눌렀는지 보여야 한다.
         open && "bg-gray-10",
       )}

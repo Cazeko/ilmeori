@@ -191,10 +191,10 @@ async function HandoverStandby({
               <span>
                 아래 숫자는 예시가 아니라 {viewer.name} {viewer.position} 님이
                 주담당인 업무에서{" "}
-                <strong className="font-bold text-gray-70">지금 세어 본 것</strong>
+                <strong className="font-bold text-gray-90">지금 세어 본 것</strong>
                 입니다. 인계를 시작하면 이 기록이 별지 제12호서식의 순서대로
                 조립되고, 항목마다 어느 기록에서 나왔는지가 함께 붙습니다.{" "}
-                <strong className="font-bold text-gray-70">
+                <strong className="font-bold text-gray-90">
                   인계서를 위해 따로 적어 둔 것은 한 줄도 없습니다.
                 </strong>
               </span>
@@ -244,7 +244,7 @@ async function HandoverStandby({
                 <div className="mt-5 border-t border-rule-hair pt-4">
                   <ul className="flex flex-col gap-2">
                     {overdue > 0 ? (
-                      <li className="flex gap-2 text-body-sm break-keep text-gray-70">
+                      <li className="flex gap-2 text-body-sm break-keep text-gray-60">
                         <PenLine
                           aria-hidden
                           className="mt-1 size-4 shrink-0 text-danger"
@@ -257,7 +257,7 @@ async function HandoverStandby({
                       </li>
                     ) : null}
                     {repeating > 0 ? (
-                      <li className="flex gap-2 text-body-sm break-keep text-gray-70">
+                      <li className="flex gap-2 text-body-sm break-keep text-gray-60">
                         <RotateCcw
                           aria-hidden
                           className="mt-1 size-4 shrink-0 text-accent-text"
@@ -353,7 +353,7 @@ async function HandoverStandby({
                     ],
                   ].map(([term, desc], i) => (
                     <li key={term} className="flex gap-3">
-                      <span className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-gray-10 text-body-xs font-bold tabular-nums text-gray-70">
+                      <span className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-gray-10 text-body-xs font-bold tabular-nums text-gray-60">
                         {i + 1}
                       </span>
                       <div>
@@ -381,7 +381,7 @@ async function HandoverStandby({
               <CardHeader variant="quiet" title="진행 중인 인계를 보려면" as="h2" />
               <CardBody variant="quiet">
                 <p className="text-body-sm leading-relaxed break-keep text-gray-60">
-                  인계·인수 문서는 <strong className="font-bold text-gray-80">
+                  인계·인수 문서는 <strong className="font-bold text-gray-90">
                     넘기는 사람과 받는 사람에게만
                   </strong>{" "}
                   보입니다. 화면이 아니라 정책(handover_select)이 그렇게
@@ -389,7 +389,7 @@ async function HandoverStandby({
                 </p>
                 <p className="mt-3 text-body-sm leading-relaxed break-keep text-gray-60">
                   시연용으로 준비된 인계 건은 자원순환과{" "}
-                  <strong className="font-bold text-gray-80">박준호 → 이하람</strong>{" "}
+                  <strong className="font-bold text-gray-90">박준호 → 이하람</strong>{" "}
                   입니다. 오른쪽 위 「계정 전환」에서 두 사람 중 하나로 들어가면
                   초안·근거 표시·실행까지 볼 수 있습니다.
                 </p>

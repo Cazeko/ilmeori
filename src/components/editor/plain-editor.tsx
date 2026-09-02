@@ -194,11 +194,11 @@ export function PlainEditor({
                           고를 수 없는 것은 아예 그리지 않고 그대로 실어 보낸다. */}
                       {b.kind === "table" ? (
                         <p className="flex flex-col gap-1">
-                          <span className="text-body-sm font-bold text-gray-80">
+                          <span className="text-body-sm font-bold text-gray-90">
                             문단 갈래
                           </span>
                           <input type="hidden" name="kind" value="table" />
-                          <span className="inline-flex min-h-11 items-center text-body-sm text-gray-70">
+                          <span className="inline-flex min-h-11 items-center text-body-sm text-gray-60">
                             표. 이 화면에서는 갈래를 바꿀 수 없습니다
                           </span>
                         </p>
@@ -206,7 +206,7 @@ export function PlainEditor({
                         <p className="flex flex-col gap-1">
                           <label
                             htmlFor={`kind-${b.id}`}
-                            className="text-body-sm font-bold text-gray-80"
+                            className="text-body-sm font-bold text-gray-90"
                           >
                             문단 갈래
                           </label>
@@ -228,7 +228,7 @@ export function PlainEditor({
                       <p className="flex flex-col gap-1">
                         <label
                           htmlFor={`indent-${b.id}`}
-                          className="text-body-sm font-bold text-gray-80"
+                          className="text-body-sm font-bold text-gray-90"
                         >
                           들여쓰기
                         </label>
@@ -277,14 +277,14 @@ export function PlainEditor({
 
                   {doc.blocks.length > 1 ? (
                     <details className="mt-3 border-t border-rule-hair pt-2">
-                      <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-body-sm font-bold text-gray-70">
+                      <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-body-sm font-bold text-gray-60">
                         <Trash2 aria-hidden className="size-4 text-gray-40" />이 문단 지우기
                       </summary>
                       <form action={deletePlainBlock} className="mt-1">
                         <input type="hidden" name="workId" value={workId} />
                         <input type="hidden" name="documentId" value={documentId} />
                         <input type="hidden" name="blockId" value={b.id} />
-                        <p className="mb-2 text-body-sm break-keep text-gray-70">
+                        <p className="mb-2 text-body-sm break-keep text-gray-60">
                           이 문단이 문서에서 사라집니다. 되돌릴 수 없습니다.
                         </p>
                         <SubmitButton pendingLabel="지우는 중…" variant="danger" size="sm">
@@ -322,7 +322,7 @@ export function PlainEditor({
             value={doc.blocks[doc.blocks.length - 1]?.id ?? ""}
           />
           <p className="flex flex-col gap-1">
-            <label htmlFor="new-block-kind" className="text-body-sm font-bold text-gray-80">
+            <label htmlFor="new-block-kind" className="text-body-sm font-bold text-gray-90">
               맨 아래에 문단 넣기
             </label>
             <select
@@ -415,9 +415,9 @@ function BlockPreview({
         kind === "heading" && "text-body font-bold text-gray-90",
         kind === "subheading" && "text-body-sm font-bold text-gray-90",
         (kind === "source" || kind === "note") && "text-body-xs text-gray-60",
-        kind === "quote" && "border-l-2 border-gray-30 text-gray-70",
+        kind === "quote" && "border-l-2 border-gray-30 text-gray-60",
         !["title", "heading", "subheading", "source", "note", "quote"].includes(kind) &&
-          "text-body-sm text-gray-80",
+          "text-body-sm text-gray-90",
       )}
       style={indent ? { paddingInlineStart: `${12 + indent * 16}px` } : undefined}
     >

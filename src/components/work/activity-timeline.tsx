@@ -80,7 +80,7 @@ const ICON: Record<ActivityKind, LucideIcon> = {
  */
 const TONE: Record<ActivityTone, { dot: string; chip: string }> = {
   결재: { dot: "bg-gray-10 text-gray-90", chip: "text-gray-90" },
-  권한: { dot: "bg-gray-10 text-gray-70", chip: "text-gray-70" },
+  권한: { dot: "bg-gray-10 text-gray-60", chip: "text-gray-60" },
   대화: { dot: "bg-gray-5 text-gray-60", chip: "text-gray-60" },
   내용: { dot: "bg-gray-5 text-gray-60", chip: "text-gray-60" },
   인계: { dot: "bg-accent-bg text-accent-text", chip: "text-accent-text" },
@@ -167,7 +167,7 @@ export function ActivityTimeline({
                         </span>
                       ) : null}
                     </p>
-                    <p className="mt-1 text-body-sm break-keep text-gray-70">
+                    <p className="mt-1 text-body-sm break-keep text-gray-60">
                       {a.summary}
                     </p>
                   </div>
@@ -208,7 +208,7 @@ export function ActivityFeed({
               </span>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-body-sm break-keep text-gray-80">
+              <p className="text-body-sm break-keep text-gray-90">
                 <span className="font-bold text-gray-90">
                   {a.actor?.name ?? "시스템"}
                 </span>{" "}

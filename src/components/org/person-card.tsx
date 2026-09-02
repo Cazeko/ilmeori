@@ -117,7 +117,7 @@ export function PersonCard({
             {view ? (
               <ProfileFacts view={view} />
             ) : (
-              <p className="text-body break-keep text-gray-70">
+              <p className="text-body break-keep text-gray-60">
                 주소가 잘못되었거나, 지금은 재직 중이 아닌 계정입니다.
               </p>
             )}

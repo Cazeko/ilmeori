@@ -37,7 +37,7 @@ export function NotificationBell({
   return (
     <details className="relative shrink-0">
       <summary
-        className="flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-sm px-2 text-gray-70 transition-colors duration-150 hover:bg-gray-5 hover:text-gray-90 [&::-webkit-details-marker]:hidden"
+        className="flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-sm px-2 text-gray-60 transition-colors duration-150 hover:bg-gray-5 hover:text-gray-90 [&::-webkit-details-marker]:hidden"
         aria-label={
           unread > 0 ? `알림 ${unread}건이 안 읽혔습니다` : "알림"
         }

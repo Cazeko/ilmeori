@@ -72,7 +72,7 @@ const ROLE_STYLE: Record<MemberRole, { chip: string; icon: typeof Eye; desc: str
       desc: "업무를 만들고 참여자와 권한을 정합니다. 인계 대상이 되는 자리입니다.",
     },
     editor: {
-      chip: "bg-gray-10 text-gray-70", // 7.07:1
+      chip: "bg-gray-10 text-gray-60", // 5.13:1
       icon: PenLine,
       desc: "문서와 상태를 고칠 수 있습니다.",
     },

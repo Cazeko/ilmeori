@@ -67,7 +67,7 @@ export default async function AuditPage() {
         <Lock aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
         <span>
           이 기록은{" "}
-          <strong className="font-bold text-gray-70">지울 수 없습니다.</strong>
+          <strong className="font-bold text-gray-90">지울 수 없습니다.</strong>
         </span>
       </p>
 
@@ -138,7 +138,7 @@ export default async function AuditPage() {
                   return (
                     <tr key={l.id}>
                       <td className="px-3 py-3 align-top sm:px-5">
-                        <span className="flex items-start gap-1 text-body-xs font-bold break-keep text-gray-70">
+                        <span className="flex items-start gap-1 text-body-xs font-bold break-keep text-gray-60">
                           <Icon
                             aria-hidden
                             className="mt-1 size-3.5 shrink-0 text-gray-40"
@@ -153,7 +153,7 @@ export default async function AuditPage() {
                              그대로 두고 눌리는 높이만 벌린다. */
                           <Link
                             href={`/works/${l.work.id}`}
-                            className="inline-flex items-center text-body-sm break-keep text-gray-80 pointer-coarse:min-h-11 transition-colors duration-150 hover:text-primary"
+                            className="inline-flex items-center text-body-sm break-keep text-gray-90 pointer-coarse:min-h-11 transition-colors duration-150 hover:text-primary"
                           >
                             {l.work.title}
                           </Link>

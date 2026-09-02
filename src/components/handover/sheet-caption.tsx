@@ -92,7 +92,7 @@ export function SheetCaption({
         {/* 좁은 화면에서는 **한 줄을 통째로** 쓴다. `flex-1` 만 두면 단추 옆
             130px 짜리 기둥에 여덟 줄로 접혀, 서식 위에 글자 벽이 선다.
             `basis-full` 이면 단추가 아래로 내려가고 문장은 제 폭을 갖는다. */}
-        <p className="min-w-0 basis-full text-body-sm leading-relaxed break-keep text-gray-70 sm:basis-0 sm:flex-1">
+        <p className="min-w-0 basis-full text-body-sm leading-relaxed break-keep text-gray-60 sm:basis-0 sm:flex-1">
           {/* 「일머리에 남은」이 빠지면 안 된다. 16 = 7 + 9 는 **닫힌 셈**으로
               읽히는데, 실제로는 결재 전 통화나 방문으로 오간 말이 애초에 이
               셈 밖에 있다(인터뷰 Q10·Q16·Q27). 그 단서는 스크롤 한참 아래

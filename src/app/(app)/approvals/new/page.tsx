@@ -80,7 +80,7 @@ export default async function NewApprovalPage({
           <li aria-hidden>
             <ChevronRight className="size-3.5" />
           </li>
-          <li className="text-gray-70">결재 올리기</li>
+          <li className="text-gray-60">결재 올리기</li>
         </ol>
       </nav>
 

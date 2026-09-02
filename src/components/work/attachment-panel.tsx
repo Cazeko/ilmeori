@@ -54,7 +54,7 @@ const ACCEPT =
 
 /** 파일 선택 버튼도 손가락으로 누르는 크기(44px)를 지킨다. */
 const FILE_INPUT =
-  "min-h-11 w-full cursor-pointer rounded-sm border border-gray-50 bg-surface text-body-sm text-gray-80 file:mr-3 file:h-11 file:cursor-pointer file:border-0 file:bg-gray-5 file:px-3 file:text-body-sm file:font-bold file:text-gray-80";
+  "min-h-11 w-full cursor-pointer rounded-sm border border-gray-50 bg-surface text-body-sm text-gray-90 file:mr-3 file:h-11 file:cursor-pointer file:border-0 file:bg-gray-5 file:px-3 file:text-body-sm file:font-bold file:text-gray-90";
 
 type Version = AttachmentWithUploader;
 
@@ -129,7 +129,7 @@ export function AttachmentPanel({
                   data-download=""
                   // 보이는 글자(파일 이름)를 접근성 이름에 그대로 품는다.
                   aria-label={`${fileName} 내려받기`}
-                  className="flex min-h-11 items-center gap-2 text-body-sm font-bold break-all text-gray-80 transition-colors duration-150 hover:text-primary"
+                  className="flex min-h-11 items-center gap-2 text-body-sm font-bold break-all text-gray-90 transition-colors duration-150 hover:text-primary"
                 >
                   <Paperclip
                     aria-hidden
@@ -141,7 +141,7 @@ export function AttachmentPanel({
                 <p className="pl-6 text-body-xs text-gray-60">
                   {versions.length > 1 ? (
                     <>
-                      <span className="font-bold text-gray-70">
+                      <span className="font-bold text-gray-60">
                         {versions.length}판
                       </span>
                       {" · "}
@@ -159,7 +159,7 @@ export function AttachmentPanel({
                 {/* ── 이전 판 ──────────────────────────────────────────── */}
                 {older.length > 0 ? (
                   <details className="pl-6">
-                    <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-body-xs font-bold text-gray-70">
+                    <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-body-xs font-bold text-gray-60">
                       <History aria-hidden className="size-3.5 text-gray-40" />
                       이전 판 {older.length}개
                     </summary>
@@ -197,7 +197,7 @@ export function AttachmentPanel({
                 {/* ── 새 판 올리기 · 삭제 ──────────────────────────────── */}
                 {canWrite ? (
                   <details className="pl-6">
-                    <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-body-xs font-bold text-gray-70">
+                    <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-body-xs font-bold text-gray-60">
                       <FileUp aria-hidden className="size-3.5 text-gray-40" />새
                       판 올리기 · 삭제
                     </summary>
@@ -310,7 +310,7 @@ export function AttachmentPanel({
           </Field>
           <p className="mt-2 text-body-xs break-keep text-gray-60">
             이미 올라온 문서를 고친 것이라면 그 파일의{" "}
-            <strong className="font-bold text-gray-70">새 판 올리기</strong>를
+            <strong className="font-bold text-gray-90">새 판 올리기</strong>를
             쓰세요. 이름이 조금씩 다른 파일이 늘어나지 않습니다.
           </p>
           <div className="mt-3 flex justify-end">

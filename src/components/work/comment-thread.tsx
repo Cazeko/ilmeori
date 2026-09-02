@@ -114,7 +114,7 @@ export function CommentThread({
                       </form>
                     ) : null}
                   </div>
-                  <p className="mt-1 rounded-sm rounded-tl-none border border-rule-frame bg-surface px-4 py-3 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
+                  <p className="mt-1 rounded-sm rounded-tl-none border border-rule-frame bg-surface px-4 py-3 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-90">
                     {c.body}
                   </p>
                   {/* 누가 불렸는지는 본문의 글자가 아니라 **저장된 사실**이다.
@@ -131,7 +131,7 @@ export function CommentThread({
                           className={
                             m.id === viewer.id
                               ? "font-bold text-accent-text"
-                              : "font-bold text-gray-70"
+                              : "font-bold text-gray-60"
                           }
                         >
                           {m.name}

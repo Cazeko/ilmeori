@@ -297,13 +297,13 @@ export function WorkCard({
             걷어내고 아이콘과 글자에만 맡긴다 — 카드에서 무엇이든 튀어야 하는
             자리는 왼쪽 띠(지연·임박) 하나뿐이다. */}
         {cross ? (
-          <span className="inline-flex items-center gap-1 font-bold text-gray-70">
+          <span className="inline-flex items-center gap-1 font-bold text-gray-60">
             <Users aria-hidden className="size-3" />
             {work.department_count}개 부서
           </span>
         ) : null}
         {work.previous_year ? (
-          <span className="inline-flex items-center gap-1 font-bold text-gray-70">
+          <span className="inline-flex items-center gap-1 font-bold text-gray-60">
             <RotateCcw aria-hidden className="size-3" />
             작년 판 있음
           </span>
@@ -316,7 +316,7 @@ export function WorkCard({
           위에 이미 상태 배지가 있고, 배지가 둘이면 어느 쪽이 업무의 상태인지
           헷갈린다. */}
       {approval ? (
-        <p className="mt-2 flex items-center gap-2 text-body-xs font-bold text-gray-70">
+        <p className="mt-2 flex items-center gap-2 text-body-xs font-bold text-gray-60">
           <Stamp aria-hidden className="size-3.5 shrink-0 text-gray-40" />
           <span>
             결재 {approvalStateLine(approval.latest.state, approval.latest)}

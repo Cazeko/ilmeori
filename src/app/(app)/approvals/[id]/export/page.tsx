@@ -61,7 +61,7 @@ export default async function ApprovalExportPage({
         <Card className="max-w-2xl">
           <CardBody className="py-8">
             <FileQuestion aria-hidden className="size-9 text-gray-30" />
-            <p className="mt-4 text-body leading-relaxed break-keep text-gray-80">
+            <p className="mt-4 text-body leading-relaxed break-keep text-gray-90">
               이 주소의 결재 문서가 <strong className="font-bold">없거나</strong>
               , 지금 계정에 <strong className="font-bold">보이지 않습니다.</strong>
             </p>
@@ -126,7 +126,7 @@ export default async function ApprovalExportPage({
             <li aria-hidden>
               <ChevronRight className="size-3.5" />
             </li>
-            <li className="text-gray-70">온나라로 넘기기</li>
+            <li className="text-gray-60">온나라로 넘기기</li>
           </ol>
         </nav>
 
@@ -192,7 +192,7 @@ export default async function ApprovalExportPage({
 
               인쇄(A4) 폴백은 그대로 둔다. 폴백은 「안 열릴까 봐」만이 아니라
               「그 자리에 한/글이 없을 수도 있어서」 있는 것이고, 그건 여전하다. */}
-          <p className="mt-3 border-t border-primary/30 pt-3 text-body-xs leading-relaxed break-keep text-gray-70">
+          <p className="mt-3 border-t border-primary/30 pt-3 text-body-xs leading-relaxed break-keep text-gray-60">
             <strong className="font-bold text-gray-90">
               최종 결재권자의 서명은 「일머리」에서 받지 않습니다.
             </strong>{" "}
@@ -214,7 +214,7 @@ export default async function ApprovalExportPage({
           <p className="mb-5 flex items-start gap-2 border-l border-l-rule-hair py-2 pl-3 text-body-sm break-keep text-gray-60">
             <Info aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
             <span>
-              <strong className="font-bold text-gray-70">
+              <strong className="font-bold text-gray-90">
                 아직 결재가 진행 중입니다.
               </strong>{" "}
               지금 받으면 서명이 덜 찍힌 결재란이 그대로 실립니다. 빈칸은 「아직
@@ -227,12 +227,12 @@ export default async function ApprovalExportPage({
           <p className="mb-5 flex items-start gap-2 border-l border-l-rule-hair py-2 pl-3 text-body-sm break-keep text-gray-60">
             <EyeOff aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
             <span>
-              <strong className="font-bold text-gray-70">
+              <strong className="font-bold text-gray-90">
                 이 계정에서는 업무 기록을 볼 수 없습니다.
               </strong>{" "}
               결재선에 이름이 있어 문서 한 장은 보이지만 연결된 업무의 기록은
               열람 권한이 없습니다. 근거 자료 항목이 비어 있는 것은{" "}
-              <strong className="font-bold text-gray-70">
+              <strong className="font-bold text-gray-90">
                 없는 것이 아니라 못 보는 것
               </strong>
               이고, 파일에도 그렇게 적힙니다.

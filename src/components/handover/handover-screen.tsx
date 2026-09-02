@@ -242,7 +242,7 @@ export async function HandoverScreen({
             {!isSender ? (
               <>
                 물어볼 것은{" "}
-                <strong className="font-bold text-gray-80">
+                <strong className="font-bold text-gray-90">
                   그 업무의 「대화」
                 </strong>
                 에 적어 주세요 — 쪽지로 주고받으면 두 사람에게서 끝나지만,
@@ -473,12 +473,12 @@ export async function HandoverScreen({
               바뀌는 날이 온다. */}
             {canWriteNotes ? (
               <details className="rounded-sm border border-rule-frame bg-surface">
-                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-90">
                   <RotateCcw aria-hidden className="size-4 shrink-0 text-gray-40" />
                   인계를 잘못 시작했다면
                 </summary>
                 <div className="border-t border-rule-hair px-4 py-4">
-                  <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
+                  <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-60">
                     아직 실행되지 않은 인계이므로 넘어간 업무는 없습니다.
                     취소하면 초안과 대상 목록이 사라지고 새로 시작할 수
                     있습니다. 실행한 뒤에는 취소할 수 없습니다.
@@ -649,7 +649,7 @@ export async function HandoverScreen({
                 (미포착 판·대기 화면이 이미 쓰는 모양, DESIGN.md §17.3). */}
               <section className="mb-4 flex gap-2 border-l border-l-rule-hair py-2 pl-3">
                 <Cog aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
-                <div className="flex flex-col gap-2 text-body-sm leading-relaxed break-keep text-gray-70">
+                <div className="flex flex-col gap-2 text-body-sm leading-relaxed break-keep text-gray-60">
                   <p>
                     <strong className="font-bold text-gray-90">
                       「현안사항」은 문서만이 아니라 대화에서도 가져옵니다.
@@ -715,7 +715,7 @@ export async function HandoverScreen({
                       알려 주는 유일한 자리가 된다(tests/browser.test.mjs [2]). */}
                   한/글 파일에는 위 서식이 그대로 담깁니다.{" "}
                   <kbd className="font-sans font-bold">Ctrl+P</kbd>로도{" "}
-                  <strong className="font-bold text-gray-80">
+                  <strong className="font-bold text-gray-90">
                     별지 제12호서식 모양의 A4
                   </strong>
                   가 나옵니다. 근거 꼬리표는 화면의 장치라 파일에도 종이에도 담기지

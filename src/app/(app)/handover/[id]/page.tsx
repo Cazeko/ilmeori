@@ -69,7 +69,7 @@ function HandoverNotFound({ path }: { path: string }) {
         <CardBody className="py-8">
           <FileQuestion aria-hidden className="size-9 text-gray-30" />
 
-          <p className="mt-4 text-body leading-relaxed break-keep text-gray-80">
+          <p className="mt-4 text-body leading-relaxed break-keep text-gray-90">
             이 주소의 인계서가 <strong className="font-bold">없거나</strong>,
             지금 계정에{" "}
             <strong className="font-bold">보이지 않습니다.</strong> 이 화면은
@@ -77,14 +77,14 @@ function HandoverNotFound({ path }: { path: string }) {
           </p>
 
           <details className="mt-4">
-            <summary className="cursor-pointer text-body-sm font-bold text-gray-70">
+            <summary className="cursor-pointer text-body-sm font-bold text-gray-60">
               왜 어느 쪽인지 알려 주지 않나요
             </summary>
             <div className="mt-2 flex flex-col gap-3 text-body-sm leading-relaxed break-keep text-gray-60">
               <p>
                 「권한이 없습니다」라고 답하면 그 인계가 존재한다는 사실을 알려
                 주는 셈이 됩니다.{" "}
-                <strong className="font-bold text-gray-80">
+                <strong className="font-bold text-gray-90">
                   누가 누구에게 업무를 넘겼는지는 그 자체로 인사 정보입니다
                 </strong>{" "}
                 — 발령이 나기 전에 새어 나가면 안 되는 것이기도 합니다.

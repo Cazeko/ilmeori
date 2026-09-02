@@ -1,4 +1,5 @@
 import { Notice } from "@/components/ui/notice";
+import { cn } from "@/lib/cn";
 import { readFeedback } from "@/lib/actions/feedback";
 
 /**
@@ -31,7 +32,9 @@ export function ActionFeedback({
     <div
       role={quiet ? "status" : "alert"}
       aria-live={quiet ? "polite" : "assertive"}
-      className={className}
+      // rise-in 이 답하는 질문은 「방금 뭔가 도착했나?」다. 이 상자는 방금
+      // 누른 행동의 결과라 정확히 그 질문에 답한다(globals.css 의 움직임 셋).
+      className={cn("motion-safe:animate-rise-in", className)}
     >
       <Notice tone={feedback.tone}>{feedback.text}</Notice>
     </div>

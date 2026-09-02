@@ -44,8 +44,8 @@ import type { Profile } from "@/lib/types";
  * 목록에서 늘 같은 자리에 있다), 색 예산을 한 갈래도 새로 쓰지 않는다.
  */
 
-/** 대비 7.07:1 (gray-70 on gray-10). tests/contrast.test.mjs 가 지킨다. */
-const NEUTRAL = "bg-gray-10 text-gray-70";
+/** 대비 5.13:1 (gray-60 on gray-10). tests/contrast.test.mjs 가 지킨다. */
+const NEUTRAL = "bg-gray-10 text-gray-60";
 
 /** 「나」. 대비 4.95:1 (accent-text on accent-bg). 같은 시험이 지킨다. */
 const MINE = "bg-accent-bg text-accent-text";
@@ -131,11 +131,11 @@ export function PersonChip({
 }
 
 /**
- * 참여자 여럿을 겹쳐 보인다. 넘치면 +N.
+ * 참여자 여럿을 이름으로 줄여 보인다. 넘치면 +N.
  *
- * 내가 낀 목록이면 내 아바타를 **맨 앞으로 당긴다.** 겹쳐 놓은 줄에서 앞자리가
- * 위에 얹히고, 상한(max)에 걸려 잘리는 것은 뒤쪽이다 — 참여자가 여섯인데 넷만
- * 보이는 카드에서 정작 내가 「+2」 안에 숨는 일이 없어야 한다.
+ * 내가 낀 목록이면 내 이름을 **맨 앞으로 당긴다.** 상한(max)에 걸려 잘리는
+ * 것은 뒤쪽이다 — 참여자가 여섯인데 넷만 보이는 카드에서 정작 내가 「+2」
+ * 안에 숨는 일이 없어야 한다.
  * 「이거 내 일인가」가 이 줄이 답하는 질문이므로, 그 답이 잘리면 안 된다.
  */
 export function AvatarStack({
@@ -155,32 +155,40 @@ export function AvatarStack({
   const rest = ordered.length - shown.length;
   return (
     <span
-      className="inline-flex items-center"
-      // 겹쳐진 아바타는 시각 정보다. 스크린리더에는 사람 수와 이름을 글로 준다.
+      className="inline-flex min-w-0 items-center gap-1 text-body-xs text-gray-60"
       aria-label={`참여자 ${ordered.length}명: ${ordered.map((p) => p.name).join(", ")}`}
       role="img"
     >
-      {/* 겹침은 4px 이다. 한동안 6px(-ml-1.5)이었고, 여백 반단계를 걷어내면서
-          8px(-ml-2)으로 **올렸다** — 방향이 반대였다. 24px 원에 13px 글자를
-          넣으면 글자가 x 5~19 를 쓰는데, 뒤 원이 ring 2px 을 달고 8px 을
-          덮으면 x 14 부터 가려진다. 실제로 「서 지 민 태」가 「ㅅ ㅈ ㅁ 태」로
-          읽혔다(8배 확대로 확인). 이 디자인은 「사람을 가르는 일은 색이 아니라
-          이름 글자가 한다」 위에 서 있으므로, 그 글자가 3분의 1 가려지면
-          아바타에서 색을 뺀 근거 자체가 무너진다. 4px 로 내리면 온전해지고,
-          넷을 늘어놓아도 84px 이라 카드 한 줄에 그대로 들어간다. */}
-      {shown.map((p) => (
-        <Avatar
-          key={p.id}
-          profile={p}
-          size="sm"
-          me={p.id === meId}
-          className="-ml-1 ring-2 ring-surface first:ml-0"
-        />
+      {/* ── 원이 아니라 이름이다 ──────────────────────────────────────────
+          한동안 24px 원에 이름 한 글자씩을 넣어 겹쳐 세웠다(「서 지 민 태」).
+          한 글자는 사람을 가르지 못한다 — 「서」가 서연인지 서준인지는 카드를
+          열어야 알고, 넷이 나란히 서면 「서지민태」라는 낯선 이름 하나로
+          읽힌다. 겹친 원 무더기는 협업 도구가 다 쓰는 모양이라 그 자체로
+          「어디서 본 화면」이 되기도 했다.
+
+          이름을 그냥 적는다. 성을 뗀 두 글자(「서연·지우·민수 +1」)는 한 글자
+          원 넷과 같은 폭에 들어가고, 읽는 데 해석이 필요 없다. 나는 굵게 —
+          「내가 낀 업무인가」가 이 줄이 답하는 질문이다. 원(Avatar)은 이름과
+          직위가 함께 서는 자리(PersonChip·대화)에 그대로 남는다. */}
+      {shown.map((p, i) => (
+        <span key={p.id} className="inline-flex min-w-0 items-center gap-1">
+          {i > 0 ? (
+            <span aria-hidden className="text-gray-30">
+              ·
+            </span>
+          ) : null}
+          <span
+            className={cn(
+              "truncate",
+              p.id === meId && "font-bold text-gray-90",
+            )}
+          >
+            {initials(p.name, false)}
+          </span>
+        </span>
       ))}
       {rest > 0 ? (
-        <span className="-ml-1 inline-flex size-6 items-center justify-center rounded-full bg-gray-10 text-body-xs font-bold text-gray-60 ring-2 ring-surface">
-          +{rest}
-        </span>
+        <span className="shrink-0 tabular-nums">+{rest}</span>
       ) : null}
     </span>
   );

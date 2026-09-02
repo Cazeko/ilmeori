@@ -49,7 +49,7 @@ export function VisibilityReason({
 
   return (
     <details className="mt-5 border-l border-l-rule-hair pl-3">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 py-2 text-body-sm text-gray-70 transition-colors duration-150 hover:text-gray-90">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 py-2 text-body-sm text-gray-60 transition-colors duration-150 hover:text-gray-90">
         <Eye aria-hidden className="size-4 shrink-0 text-gray-40" />
         <span className="break-keep">
           <span className="font-bold">이 업무가 보이는 이유</span>:{" "}
@@ -58,10 +58,10 @@ export function VisibilityReason({
       </summary>
 
       <div className="pt-1 pb-3">
-        <p className="text-body-sm leading-relaxed break-keep text-gray-70">
+        <p className="text-body-sm leading-relaxed break-keep text-gray-60">
           {reason.long}
         </p>
-        <p className="mt-2 text-body-sm leading-relaxed break-keep text-gray-70">
+        <p className="mt-2 text-body-sm leading-relaxed break-keep text-gray-60">
           {reason.scope}
         </p>
         {/* 목업 모드에서는 Supabase에 연결조차 되어 있지 않다. 그때도 「DB가 막는다」고
@@ -71,14 +71,14 @@ export function VisibilityReason({
             <>
               이 판단을 화면이 하지 않습니다. 목록에 없는 업무는 화면이 감춘 것이
               아니라{" "}
-              <strong className="font-bold text-gray-80">
+              <strong className="font-bold text-gray-90">
                 DB가 내어 주지 않은 것
               </strong>
               입니다. 서버를 우회해 직접 질의해도 결과는 같습니다.
             </>
           ) : (
             <>
-              지금은 DB 없이 도는 <strong className="font-bold text-gray-80">시연
+              지금은 DB 없이 도는 <strong className="font-bold text-gray-90">시연
               모드</strong>라, 서버가 같은 규칙을 흉내 내고 있습니다. 데이터베이스에
               연결하면 이 판단을 화면도 서버도 아닌 DB의 행 수준 보안(RLS)이 하고,
               서버를 우회해 직접 질의해도 결과가 같아집니다.
@@ -99,7 +99,7 @@ export function VisibilityReason({
             <>
               지금 계정에서 나가 계정 선택 화면으로 갑니다. 계정을 고르면 이
               주소로 다시 옵니다.{" "}
-              <strong className="font-bold text-gray-80">
+              <strong className="font-bold text-gray-90">
                 볼 수 없는 계정으로 오면 「없습니다」라고 답합니다.
               </strong>{" "}
               권한이 없다고 말하지 않습니다. 그렇게 답하는 순간 「그런 업무가
@@ -109,7 +109,7 @@ export function VisibilityReason({
             <>
               지금 계정에서 나가 계정 선택 화면으로 갑니다. 계정을 고르면 이
               주소로 다시 옵니다. 이 업무는 전체 공개라{" "}
-              <strong className="font-bold text-gray-80">
+              <strong className="font-bold text-gray-90">
                 어느 계정으로 와도 보입니다.
               </strong>{" "}
               가려지는 것을 보시려면 공개 범위가 좁은 업무에서 눌러 보십시오.

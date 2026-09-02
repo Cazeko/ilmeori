@@ -26,7 +26,7 @@ export default function OfflinePage() {
       <h1 className="mt-5 text-h2 font-bold break-keep text-gray-90">
         연결이 끊겼습니다
       </h1>
-      <p className="mt-3 text-body leading-relaxed break-keep text-gray-70">
+      <p className="mt-3 text-body leading-relaxed break-keep text-gray-60">
         일머리는 업무 기록을 이 기기에 저장하지 않습니다. 그래서 연결이 없는
         동안에는 아무것도 보여 드릴 수 없습니다.
       </p>

@@ -10,7 +10,7 @@ import {
 import { confirmHandover, executeHandover } from "@/lib/actions/handover";
 import { ButtonLink, DownloadLink } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { AnchorLink } from "@/components/handover/anchor-link";
+import { HandoverToc } from "@/components/handover/handover-toc";
 import { ProgressSteps } from "@/components/handover/progress-steps";
 import { josa } from "@/lib/format";
 import { HANDOVER_SCREENING_ANCHOR, handoverBlockAnchor } from "@/lib/types";
@@ -125,35 +125,25 @@ export function HandoverRail({
       {toc.length > 0 ? (
       <nav aria-label="서식 항목" className="border-t border-rule-hair px-4 py-3">
         <p className="text-body-xs font-bold text-gray-60">항목으로 가기</p>
-        <ol className="mt-2 flex flex-col gap-1">
-          {toc.map((t) => (
-            <li
-              key={t.key}
-              className="flex items-baseline justify-between gap-2 text-body-xs"
-            >
-              <AnchorLink
-                href={`#${handoverBlockAnchor(t.key)}`}
-                className="min-w-0 truncate font-bold text-primary"
-              >
-                {t.heading}
-              </AnchorLink>
-              <span className="shrink-0 tabular-nums text-gray-60">
-                {t.empty ? "빈칸" : t.notes > 0 ? `보충 ${t.notes}` : ""}
-              </span>
-            </li>
-          ))}
-          {notUsed > 0 ? (
-            <li className="flex items-baseline justify-between gap-2 border-t border-rule-hair pt-1 text-body-xs">
-              <AnchorLink
-                href={`#${HANDOVER_SCREENING_ANCHOR}`}
-                className="min-w-0 truncate font-bold text-primary"
-              >
-                규칙이 안 실은 것
-              </AnchorLink>
-              <span className="shrink-0 tabular-nums text-gray-60">{notUsed}건</span>
-            </li>
-          ) : null}
-        </ol>
+        <HandoverToc
+          items={[
+            ...toc.map((t) => ({
+              anchor: handoverBlockAnchor(t.key),
+              heading: t.heading,
+              tail: t.empty ? "빈칸" : t.notes > 0 ? `보충 ${t.notes}` : undefined,
+            })),
+            ...(notUsed > 0
+              ? [
+                  {
+                    anchor: HANDOVER_SCREENING_ANCHOR,
+                    heading: "규칙이 안 실은 것",
+                    tail: `${notUsed}건`,
+                    divider: true,
+                  },
+                ]
+              : []),
+          ]}
+        />
       </nav>
       ) : null}
 
@@ -209,7 +199,7 @@ function Action({
             두 번 있으면 둘 중 하나는 다른 말인 줄 알고 읽게 된다.
             여기서는 **그래서 지금 무엇을 할 수 있는가**만 말한다. */}
         <div>
-          <p className="flex items-start gap-2 text-body-sm break-keep text-gray-70">
+          <p className="flex items-start gap-2 text-body-sm break-keep text-gray-60">
             <CheckCircle2
               aria-hidden
               className="mt-1 size-4 shrink-0 text-success"
@@ -292,7 +282,7 @@ function Action({
           <li className="flex gap-2">
             <PenLine aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
             <div className="min-w-0">
-              <p className="text-body-sm text-gray-70">
+              <p className="text-body-sm text-gray-60">
                 직접 적을 칸{" "}
                 <b className="font-bold tabular-nums text-gray-90">
                   {toFill.length}건
@@ -326,7 +316,7 @@ function Action({
             <li className="flex gap-2">
               <Cog aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
               <div className="min-w-0">
-                <p className="text-body-sm text-gray-70">
+                <p className="text-body-sm text-gray-60">
                   규칙이 안 실은 것{" "}
                   <b className="font-bold tabular-nums text-gray-90">
                     {notUsed}건
@@ -347,7 +337,7 @@ function Action({
         {/* 데모 모드다. 적을 칸이 없는 곳으로 보내 놓고 아무 말도 안 하면 안 된다. */}
         {!canWriteNotes && toFill.length > 0 ? (
           <p className="mb-4 text-body-sm break-keep text-gray-60">
-            <strong className="font-bold text-gray-80">
+            <strong className="font-bold text-gray-90">
               데모 모드에서는 읽기만 됩니다.
             </strong>{" "}
             데이터베이스에 연결하면 이 화면에서 그 칸에 직접 적을 수 있습니다.
@@ -384,7 +374,7 @@ function Action({
             인계 실행
           </summary>
           <div className="border-t border-danger/30 px-4 py-4">
-            <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
+            <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-60">
               아래 업무의 주담당이 {to.name} {to.position}
               {josa(to.position ?? to.name, "으로", "로")} 바뀌고, {from.name}{" "}
               {from.position}
@@ -395,7 +385,7 @@ function Action({
               {items.map(({ work }) => (
                 <li
                   key={work.id}
-                  className="text-body-sm break-keep text-gray-80"
+                  className="text-body-sm break-keep text-gray-90"
                 >
                   · {work.title}
                 </li>

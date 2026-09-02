@@ -400,7 +400,7 @@ export function WorkLive({
         </p>
 
         {link === "live" ? (
-          <p className="inline-flex items-center gap-2 text-body-xs text-gray-70">
+          <p className="inline-flex items-center gap-2 text-body-xs text-gray-60">
             <Users aria-hidden className="size-3.5 shrink-0 text-gray-40" />
             {others.length === 0 ? (
               <span>지금은 나만 보고 있습니다</span>
@@ -432,7 +432,7 @@ export function WorkLive({
       {/* 편집 중에 쌓인 변경. 반영할지는 쓰고 있는 사람이 정한다. */}
       {waiting > 0 ? (
         <div className="animate-rise-in mt-2 flex flex-wrap items-center gap-3 rounded-sm border border-status-doing/30 bg-status-doing-bg px-4 py-3">
-          <p className="min-w-0 flex-1 text-body-sm text-gray-80">
+          <p className="min-w-0 flex-1 text-body-sm text-gray-90">
             <span className="font-bold">
               다른 사람이 {waitingLabel}
               {josa(waitingLabel, "을", "를")} 고쳤습니다.

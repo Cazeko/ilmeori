@@ -39,7 +39,7 @@ import type { WorkListItem } from "@/lib/types";
  * 색은 셋뿐이다(globals.css 의 4색 체계).
  *   지났다      빨강   status-overdue-text   5.74:1
  *   오늘·내일   주황   accent-text           5.25:1
- *   그 밖       먹색   gray-70               8.32:1
+ *   그 밖       회색   gray-60               6.04:1
  * 46px 은 큰 글자라 요구 대비가 3:1 인데 셋 다 4.5:1 을 넘긴다.
  * (tests/contrast.test.mjs 가 잰다)
  *
@@ -62,7 +62,7 @@ function toneOf(work: WorkListItem) {
   if (d !== null && d >= 0 && d <= 1) {
     return { text: "text-accent-text", edge: "border-l-accent" };
   }
-  return { text: "text-gray-70", edge: "border-l-rule-frame" };
+  return { text: "text-gray-60", edge: "border-l-rule-frame" };
 }
 
 export function UrgentHero({
@@ -135,13 +135,13 @@ export function UrgentHero({
           {work.department.name}
         </span>
         {cross ? (
-          <span className="inline-flex items-center gap-2 font-bold text-gray-70">
+          <span className="inline-flex items-center gap-2 font-bold text-gray-60">
             <Users aria-hidden className="size-4" />
             {work.department_count}개 부서
           </span>
         ) : null}
         {approval ? (
-          <span className="inline-flex items-center gap-2 font-bold text-gray-70">
+          <span className="inline-flex items-center gap-2 font-bold text-gray-60">
             <Stamp aria-hidden className="size-4" />
             결재 {approvalStateLine(approval.latest.state, approval.latest)}
           </span>

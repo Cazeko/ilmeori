@@ -198,7 +198,7 @@ export function MentionBox({
                   onClick={() => pick(p)}
                   className={cn(
                     "flex min-h-11 w-full items-center gap-2 px-3 text-left text-body-sm",
-                    i === cursor ? "bg-primary-5 text-primary" : "text-gray-80",
+                    i === cursor ? "bg-primary-5 text-primary" : "text-gray-90",
                   )}
                 >
                   <span className="font-bold">{p.name}</span>
@@ -217,7 +217,7 @@ export function MentionBox({
         {/* 「— 본문에 @ 를 치면 목록이 뜹니다」가 붙어 있었다. 그 사실은 실제로
             @ 를 쳐 본 사람에게 즉시 드러나고, 안 쳐 본 사람은 아래 체크박스로
             이미 부를 수 있다. 어느 쪽에게도 필요하지 않은 줄이었다. */}
-        <legend className="mb-2 flex items-center gap-1 text-body-xs font-bold text-gray-70">
+        <legend className="mb-2 flex items-center gap-1 text-body-xs font-bold text-gray-60">
           <AtSign aria-hidden className="size-3.5 text-gray-40" />
           부를 사람
         </legend>
@@ -234,7 +234,7 @@ export function MentionBox({
                   "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border px-3 text-body-sm transition-colors duration-150",
                   on
                     ? "border-accent-text bg-accent-bg font-bold text-accent-text"
-                    : "border-rule-frame bg-surface text-gray-70 hover:bg-gray-5 active:bg-primary-10 active:text-primary",
+                    : "border-rule-frame bg-surface text-gray-60 hover:bg-gray-5 active:bg-primary-10 active:text-primary",
                 )}
               >
                 <input

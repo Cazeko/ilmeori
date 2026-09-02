@@ -91,7 +91,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
           {/* 어느 공모전의 무슨 과제인지. 본문 문단 안에 섞여 있으면 읽고
               지나가는데, 심사위원에게는 이게 첫 번째 확인 사항이다. */}
-          <p className="mt-4 inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-sm border border-rule-hair bg-surface px-3 py-2 text-body-xs text-gray-70">
+          <p className="mt-4 inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-sm border border-rule-hair bg-surface px-3 py-2 text-body-xs text-gray-60">
             <span className="font-bold text-gray-90">
               2026 화성시 AI·DATA 공모전
             </span>
@@ -196,7 +196,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             </h2>
             <p className="mt-2 text-body-sm break-keep text-gray-60">
               가입 절차 없이 바로 보실 수 있습니다. 계정마다 소속과 역할이 달라
-              <strong className="font-bold text-gray-80"> 보이는 업무가 서로 다릅니다.</strong>
+              <strong className="font-bold text-gray-90"> 보이는 업무가 서로 다릅니다.</strong>
             </p>
 
             {/* 「이 주소를 다른 계정으로 열어 보기」로 온 경우.

@@ -125,7 +125,7 @@ export function HandoverTalk({
                       mine ? "justify-end" : "",
                     )}
                   >
-                    <span className="font-bold text-gray-80">
+                    <span className="font-bold text-gray-90">
                       {m.author.name} {m.author.position}
                     </span>
                     <time
@@ -145,7 +145,7 @@ export function HandoverTalk({
                       "mt-1 inline-block rounded-sm px-3 py-2 text-left text-body-sm leading-relaxed break-keep whitespace-pre-line",
                       mine
                         ? "bg-primary-5 text-gray-90"
-                        : "border border-rule-hair bg-gray-0 text-gray-80",
+                        : "border border-rule-hair bg-gray-0 text-gray-90",
                     )}
                   >
                     {m.body}

@@ -55,7 +55,7 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
           <li aria-hidden>
             <ChevronRight className="size-3.5" />
           </li>
-          <li className="text-gray-70">{view ? view.profile.name : "직원"}</li>
+          <li className="text-gray-60">{view ? view.profile.name : "직원"}</li>
         </ol>
       </nav>
 
@@ -65,10 +65,10 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
           응답은 404 가 아니라 200 이다(src/app/not-found.tsx 와 같은 맞바꿈). */}
       {!view ? (
         <div data-rank="doc" className="border border-rule-frame border-t-2 border-t-rule-head bg-gray-0 p-6">
-          <h1 className="text-h2 font-bold tracking-tight text-gray-90 sm:text-h1">
+          <h1 className="text-h2 font-bold text-gray-90 sm:text-h1">
             그런 직원이 없습니다
           </h1>
-          <p className="mt-4 text-body break-keep text-gray-70">
+          <p className="mt-4 text-body break-keep text-gray-60">
             주소가 잘못되었거나, 지금은 재직 중이 아닌 계정입니다.
           </p>
           <ButtonLink href="/works" variant="secondary" className="mt-6">

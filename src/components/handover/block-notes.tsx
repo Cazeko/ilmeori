@@ -58,7 +58,7 @@ export function BlockNoteForm({
     // 사람이 적어야 하는 자리이고, 일곱 개를 다 펼쳐 두면 서식이 아니라
     // 설문지처럼 보인다.
     <details open={needsHuman && !hasNotes} className="mt-2">
-      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-2 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
+      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-2 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-90">
         <PenLine aria-hidden className="size-4" />
         보충 적기
       </summary>

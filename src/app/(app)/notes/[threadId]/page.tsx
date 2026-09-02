@@ -75,7 +75,7 @@ export default async function NoteThreadPage({
             <ChevronRight className="size-3.5" />
           </li>
           <li className="min-w-0">
-            <span className="line-clamp-1 text-gray-70">{counterpart} 님</span>
+            <span className="line-clamp-1 text-gray-60">{counterpart} 님</span>
           </li>
         </ol>
       </nav>

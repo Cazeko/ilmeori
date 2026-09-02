@@ -143,7 +143,7 @@ export function NoteThreadView({
 
                 <p
                   className={cn(
-                    "mt-1 rounded-sm rounded-tl-none border px-4 py-3 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80",
+                    "mt-1 rounded-sm rounded-tl-none border px-4 py-3 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-90",
                     "border-rule-frame bg-surface",
                   )}
                 >

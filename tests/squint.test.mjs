@@ -332,12 +332,69 @@ for (const screen of SCREENS) {
   const { cells } = grid;
   const sorted = [...cells].sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)];
-  const scored = cells
-    .map((v, i) => ({ i, w: Math.abs(v - median) }))
-    .sort((a, b) => b.w - a.w);
+  // ── 칸이 아니라 덩어리로 센다 ──────────────────────────────────────────────
+  //
+  // 한동안 칸 하나하나를 따로 세웠다. 그러면 **가로로 넓은 히어로가 자기
+  // 자신과 겨룬다** — 히어로가 한 줄의 세 칸을 채우면 그 세 칸이 1등의
+  // 2~4등이 되어 지배도를 끌어내린다. 실제로 홈에서 「내 차례인 결재」 상자를
+  // 걷어 히어로가 25px 올라오자(첫 줄을 더 꽉 채우자) 1.53 → 1.15 로
+  // **떨어졌다.** 화면에서는 히어로가 더 서는데 자는 묻혔다고 말했다.
+  //
+  // 이 시험의 물음은 「덩어리 하나가 서는가」이지 「칸 하나가 서는가」가 아니다.
+  // 같은 줄에서 이웃한 칸이 둘 다 무겁고(1등 칸의 절반 이상) 같은 쪽으로
+  // 벗어나면(둘 다 밝거나 둘 다 어둡거나) 한 덩어리로 잇고 무게를 더한다.
+  // 줄을 넘어서는 잇지 않는다 — 세로로 긴 목록은 「덩어리 하나」가 아니라
+  // 「쌓인 줄」이고, 그것이 히어로를 이기는 것은 이 시험이 잡아야 할 일이다.
+  //
+  //   실측(2026-09-02, 1440×1000)      칸 단위 → 덩어리 단위
+  //     홈 (상자 걷기 전)               1.53 → 1.61   1등은 아래쪽 소식 목록
+  //     홈 (상자 걷은 뒤)               1.15 → 2.30   1등이 비로소 히어로다
+  //     업무 보드 (조건 줄 합치기 전)   1.04 → 1.40   1등이 위쪽 크롬 — 자리 ✗
+  //     업무 보드 (합친 뒤)             1.58 → 1.62   1등이 카드 열 — 자리 ✓
+  //     결재함 · 쪽지함 · 인계(대기)    3~8           빈 종이 판이 한 줄로 이어져
+  //                                                  값이 크게 나온다. 셋 다 assert
+  //                                                  가 아니라 숫자만 적어 둔다.
+  //
+  // 위 「열어 둔 빨간불 ①」(업무 보드의 자리)은 이 날 꺼졌다 — 조건 폼과 칩을
+  // 한 줄로 합쳐 문서 위 크롬이 한 칸 아래로 내려갔고, 덩어리로 세자 1등이
+  // 크롬이 아니라 카드 열이 됐다.
+  const signed = cells.map((v) => v - median);
+  const maxW = Math.max(...signed.map((v) => Math.abs(v)));
+  const blobs = [];
+  for (let r = 0; r < ROWS; r += 1) {
+    let run = null;
+    for (let c = 0; c < COLS; c += 1) {
+      const i = r * COLS + c;
+      const w = Math.abs(signed[i]);
+      const sign = Math.sign(signed[i]);
+      const strong = w >= maxW * 0.5;
+      if (strong && run && run.sign === sign) {
+        run.w += w;
+        run.cells.push(i);
+        continue;
+      }
+      if (run) blobs.push(run);
+      run = strong ? { w, cells: [i], sign } : null;
+      if (!strong) blobs.push({ w, cells: [i], sign });
+    }
+    if (run) blobs.push(run);
+  }
+  blobs.sort((a, b) => b.w - a.w);
+  const scored = blobs;
 
   const top = scored[0].w;
   const rivals = scored.slice(1, 5).reduce((s, v) => s + v.w, 0) / 4;
+  // SQUINT_DEBUG=1 — 칸마다 무게를 격자로 찍는다. 1등 칸 하나만 보고는
+  // 「왜 이 칸인가」를 알 수 없어서, 화면을 손댈 때 이것부터 본다.
+  if (process.env.SQUINT_DEBUG) {
+    for (let r = 0; r < ROWS; r += 1) {
+      const row = cells
+        .slice(r * COLS, (r + 1) * COLS)
+        .map((v) => (Math.abs(v - median) * 1000).toFixed(0).padStart(4))
+        .join(" ");
+      console.log(`      ${screen.label.padEnd(10)} r${r} ${row}`);
+    }
+  }
   const dominance = rivals > 1e-6 ? top / rivals : Infinity;
 
   // ── ② 그 덩어리는 「문서」 위에 있는가 ─────────────────────────────────────
@@ -346,10 +403,12 @@ for (const screen of SCREENS) {
   // CSS 픽셀이 같다(newContext 에 deviceScaleFactor 를 주지 않았다).
   const cellW = Math.floor(grid.width / COLS);
   const cellH = Math.floor(grid.height / ROWS);
-  const topRow = Math.floor(scored[0].i / COLS);
-  const topX = clip.x + ((scored[0].i % COLS) + 0.5) * cellW;
+  const topCols = scored[0].cells.map((i) => i % COLS);
+  const topRow = Math.floor(scored[0].cells[0] / COLS);
+  const topX =
+    clip.x + ((Math.min(...topCols) + Math.max(...topCols) + 1) / 2) * cellW;
   const topY = clip.y + (topRow + 0.5) * cellH;
-  /** 1등 칸의 아랫변. 판정은 중심이 아니라 이 값으로 한다 — 아래 주석 참조. */
+  /** 1등 덩어리의 아랫변. 판정은 중심이 아니라 이 값으로 한다 — 아래 주석 참조. */
   const topBottom = clip.y + (topRow + 1) * cellH;
 
   const anchor = await page.evaluate(

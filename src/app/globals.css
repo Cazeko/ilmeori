@@ -82,10 +82,23 @@
 
   --text-h1: 34px; /* 문서 제목 — 화면에 하나 */
   --text-h1--line-height: 1.3;
+  --text-h1--letter-spacing: -0.02em;
   --text-h2: 27px; /* 1등 대상의 제목 */
   --text-h2--line-height: 1.35;
+  --text-h2--letter-spacing: -0.015em;
   --text-h3: 21px; /* 구역 제목 */
   --text-h3--line-height: 1.45;
+
+  /* ── 자간: 큰 글자만 조인다 ──────────────────────────────────────────────
+     Pretendard 는 본문 크기에 맞춰 글자 사이가 잡혀 있다. 그 간격을 27·34px
+     로 키우면 사이가 같이 커져서 제목이 **헐겁게** 보인다 — 굵은데 단단하지
+     않은 인상이고, 「AI 가 만든 화면」이라는 말의 작은 뿌리 하나가 이것이다.
+     크기 토큰에 자간을 붙여 두면 text-h1 을 쓰는 자리마다 따로 tracking-* 을
+     적을 일이 없다(한동안 카드 제목과 사람 화면 제목이 저마다 tracking-tight
+     를 달고 있었고, 다른 h1 은 안 달고 있었다).
+
+     21px 아래는 건드리지 않는다. 본문과 붙어 서는 크기라 자간이 다르면
+     같은 서체가 둘로 보인다. */
 
   /* ── 숫자 한 개 ────────────────────────────────────────────────────────
      예전에는 32px 이 두 가지 일을 겸했다 — 화면 이름표(「업무 보드」)와
@@ -94,6 +107,7 @@
      자동으로 물러난다. 화면당 하나만 쓴다. */
   --text-figure: 46px;
   --text-figure--line-height: 1;
+  --text-figure--letter-spacing: -0.02em;
 
   /* ── 지운 두 칸, 그리고 그 이유 ──────────────────────────────────────────
      --text-h4(17px)   본문과 **같은 값**이었다. 한동안 판 제목이 전부 이
@@ -185,9 +199,17 @@
   --color-warning: #9e6a00;
   --color-warning-bg: #fff3db;
   --color-success: #228738;
+  /* success-bg 는 화면에서 안 쓴다. 편집기가 **내보내는 문서**(lib/editor/html.ts)
+     의 초록 형광펜이 이 값의 사본이라, 팔레트 대조 시험이 이름을 찾도록
+     남긴다(화면 안 형광펜은 editor.css 의 --mark-green 이고 값이 다르다 —
+     종이와 화면의 형광펜을 맞추는 일은 따로 잡아야 한다). bg-success-bg 를
+     화면에서 다시 쓰는 것은 design-lint 가 막는다. */
   --color-success-bg: #eaf6ec;
-  --color-info: #0b78cb;
-  --color-info-bg: #e7f4fe;
+  /* info · info-bg 를 지웠다. 알림 상자(ui/notice.tsx)가 파랑 면·초록 면으로
+     쓰던 것인데, 위 네 갈래 색 언어에 「알림용 파랑」도 「축하용 초록」도 없다 —
+     정보는 먹색이다. 상자는 판 색으로 물러났고, info 와 success 의 차이는
+     아이콘 모양(ⓘ·✓)뿐이다. text-success 는 작은 ✓ 아이콘(인계 기둥·「보충됨」)
+     에만 남아 있다. 편집기의 「편집 중」 파랑은 아래 status-doing 이 따로 든다. */
 
   /* --- 업무 상태 색 언어 (일머리 고유) ---------------------------------------
      제품의 중심 색 언어. KRDS 시스템 색상 의미 체계에 매핑해 파생했다.
@@ -784,13 +806,16 @@
     border: 1px solid var(--color-gray-50);
     border-radius: var(--radius-sm);
     background: var(--color-surface);
-    color: var(--color-gray-80);
+    color: var(--color-gray-90);
     font-size: var(--text-body-sm);
     font-weight: 700;
     cursor: pointer;
     transition:
       background-color 150ms,
       border-color 150ms;
+  }
+  .fold-toggle svg {
+    transition: transform 150ms;
   }
   .fold-toggle:hover {
     background: var(--color-gray-5);

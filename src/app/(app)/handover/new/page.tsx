@@ -84,7 +84,7 @@ export default async function StartHandoverPage({
           <li aria-hidden>
             <ChevronRight className="size-3.5" />
           </li>
-          <li className="text-gray-70">인계 시작</li>
+          <li className="text-gray-60">인계 시작</li>
         </ol>
       </nav>
 

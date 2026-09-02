@@ -61,7 +61,7 @@ export function TabNav({
                   "active:bg-primary-10 active:text-primary",
                   current
                     ? "bg-primary-5 text-primary sm:border-primary sm:bg-transparent"
-                    : "text-gray-60 hover:bg-gray-5 hover:text-gray-80 active:bg-primary-10 active:text-primary sm:border-transparent sm:bg-transparent sm:hover:border-rule-hair",
+                    : "text-gray-60 hover:bg-gray-5 hover:text-gray-90 active:bg-primary-10 active:text-primary sm:border-transparent sm:bg-transparent sm:hover:border-rule-hair",
                 )}
               >
                 {Icon ? <Icon aria-hidden className="size-4" /> : null}

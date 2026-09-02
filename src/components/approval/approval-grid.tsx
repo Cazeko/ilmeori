@@ -158,7 +158,7 @@ export function ApprovalGrid({
             스크린리더가 행·열을 읽어 주지만 그 행·열에 뜻이 없다.
             대신 각 칸을 목록 항목으로 두고 읽을 말을 글자로 적는다. */}
         <div className="flex border border-rule-hair bg-surface">
-          <div className="flex w-16 shrink-0 items-center justify-center border-r border-rule-hair bg-gray-5 text-body-sm font-bold text-gray-70">
+          <div className="flex w-16 shrink-0 items-center justify-center border-r border-rule-hair bg-gray-5 text-body-sm font-bold text-gray-60">
             결재
           </div>
           <ul className="flex flex-1">
@@ -190,7 +190,7 @@ export function ApprovalGrid({
 
         {concur.length > 0 ? (
           <div className="flex border-x border-b border-rule-hair bg-surface">
-            <div className="flex w-16 shrink-0 items-center justify-center border-r border-rule-hair bg-gray-5 text-body-sm font-bold text-gray-70">
+            <div className="flex w-16 shrink-0 items-center justify-center border-r border-rule-hair bg-gray-5 text-body-sm font-bold text-gray-60">
               협조
             </div>
             <ul className="flex flex-1 flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
@@ -244,7 +244,7 @@ export function ApprovalGrid({
 
         {post.length > 0 ? (
           <div className="flex border-x border-b border-rule-hair bg-surface">
-            <div className="flex w-16 shrink-0 items-center justify-center border-r border-rule-hair bg-gray-5 text-body-sm font-bold text-gray-70">
+            <div className="flex w-16 shrink-0 items-center justify-center border-r border-rule-hair bg-gray-5 text-body-sm font-bold text-gray-60">
               사후
             </div>
             <ul className="flex flex-1 flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
@@ -284,7 +284,7 @@ export function ApprovalOpinions({
     <section aria-labelledby="approval-opinions" className="mt-6">
       <h3
         id="approval-opinions"
-        className="mb-2 text-body-sm font-bold text-gray-80"
+        className="mb-2 text-body-sm font-bold text-gray-90"
       >
         결재 의견
       </h3>
@@ -306,7 +306,7 @@ export function ApprovalOpinions({
                 {at ? ` · ${formatShortDate(at)}` : ""}
                 {s.rejected_at ? " · 반려 사유" : ""}
               </p>
-              <p className="mt-1 text-body-sm leading-relaxed break-keep whitespace-pre-wrap text-gray-80">
+              <p className="mt-1 text-body-sm leading-relaxed break-keep whitespace-pre-wrap text-gray-90">
                 {s.opinion}
               </p>
             </li>

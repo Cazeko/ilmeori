@@ -93,7 +93,7 @@ export function WorkNotes({
                         {t.notes.length}통
                       </span>
                     </p>
-                    <p className="mt-1 line-clamp-2 text-body-sm break-keep text-gray-70">
+                    <p className="mt-1 line-clamp-2 text-body-sm break-keep text-gray-60">
                       {last.body}
                     </p>
                     {/* 실을 펴 보는 길은 당사자에게만 있다. 제3자는 여기서

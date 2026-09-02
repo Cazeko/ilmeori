@@ -245,7 +245,7 @@ export default async function WorkDetailPage({
             <ChevronRight className="size-3.5" />
           </li>
           <li className="min-w-0">
-            <span className="line-clamp-1 text-gray-70">{work.title}</span>
+            <span className="line-clamp-1 text-gray-60">{work.title}</span>
           </li>
         </ol>
       </nav>
@@ -304,7 +304,7 @@ export default async function WorkDetailPage({
         </div>
 
         {work.description ? (
-          <p className="mt-3 max-w-3xl text-body leading-relaxed break-keep text-gray-70">
+          <p className="mt-3 max-w-3xl text-body leading-relaxed break-keep text-gray-60">
             {work.description}
           </p>
         ) : null}
@@ -313,7 +313,7 @@ export default async function WorkDetailPage({
           <div className="flex items-center gap-2">
             <dt className="sr-only">소관 부서</dt>
             <Building2 aria-hidden className="size-4 text-gray-40" />
-            <dd className="text-body-sm text-gray-70">
+            <dd className="text-body-sm text-gray-60">
               {work.department.name}
             </dd>
           </div>
@@ -346,7 +346,7 @@ export default async function WorkDetailPage({
                   "text-body-sm",
                   work.derived === "overdue"
                     ? "font-bold text-status-overdue-text"
-                    : "text-gray-70",
+                    : "text-gray-60",
                 )}
               >
                 {formatDate(work.due_date)}
@@ -612,7 +612,7 @@ export default async function WorkDetailPage({
                             aria-hidden
                             className="size-4 shrink-0 text-gray-30"
                           />
-                          <span className="min-w-0 flex-1 text-body-sm text-gray-80">
+                          <span className="min-w-0 flex-1 text-body-sm text-gray-90">
                             <span className="font-bold">{l.actor?.name}</span>{" "}
                             {ACCESS_KIND_LABEL[l.kind]}
                           </span>

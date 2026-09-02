@@ -47,7 +47,7 @@ export default async function NewWorkPage({
           <li aria-hidden>
             <ChevronRight className="size-3.5" />
           </li>
-          <li className="text-gray-70">새 업무</li>
+          <li className="text-gray-60">새 업무</li>
         </ol>
       </nav>
 

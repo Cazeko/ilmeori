@@ -120,7 +120,7 @@ function NavList({ pathname }: { pathname: string }) {
                       "active:bg-primary-10 active:text-primary",
                       active
                         ? "border-l-primary bg-primary-5 text-primary"
-                        : "border-l-transparent text-gray-70 hover:bg-gray-5 hover:text-gray-90",
+                        : "border-l-transparent text-gray-60 hover:bg-gray-5 hover:text-gray-90",
                     )}
                   >
                     <Icon aria-hidden className="size-5 shrink-0" />
@@ -166,23 +166,12 @@ function DemoNotice() {
   );
 }
 
-/**
- * 옆줄 맨 아래의 운영기관 표식.
- *
- * 머리 줄의 것은 제품 이름 옆에 서느라 작을 수밖에 없다(34px). 그 크기로는
- * 「어느 시의 도구인가」가 눈에 안 들어온다. 옆줄 아래는 폭이 남는 자리이고,
- * 공공 서비스에서 운영기관을 밝히는 자리가 원래 화면 아래다.
- *
- * 위에 선을 하나 긋고 여백을 넉넉히 준다 — 메뉴에 딱 붙여 두면 표식이 메뉴의
- * 마지막 항목처럼 읽힌다.
- */
-function SidebarCityMark() {
-  return (
-    <div className="mt-2 border-t border-rule-hair px-5 pt-5 pb-6">
-      <CityMark size="block" />
-    </div>
-  );
-}
+/* 옆줄 맨 아래에 시 표식이 하나 더 있었다(SidebarCityMark). 머리 줄에 이미
+   「일머리 | 화성특례시」가 서 있어서, 옆줄에는 표식이 셋이었다 — 위의 것,
+   아래의 것, 그리고 「시연용 가상 데이터」쪽지. 표식이 셋이면 어느 것도
+   표식 노릇을 못 하고 옆줄이 장식으로 읽힌다. 넓은 화면에서 운영기관을
+   밝히는 일은 머리 줄 하나로 충분하다. 옆줄 아래에는 쪽지 하나만 남긴다.
+   (좁은 화면의 서랍은 다르다 — 아래 서랍 주석.) */
 
 export function AppShell({
   viewer,
@@ -325,7 +314,13 @@ export function AppShell({
               <NavList pathname={pathname} />
             </div>
             <DemoNotice />
-            <SidebarCityMark />
+            {/* md 미만에서는 머리 줄이 시 표식을 접는다(검색칸이 먼저다). 그러면
+                화면 어디에도 「어느 시의 도구인가」가 없으므로 서랍 아래에 하나
+                둔다. 넓은 화면의 옆줄에는 두지 않는다 — 거기서는 머리 줄의 것과
+                겹쳐 표식이 둘이 된다. */}
+            <div className="border-t border-rule-hair px-5 py-4">
+              <CityMark />
+            </div>
           </div>
         </details>
 
@@ -473,7 +468,6 @@ export function AppShell({
             <NavList pathname={pathname} />
           </div>
           <DemoNotice />
-          <SidebarCityMark />
         </aside>
 
         {/* ── 본문 ────────────────────────────────────────────────────────── */}

@@ -23,7 +23,7 @@ export function EmptyState({
       <span className="mb-3 flex size-12 items-center justify-center rounded-full bg-gray-5">
         <Icon aria-hidden className="size-6 text-gray-40" />
       </span>
-      <p className="text-body font-bold text-gray-80">{title}</p>
+      <p className="text-body font-bold text-gray-90">{title}</p>
       {description ? (
         <p className="mt-2 max-w-md text-body-sm text-gray-60">{description}</p>
       ) : null}

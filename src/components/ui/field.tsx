@@ -75,7 +75,7 @@ export function Field({
 
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <label htmlFor={id} className="text-body-sm font-bold text-gray-80">
+      <label htmlFor={id} className="text-body-sm font-bold text-gray-90">
         {label}
         {required ? (
           <span className="ml-1 font-normal text-danger">(필수)</span>

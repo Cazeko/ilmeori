@@ -47,7 +47,9 @@ export function PageContainer({
   return (
     <div
       className={cn(
-        "mx-auto px-5 py-6 sm:px-7 lg:px-8",
+        // 아래를 위보다 넉넉히 둔다(24 → 48px). 긴 화면의 마지막 줄이 창 바닥에
+        // 붙어 끝나면 「잘렸다」로 읽힌다 — 끝났다는 것은 여백이 말한다.
+        "mx-auto px-5 pt-6 pb-12 sm:px-7 lg:px-8",
         WIDTH[width],
         className,
       )}

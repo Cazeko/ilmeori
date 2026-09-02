@@ -159,7 +159,7 @@ export function DocSections({
             {/* 세 문단이 있었다 — 무엇이 좋아지는가, 무엇이 어떻게 바뀌는가,
                 무엇이 남는가. 누르기 전에 알아야 하는 것은 **되돌릴 수 없다**
                 하나뿐이다. 나머지는 옮기고 나면 화면이 직접 보여 준다. */}
-            <p className="mt-2 text-body-sm leading-relaxed break-keep text-gray-70">
+            <p className="mt-2 text-body-sm leading-relaxed break-keep text-gray-60">
               굵게·표·번호를 쓰고 여럿이 <b className="font-bold">동시에</b> 한
               문서를 고칠 수 있게 됩니다.{" "}
               <b className="font-bold">되돌리는 단추는 없습니다.</b>
@@ -175,7 +175,7 @@ export function DocSections({
           </div>
 
           <details className="rounded-sm border border-rule-frame bg-surface">
-            <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-body-sm font-bold text-gray-70">
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-body-sm font-bold text-gray-60">
               <PenLine aria-hidden className="size-4 text-gray-40" />
               문서 이름 바꾸기
             </summary>
@@ -207,7 +207,7 @@ export function DocSections({
           {/* 되돌릴 수 없는 동작은 접어 둔다. 펼치는 손짓 한 번이 확인 절차를 대신한다. */}
           {canDelete ? (
             <details className="rounded-sm border border-rule-frame bg-surface">
-              <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-body-sm font-bold text-gray-70">
+              <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-body-sm font-bold text-gray-60">
                 <Trash2 aria-hidden className="size-4 text-gray-40" />
                 문서 삭제
               </summary>
@@ -362,14 +362,14 @@ export function DocSections({
                     </form>
 
                     <details className="mt-4 border-t border-rule-hair pt-3">
-                      <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-body-sm font-bold text-gray-70">
+                      <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-body-sm font-bold text-gray-60">
                         <Trash2 aria-hidden className="size-4 text-gray-40" />
                         <span>이 항목 삭제</span>
                       </summary>
                       <form action={deleteSection} className="mt-1">
                         <input type="hidden" name="workId" value={workId} />
                         <input type="hidden" name="sectionId" value={s.id} />
-                        <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
+                        <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-60">
                           이 항목이 문서에서 사라집니다. 되돌릴 수 없습니다.
                         </p>
                         <SubmitButton pendingLabel="삭제하는 중…" variant="danger">
@@ -383,7 +383,7 @@ export function DocSections({
                   <>
                     {/* 줄바꿈이 의미를 갖는 행정 문서라 whitespace를 살린다 */}
                     {s.body ? (
-                      <p className="px-4 py-4 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
+                      <p className="px-4 py-4 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-90">
                         {s.body}
                       </p>
                     ) : (
@@ -446,7 +446,7 @@ export function DocSections({
         >
           <input type="hidden" name="workId" value={workId} />
           <input type="hidden" name="documentId" value={doc.id} />
-          <h3 className="mb-3 text-body-sm font-bold text-gray-80">항목 추가</h3>
+          <h3 className="mb-3 text-body-sm font-bold text-gray-90">항목 추가</h3>
           <div className="flex flex-col gap-4">
             <Field
               id="new-section-heading"

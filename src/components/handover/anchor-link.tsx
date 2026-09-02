@@ -89,7 +89,11 @@ export function scrollToElement(el: HTMLElement) {
   };
   const step = (now: number) => {
     if (stopped) {
+      // 사람이 바퀴·키로 끊었다. 스크롤은 그 자리에 두되 초점은 목표로 옮긴다
+      // (preventScroll) — 안 옮기면 초점이 방금 누른 링크에 남는데, 그 링크가
+      // 목록과 함께 닫힌 자리(조직도 바로 가기)면 초점이 body 로 떨어진다.
       done();
+      land();
       return;
     }
     if (t0 === null) t0 = now;

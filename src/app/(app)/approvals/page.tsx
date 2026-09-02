@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FileCheck2, FilePlus2, Hourglass, Inbox, Info } from "lucide-react";
+import {
+  ArrowRight,
+  FileCheck2,
+  FilePlus2,
+  Hourglass,
+  Inbox,
+  Info,
+} from "lucide-react";
 import { CARD_SURFACE } from "@/components/ui/card";
 import { ApprovalRow } from "@/components/approval/approval-row";
 import { ButtonLink } from "@/components/ui/button";
@@ -147,7 +154,7 @@ export default async function ApprovalsPage({
         <p className="mb-4 flex items-start gap-2 border-l border-l-rule-hair py-2 pl-3 text-body-sm break-keep text-gray-60">
           <Info aria-hidden className="mt-1 size-4 shrink-0 text-gray-40" />
           <span>
-            지금은 <strong className="font-bold text-gray-70">읽기 전용</strong>
+            지금은 <strong className="font-bold text-gray-90">읽기 전용</strong>
             입니다. 결재를 올리거나 서명할 수 없고, 결재함·결재란·진행률은
             시연용 문서로 그대로 봅니다.
           </span>
@@ -171,7 +178,7 @@ export default async function ApprovalsPage({
                       "active:bg-primary-10 active:text-primary",
                       on
                         ? "bg-primary-5 text-primary"
-                        : "text-gray-70 hover:bg-gray-5 hover:text-gray-90",
+                        : "text-gray-60 hover:bg-gray-5 hover:text-gray-90",
                     )}
                   >
                     {APPROVAL_BOX_LABEL[b]}
@@ -302,14 +309,27 @@ export default async function ApprovalsPage({
               >
                 문서종류 고르기
               </h2>
-              <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {APPROVAL_FORMS.map((f) => (
-                  <li key={f}>
+              {/* ── 격자가 아니라 목록이다 ────────────────────────────────
+                  한동안 같은 크기의 칸 넷을 가로로 늘어놓았다(2×2 → 1×4).
+                  이 저장소가 발표자료에서 스스로 금지한 「카드 배열」이 화면에
+                  남아 있던 마지막 자리였다 — 같은 크기의 상자가 넷이면 눈은
+                  내용보다 먼저 격자를 읽고, 격자는 「고를 것」이 아니라
+                  「구경할 것」처럼 보인다.
+
+                  넷은 이름·설명이 한 줄씩이라 목록이 맞다. 상자를 걷고 가는
+                  선으로만 가른다. 이름은 폭을 맞춰 세워 두어 설명이 한 세로선에
+                  선다 — 그래야 넷을 내려 읽으며 비교할 수 있다. */}
+              <ul className="mt-2 border-y border-rule-hair">
+                {APPROVAL_FORMS.map((f, i) => (
+                  <li
+                    key={f}
+                    className={i > 0 ? "border-t border-rule-hair" : undefined}
+                  >
                     <Link
                       href={`/approvals/new?form=${f}`}
-                      className="flex h-full flex-col gap-1 rounded-sm border border-rule-frame bg-surface px-4 py-3 hover:border-primary-20 hover:bg-primary-5"
+                      className="-mx-2 flex items-center gap-3 px-2 py-3 transition-colors duration-150 hover:bg-gray-10 active:bg-primary-5"
                     >
-                      <span className="text-body-sm font-bold text-gray-90">
+                      <span className="w-16 shrink-0 text-body-sm font-bold text-gray-90">
                         {APPROVAL_FORM_LABEL[f]}
                       </span>
                       {/* 「HS-보고-…」 하는 문서번호 미리보기가 이 자리에 있었다.
@@ -317,9 +337,13 @@ export default async function ApprovalsPage({
                           사람에게는 고장 난 값처럼 보였다. 문서번호는 상신하는
                           순간 붙고 그때 실제 값이 화면에 나온다 — 그 전에 자리만
                           잡아 둘 이유가 없다. */}
-                      <span className="text-body-xs text-gray-60">
+                      <span className="min-w-0 flex-1 truncate text-body-xs text-gray-60">
                         {FORM_HINT[f]}
                       </span>
+                      <ArrowRight
+                        aria-hidden
+                        className="size-4 shrink-0 text-gray-40"
+                      />
                     </Link>
                   </li>
                 ))}

@@ -77,7 +77,7 @@ export default async function ApprovalDetailPage({
         <Card className="max-w-2xl">
           <CardBody className="py-8">
             <FileQuestion aria-hidden className="size-9 text-gray-30" />
-            <p className="mt-4 text-body leading-relaxed break-keep text-gray-80">
+            <p className="mt-4 text-body leading-relaxed break-keep text-gray-90">
               이 주소의 결재 문서가 <strong className="font-bold">없거나</strong>,
               지금 계정에 <strong className="font-bold">보이지 않습니다.</strong>
             </p>
@@ -121,7 +121,7 @@ export default async function ApprovalDetailPage({
             <ChevronRight className="size-3.5" />
           </li>
           <li className="min-w-0">
-            <span className="line-clamp-1 text-gray-70">{approval.title}</span>
+            <span className="line-clamp-1 text-gray-60">{approval.title}</span>
           </li>
         </ol>
       </nav>
@@ -179,14 +179,14 @@ export default async function ApprovalDetailPage({
         <dl className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-body-sm">
           <div className="flex items-center gap-2">
             <dt className="text-gray-60">기안</dt>
-            <dd className="text-gray-80">
+            <dd className="text-gray-90">
               {approval.drafter.name} {approval.drafter.position} ·{" "}
               {formatDate(approval.created_at)}
             </dd>
           </div>
           <div className="flex items-center gap-2">
             <dt className="text-gray-60">업무</dt>
-            <dd className="min-w-0 text-gray-80">
+            <dd className="min-w-0 text-gray-90">
               {approval.work ? (
                 <Link
                   href={`/works/${approval.work.id}?tab=approval`}
@@ -208,7 +208,7 @@ export default async function ApprovalDetailPage({
           {approval.retention ? (
             <div className="flex items-center gap-2">
               <dt className="text-gray-60">보존연한</dt>
-              <dd className="text-gray-80">{approval.retention}년</dd>
+              <dd className="text-gray-90">{approval.retention}년</dd>
             </div>
           ) : null}
           {approval.closed_at ? (
@@ -216,7 +216,7 @@ export default async function ApprovalDetailPage({
               <dt className="text-gray-60">
                 {APPROVAL_STATE_LABEL[approval.state]}
               </dt>
-              <dd className="text-gray-80">
+              <dd className="text-gray-90">
                 {formatFullDateTime(approval.closed_at)}
               </dd>
             </div>
@@ -273,7 +273,7 @@ export default async function ApprovalDetailPage({
           </h2>
           <div className="rounded-sm border border-rule-frame bg-surface px-5 py-4">
             {approval.body ? (
-              <p className="text-body leading-relaxed break-keep whitespace-pre-wrap text-gray-80">
+              <p className="text-body leading-relaxed break-keep whitespace-pre-wrap text-gray-90">
                 {approval.body}
               </p>
             ) : (
@@ -322,7 +322,7 @@ export default async function ApprovalDetailPage({
 
             <div className="rounded-sm border border-primary/30 bg-primary-5 px-5 py-4">
               <p className="text-body-sm font-bold text-gray-90">상신</p>
-              <p className="mt-1 mb-3 text-body-sm break-keep text-gray-70">
+              <p className="mt-1 mb-3 text-body-sm break-keep text-gray-60">
                 상신하면 문서번호가 붙고 기안란에 서명이 찍힙니다. 그때부터
                 본문은 고칠 수 없고, 결재선에 칸을 더하거나 뺄 수도 없습니다.
               </p>
@@ -340,12 +340,12 @@ export default async function ApprovalDetailPage({
             </div>
 
             <details className="rounded-sm border border-rule-frame bg-surface">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-80">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 text-body-sm font-bold text-gray-60 transition-colors duration-150 hover:text-gray-90">
                 <Trash2 aria-hidden className="size-4 shrink-0 text-gray-40" />
                 이 초안을 지우려면
               </summary>
               <div className="border-t border-rule-hair px-4 py-4">
-                <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-70">
+                <p className="mb-3 text-body-sm leading-relaxed break-keep text-gray-60">
                   아직 상신되지 않았으므로 아무 기록도 남기지 않고 지울 수
                   있습니다. 상신한 뒤에는 지울 수 없습니다. 결재는 증빙이고,
                   지울 수 있는 증빙은 증빙이 아닙니다.

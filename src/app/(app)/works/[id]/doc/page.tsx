@@ -97,7 +97,7 @@ export default async function WorkDocPage({
           <li aria-hidden>
             <ChevronRight className="size-3.5" />
           </li>
-          <li className="text-gray-70">문서</li>
+          <li className="text-gray-60">문서</li>
         </ol>
       </nav>
 

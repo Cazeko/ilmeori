@@ -19,22 +19,22 @@ import { cn } from "@/lib/cn";
  * 흰 네모로 떠 보였고, 흰 판을 깔아 가렸었다. 지금 파일은 누끼가 따져 있어
  * 어느 바탕에 놓아도 그대로 얹힌다 — 그 판을 걷어냈다.
  *
- * 원본(1956×804, 619KB)은 화면에 쓰기엔 지나치게 크다. 가장 크게 쓰는 자리가
- * 옆줄 너비(약 220px)라 480×197 로 줄여 넣었다(69KB). 그래도 2배 넘는 밀도다.
+ * 원본(1956×804, 619KB)은 화면에 쓰기엔 지나치게 크다. 480×197 로 줄여
+ * 넣었다(69KB). 가장 크게 쓰는 자리(로그인, 높이 52px)에서도 3배 넘는 밀도다.
  *
  * ── 크기 ──────────────────────────────────────────────────────────────────
  *
  *   sm     머리 줄 — 제품 표식 옆
  *   lg     로그인 화면
- *   block  옆줄 아래 — 폭에 맞춰 늘어난다
+ *
+ *   (옆줄 아래에 폭 맞춰 늘리던 block 이 있었다. 머리 줄과 겹치는 표식이라
+ *   걷어냈다 — app-shell.tsx 의 옆줄 주석 참고.)
  *
  * width/height 를 늘 함께 적는다. 그림이 늦게 와도 줄이 밀리지 않아야 한다.
  */
 
-/** 파일 크기. 여기서 가로세로비가 나온다. */
-const SRC_W = 480;
-const SRC_H = 197;
-const RATIO = SRC_W / SRC_H;
+/** 파일 크기(480×197). 여기서 가로세로비가 나온다. */
+const RATIO = 480 / 197;
 
 export function CityMark({
   className,
@@ -44,9 +44,8 @@ export function CityMark({
   className?: string;
   /** 아래 줄에 덧붙일 한 마디 — 「AI·DATA 공모전 출품작」 등 */
   note?: string;
-  size?: "sm" | "lg" | "block";
+  size?: "sm" | "lg";
 }) {
-  const block = size === "block";
   const height = size === "lg" ? 52 : 34;
   const width = Math.round(height * RATIO);
 
@@ -64,15 +63,10 @@ export function CityMark({
       <img
         src="/brand/hwaseong.png"
         alt="화성특례시"
-        width={block ? SRC_W : width}
-        height={block ? SRC_H : height}
-        style={block ? undefined : { width, height }}
-        className={cn(
-          "block object-contain",
-          // 옆줄에서는 남은 폭을 그대로 쓴다. height:auto 가 없으면 위에서 적은
-          // height 속성이 그대로 살아 그림이 눌린다.
-          block ? "h-auto w-full" : "max-w-full",
-        )}
+        width={width}
+        height={height}
+        style={{ width, height }}
+        className="block max-w-full object-contain"
       />
       {note ? (
         <span className="mt-3 text-body-xs break-keep text-gray-60">

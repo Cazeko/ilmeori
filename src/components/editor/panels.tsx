@@ -74,7 +74,7 @@ export function TopBar({
         <h2 className="truncate text-h3 font-bold text-gray-90">{title}</h2>
         <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-xs text-gray-60">
           {readOnly ? (
-            <span className="font-bold text-gray-70">읽기 전용</span>
+            <span className="font-bold text-gray-60">읽기 전용</span>
           ) : (
             <span>{viewerName}님으로 편집 중</span>
           )}
@@ -383,7 +383,7 @@ function CommentCard({
 
       {comment.body ? (
         <>
-          <p className="text-body-xs font-bold text-gray-80">
+          <p className="text-body-xs font-bold text-gray-90">
             {comment.authorName}
             {comment.at ? (
               <time dateTime={comment.at} className="ml-2 font-normal text-gray-60">
@@ -391,7 +391,7 @@ function CommentCard({
               </time>
             ) : null}
           </p>
-          <p className="mt-1 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
+          <p className="mt-1 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-90">
             {comment.body}
           </p>
         </>
@@ -399,7 +399,7 @@ function CommentCard({
 
       {comment.replies?.map((r) => (
         <div key={r.id} className="mt-2 border-t border-rule-hair pt-2">
-          <p className="text-body-xs font-bold text-gray-80">
+          <p className="text-body-xs font-bold text-gray-90">
             {r.authorName}
             {r.at ? (
               <time dateTime={r.at} className="ml-2 font-normal text-gray-60">
@@ -407,7 +407,7 @@ function CommentCard({
               </time>
             ) : null}
           </p>
-          <p className="mt-1 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-80">
+          <p className="mt-1 text-body-sm leading-relaxed break-keep whitespace-pre-line text-gray-90">
             {r.body}
           </p>
         </div>

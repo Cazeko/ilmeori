@@ -41,10 +41,14 @@ const COLUMNS: WorkStatus[] = ["todo", "doing", "review", "done"];
  * 3:1 만 넘으면 되고, 그래서 아래쪽 두 칸이 열리며 순서가 비로소 보인다.
  * 하나뿐인 색 신호(지연)는 오른쪽 「지연 N」 배지가 그대로 나른다.
  */
+/* 배지(status-badge.tsx)와 같은 두 단이다 — 지금 손에 있는 것(진행중·검토)은
+   먹, 손에 없는 것(대기·완료)은 회색. 한동안 넷이 저마다 달랐는데(60·90·70·50),
+   배지가 두 단으로 내려간 뒤에는 같은 상태가 한 화면에서 두 명도로 보였다.
+   점은 글자가 아니라 3:1 이면 되므로 회색 쪽은 50 을 쓴다. */
 const DOT: Record<WorkStatus, string> = {
-  todo: "bg-gray-60",
+  todo: "bg-gray-50",
   doing: "bg-gray-90",
-  review: "bg-gray-70",
+  review: "bg-gray-90",
   done: "bg-gray-50",
 };
 

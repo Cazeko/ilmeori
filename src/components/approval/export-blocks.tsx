@@ -31,10 +31,10 @@ export function ExportBlocks({ blocks }: { blocks: readonly ExportBlock[] }) {
                   className={cn(
                     "text-body leading-relaxed break-keep whitespace-pre-line",
                     line.quote
-                      ? "border-l-2 border-rule-hair pl-3 text-gray-70 italic"
+                      ? "border-l-2 border-rule-hair pl-3 text-gray-60 italic"
                       : block.empty
                         ? "text-gray-60"
-                        : "text-gray-80",
+                        : "text-gray-90",
                   )}
                 >
                   {line.quote ? `“${line.text}”` : line.text}

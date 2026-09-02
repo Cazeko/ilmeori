@@ -34,8 +34,13 @@ import { STATUS_LABEL, type DerivedStatus } from "@/lib/types";
  * 격자**다. 「무엇이 핵심이고 무엇이 보조인지 시선이 안 간다」는 말이 이 자리에도
  * 걸린다. 면은 화면에서 가장 비싼 표현 수단이라, 상태 같은 곁정보가 쓸 것이 아니다.
  *
- * 면을 지우면 명도 사다리가 유일한 축이 되고, 그래서 한 칸씩 더 벌렸다
- * (90 · 80 · 70 · 60). 배지는 이제 점 하나와 글자다.
+ * 면을 지우면 명도 사다리가 유일한 축이 된다. 한동안 네 칸(90 · 80 · 70 · 60)
+ * 이었는데, 80 과 90, 60 과 70 은 13px 굵은 글자에서 눈이 가르지 못하는
+ * 차이였다 — 네 단이라고 적어 두고 실제로는 두 단으로 보였다. 그래서 두 단으로
+ * 못박는다: **지금 손에 있는 것**(진행중·검토)은 먹색, **손에 없는 것**(대기·
+ * 완료)은 회색. 넷을 가르는 일은 글자(「대기」「완료」)가 하고, 명도는
+ * 「지금 움직이는 것인가」 하나만 답한다. 배지는 점 하나와 글자다.
+ * (글자 회색을 90·60·40 셋으로 묶은 규칙은 tests/design-lint.test.mjs 에.)
  *
  * 대비는 tests/contrast.test.mjs 가 잰다. 재는 바탕이 바뀌었다 — 예전에는 자기
  * 채움(gray-5·gray-10) 위에서 쟀지만, 이제는 판(surface)과 본문 바탕(gray-5)
@@ -43,9 +48,9 @@ import { STATUS_LABEL, type DerivedStatus } from "@/lib/types";
  */
 
 const TONE: Record<DerivedStatus, string> = {
-  todo: "text-gray-70",
+  todo: "text-gray-60",
   doing: "text-gray-90",
-  review: "text-gray-80",
+  review: "text-gray-90",
   done: "text-gray-60",
   overdue: "text-status-overdue-text", // 유일한 색
 };

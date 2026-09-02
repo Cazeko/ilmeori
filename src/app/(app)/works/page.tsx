@@ -232,123 +232,132 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
 
       {/* ── 조건 ───────────────────────────────────────────────────────────
           예전에는 이 폼이 늘 펼쳐진 채 첫 화면을 먹었다. 390px 에서는 화면의
-          42%가 필터였고 업무 카드는 한 장만 보였다. 자주 쓰는 조건은 아래 칩
+          42%가 필터였고 업무 카드는 한 장만 보였다. 자주 쓰는 조건은 왼쪽 칩
           네 개로 충분하므로, 검색어·부서는 접어 두고 걸려 있을 때만 편다.
 
-          「내 업무만」 체크박스는 없앴다. 아래 「내 업무」 칩과 같은 일을 하는데
+          「내 업무만」 체크박스는 없앴다. 왼쪽 「내 업무」 칩과 같은 일을 하는데
           주인이 둘이라, 지연만 + 내 업무만을 함께 걸면 칩 줄이 그 사실을 숨겼다.
           이제 mine 의 주인은 칩 하나뿐이고, 폼은 그 값을 그대로 들고 간다. */}
-      <details
-        open={Boolean(q) || Boolean(departmentId)}
-        className="mb-4 rounded-sm border border-rule-frame bg-surface"
-      >
-        <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-body-sm font-bold text-gray-70">
-          <Filter aria-hidden className="size-4 text-gray-40" />
-          검색어·부서로 좁히기
-          {q || departmentId ? (
-            <span className="text-body-xs text-primary">
-              걸림
-            </span>
-          ) : null}
-        </summary>
-        {/* GetForm — 스크립트가 있으면 화면을 갈지 않고 옮긴다.
-            평범한 GET 폼은 전체 페이지 로드라, 조건을 한 번 걸고 나면 그 뒤의
-            앞으로·뒤로가 전부 bfcache 없이 서버까지 갔다 왔다. get-form.tsx 참고. */}
-        <GetForm action="/works" className="border-t border-rule-hair p-4">
-          {/* 칸으로 그리지 않은 조건은 제출할 때 사라진다.
-              보관함에서 검색하면 보관함 밖으로 튕겨 나가고, 그건 고장으로 보인다. */}
-          {overdueOnly ? (
-            <input type="hidden" name="overdue" value="1" />
-          ) : null}
-          {archived ? <input type="hidden" name="archived" value="1" /> : null}
-          {mine ? <input type="hidden" name="mine" value="1" /> : null}
 
-          {/* items-end 로 맞춘다. 라벨이 붙은 칸(검색·부서)은 라벨 높이만큼 위가
-            길고, 라벨이 없는 것(체크박스·버튼)은 그렇지 않다. 가운데로 맞추면
-            체크박스만 몇 px 내려앉아 한 줄이 삐뚤어 보인다.
-            검색칸은 flex-1 로 두지 않는다 — 넓은 화면에서 혼자 다 먹으면
-            시선이 그쪽으로 쏠려, 정작 먼저 읽혀야 할 보드가 뒤로 밀린다. */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <Field
-              id="works-q"
-              label="검색"
-              className="min-w-0 flex-1 sm:max-w-xs"
-            >
-              {(p) => (
-                <Input
-                  {...p}
-                  name="q"
-                  type="search"
-                  defaultValue={q}
-                  placeholder="업무 제목이나 설명에 들어간 말"
-                  autoComplete="off"
-                />
-              )}
-            </Field>
-
-            <Field id="works-dept" label="부서" className="min-w-0 sm:w-56">
-              {(p) => (
-                <Select {...p} name="dept" defaultValue={departmentId ?? ""}>
-                  <option value="">전체 부서</option>
-                  {tree.map((bureau) =>
-                    bureau.children.length === 0 ? (
-                      <option key={bureau.id} value={bureau.id}>
-                        {bureau.name}
-                      </option>
-                    ) : (
-                      <optgroup key={bureau.id} label={bureau.name}>
-                        {bureau.children.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ),
+      {/* ── 조건 한 줄 ──────────────────────────────────────────────────
+          한동안 「검색어·부서로 좁히기」 상자와 조건 칩이 **각각 한 줄**이었다.
+          위의 지연 줄까지 세면 보드가 시작되기 전에 44px 짜리 줄이 셋 —
+          180px 의 조작기 뒤에야 첫 카드가 보였다. 칩 넷은 왼쪽, 좁히기는
+          같은 줄 오른쪽 끝으로 붙인다. 펼치면 그 줄 아래로 폼이 내려온다. */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {/* ── 빠른 조건 ───────────────────────────────────────────────────────
+            이름 없는 링크 네 개가 떠 있었다. 스크린리더로 들으면 「전체 / 내 업무
+            / 지연만 / 보관함」이 무엇의 목록인지 알 수 없다. nav 로 묶어 이름을
+            준다. 높이도 38px → 44px 로 올린다
+            (2.5.5 AAA. AA 기준선인 2.5.8 은 24px 이고 그건 최소이지 목표가 아니다). */}
+        <nav aria-label="업무 걸러 보기">
+          <ul className="flex flex-wrap items-center gap-2">
+            {chips.map((c) => (
+              <li key={c.label}>
+                <Link
+                  href={c.href}
+                  aria-current={c.on ? "true" : undefined}
+                  className={cn(
+                    "inline-flex min-h-11 items-center gap-2 rounded-sm border px-3 text-body-sm font-bold transition-colors duration-150",
+                    // 누르는 즉시 칠해진다(브라우저가 한다 — 자바스크립트 대기 없음)
+                    "active:bg-primary-10 active:text-primary",
+                    c.on
+                      ? "border-primary bg-primary-5 text-primary"
+                      : "border-gray-50 bg-surface text-gray-60 hover:bg-gray-5",
                   )}
-                </Select>
-              )}
-            </Field>
+                >
+                  {c.label}
+                  {/* 조건 칩은 물음표 뒤만 바뀌는 같은 화면 이동이라 본문 자리를
+                      갈지 않는다(use-nav-pending 의 sameScreen). 눌렸다는 표시가
+                      이 자리에 있어야 한다 — 없으면 새 목록이 올 때까지
+                      383~448ms 동안 화면이 완전히 정지한다. */}
+                  <LinkPending />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        {/* 접혀 있을 때는 칩 줄의 오른쪽 끝에 서고, 펴면 한 줄을 통째로 차지한다
+            (open:basis-full). 조건이 걸려 있으면 펴진 채로 온다. */}
+        <details
+          open={Boolean(q) || Boolean(departmentId)}
+          className="ml-auto min-w-0 rounded-sm border border-rule-frame bg-surface open:basis-full"
+        >
+          <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-body-sm font-bold text-gray-60">
+            <Filter aria-hidden className="size-4 text-gray-40" />
+            검색어·부서로 좁히기
+            {q || departmentId ? (
+              <span className="text-body-xs text-primary">
+                걸림
+              </span>
+            ) : null}
+          </summary>
+          {/* GetForm — 스크립트가 있으면 화면을 갈지 않고 옮긴다.
+              평범한 GET 폼은 전체 페이지 로드라, 조건을 한 번 걸고 나면 그 뒤의
+              앞으로·뒤로가 전부 bfcache 없이 서버까지 갔다 왔다. get-form.tsx 참고. */}
+          <GetForm action="/works" className="border-t border-rule-hair p-4">
+            {/* 칸으로 그리지 않은 조건은 제출할 때 사라진다.
+                보관함에서 검색하면 보관함 밖으로 튕겨 나가고, 그건 고장으로 보인다. */}
+            {overdueOnly ? (
+              <input type="hidden" name="overdue" value="1" />
+            ) : null}
+            {archived ? <input type="hidden" name="archived" value="1" /> : null}
+            {mine ? <input type="hidden" name="mine" value="1" /> : null}
 
-            <Button type="submit" className="sm:ml-auto sm:w-auto">
-              <Filter aria-hidden className="size-4" />
-              적용
-            </Button>
-          </div>
-        </GetForm>
-      </details>
-
-      {/* ── 빠른 조건 ───────────────────────────────────────────────────────
-          이름 없는 링크 네 개가 떠 있었다. 스크린리더로 들으면 「전체 / 내 업무
-          / 지연만 / 보관함」이 무엇의 목록인지 알 수 없다. nav 로 묶어 이름을
-          준다. 높이도 38px → 44px 로 올린다
-          (2.5.5 AAA. AA 기준선인 2.5.8 은 24px 이고 그건 최소이지 목표가 아니다). */}
-      <nav aria-label="업무 걸러 보기" className="mb-4">
-        <ul className="flex flex-wrap items-center gap-2">
-          {chips.map((c) => (
-            <li key={c.label}>
-              <Link
-                href={c.href}
-                aria-current={c.on ? "true" : undefined}
-                className={cn(
-                  "inline-flex min-h-11 items-center gap-2 rounded-sm border px-3 text-body-sm font-bold transition-colors duration-150",
-                  // 누르는 즉시 칠해진다(브라우저가 한다 — 자바스크립트 대기 없음)
-                  "active:bg-primary-10 active:text-primary",
-                  c.on
-                    ? "border-primary bg-primary-5 text-primary"
-                    : "border-gray-50 bg-surface text-gray-60 hover:bg-gray-5",
-                )}
+            {/* items-end 로 맞춘다. 라벨이 붙은 칸(검색·부서)은 라벨 높이만큼 위가
+              길고, 라벨이 없는 것(체크박스·버튼)은 그렇지 않다. 가운데로 맞추면
+              체크박스만 몇 px 내려앉아 한 줄이 삐뚤어 보인다.
+              검색칸은 flex-1 로 두지 않는다 — 넓은 화면에서 혼자 다 먹으면
+              시선이 그쪽으로 쏠려, 정작 먼저 읽혀야 할 보드가 뒤로 밀린다. */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <Field
+                id="works-q"
+                label="검색"
+                className="min-w-0 flex-1 sm:max-w-xs"
               >
-                {c.label}
-                {/* 조건 칩은 물음표 뒤만 바뀌는 같은 화면 이동이라 본문 자리를
-                    갈지 않는다(use-nav-pending 의 sameScreen). 눌렸다는 표시가
-                    이 자리에 있어야 한다 — 없으면 새 목록이 올 때까지
-                    383~448ms 동안 화면이 완전히 정지한다. */}
-                <LinkPending />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+                {(p) => (
+                  <Input
+                    {...p}
+                    name="q"
+                    type="search"
+                    defaultValue={q}
+                    placeholder="업무 제목이나 설명에 들어간 말"
+                    autoComplete="off"
+                  />
+                )}
+              </Field>
+
+              <Field id="works-dept" label="부서" className="min-w-0 sm:w-56">
+                {(p) => (
+                  <Select {...p} name="dept" defaultValue={departmentId ?? ""}>
+                    <option value="">전체 부서</option>
+                    {tree.map((bureau) =>
+                      bureau.children.length === 0 ? (
+                        <option key={bureau.id} value={bureau.id}>
+                          {bureau.name}
+                        </option>
+                      ) : (
+                        <optgroup key={bureau.id} label={bureau.name}>
+                          {bureau.children.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ),
+                    )}
+                  </Select>
+                )}
+              </Field>
+
+              <Button type="submit" className="sm:ml-auto sm:w-auto">
+                <Filter aria-hidden className="size-4" />
+                적용
+              </Button>
+            </div>
+          </GetForm>
+        </details>
+      </div>
 
       {/* 결과 수가 바뀐 것을 스크린리더에도 알린다 */}
       <p aria-live="polite" className="sr-only">
@@ -384,7 +393,7 @@ export default async function WorksPage({ searchParams }: PageProps<"/works">) {
           {/* 화면 아래에 붙여 둔다. 칸반은 세로로 길어서, 위에 두면 아래쪽
               카드를 고르는 동안 단추가 화면 밖으로 나간다. */}
           <div className="sticky bottom-0 z-10 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-sm border border-rule-frame bg-surface px-4 py-3">
-            <p className="min-w-0 flex-1 text-body-sm break-keep text-gray-70">
+            <p className="min-w-0 flex-1 text-body-sm break-keep text-gray-60">
               {archived
                 ? "고른 업무를 보드로 되돌립니다."
                 : "고른 업무를 보관합니다. 삭제가 아니라 목록에서 내리는 것이고, 문서·대화·이력은 그대로 남습니다."}

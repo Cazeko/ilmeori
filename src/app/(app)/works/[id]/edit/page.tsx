@@ -87,7 +87,7 @@ export default async function EditWorkPage({
           <li aria-hidden>
             <ChevronRight className="size-3.5" />
           </li>
-          <li className="shrink-0 text-gray-70">수정</li>
+          <li className="shrink-0 text-gray-60">수정</li>
         </ol>
       </nav>
 
@@ -137,7 +137,7 @@ export default async function EditWorkPage({
                 {/* 공개 범위는 참여자와 함께 봐야 판단이 된다.
                     "누가 참여자인지"를 모르는 채 범위만 넓히는 화면을 만들지 않는다. */}
                 <div className="rounded-sm border border-rule-frame bg-gray-5 px-4 py-3">
-                  <p className="text-body-sm font-bold text-gray-80">
+                  <p className="text-body-sm font-bold text-gray-90">
                     공개 범위: {VISIBILITY_LABEL[work.visibility]}
                   </p>
                   <p className="mt-1 text-body-xs leading-relaxed break-keep text-gray-60">
@@ -172,7 +172,7 @@ export default async function EditWorkPage({
                 }
               />
               <CardBody>
-                <p className="max-w-2xl text-body-sm leading-relaxed break-keep text-gray-70">
+                <p className="max-w-2xl text-body-sm leading-relaxed break-keep text-gray-60">
                   {archived
                     ? "해제하면 업무 보드 목록에 다시 나타납니다."
                     : "업무 보드 목록에서만 빠집니다. 지워지는 것은 없고 언제든 해제할 수 있습니다."}
